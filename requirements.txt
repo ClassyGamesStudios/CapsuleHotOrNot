@@ -1,0 +1,6 @@
+Flask
+requests
+PyMySQL
+Pillow
+numpy
+scikit-learn

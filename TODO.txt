@@ -1,0 +1,122 @@
+every game 20 tags
+how to weigh
+
+(in developer)
+top tag 1.5
+
+and player has multiplayer 10%
+therefore 10x1.5 = 15
+
+1) separate list 2 weeks on player profile
+	- list 1: all time
+	- list 2: last 2 weeks
+	- list 3: all time + most recent 2 weeks multiplier
+war all time 100 hour
+war 2 weeks 20 hour
+multiplier 1.5
+20x1.5 = 30
+30-20 = 10
+therefore 100+10 = 110h
+
+2) out of all games, get sum of hours and %
+MUST use calculated list
+
+3) weight system for developer games tags
+
+top 5 the most important
+first 5 hold 40%
+rest holds 60%
+
+
+10 categories
+
+store assets:
+1) header capsule 
+size 920x430
+
+2) small 
+462x174
+
+3) main
+1232x706
+
+4) vertical
+748x896
+
+5) background
+1438x810
+
+library:
+
+6) library capsule
+600x900
+
+7) library header
+920x430
+
+8) library hero
+3840x1240
+
+9) logo
+1280 wide or 720 tall
+either one gotta be true
+if pic is 1280 wide, tall can be anything
+if pic is 720 tall, wide can be anything
+
+10) screenshots
+1920x1080
+
+
+inside the game (http://127.0.0.1:5000/game/4896010) for example
+
+- upload an asset (image)
+- drop down menu for the 10 categories
+- save image in DB
+	Media table
+	- mediaID
+	- appID
+	- categoryID
+	- path/to/image
+	- developerID
+
+	Media score log
+	- mediaScoreLogID
+	- mediaID
+	- numberTimeshown
+	- numberUpVotes
+	- winrate (%)
+	- playerIDVoted
+
+- add mediaID column in developer table as lists
+
+matchups table
+- matchUpID
+- pic1MediaID
+- pic2MediaID
+
+list of matchupid in player profile.
+
+log table
+- logID
+- playerID
+- matchupID
+- winnerMediaID
+- timestamp
+
+
+
+
+
+
+put each game in a vector
+do cosine similarity on each game and plot them
+and then do a clustering algo
+
+each cluster has weighted tags
+this cluster is most matched to this player based on his tags.
+rank clusters to the players.
+
+go to cluster A
+pick 2 games
+pick 2 images
+battle.

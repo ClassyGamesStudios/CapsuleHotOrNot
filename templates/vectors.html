@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Game Vectors — GameDev Portal{% endblock %}
+
+{% block content %}
+<header>
+    <h1>🧭 Game tag-vector scatter</h1>
+    <a href="{{ url_for('profile') }}" class="link">← Back to profile</a>
+</header>
+
+<p class="muted">
+    {{ count }} game{{ '' if count == 1 else 's' }} · {{ dim }}-dim binary tag vectors.
+    Clustered with K-means (cosine) in full {{ dim }}-D; optimal
+    <strong>k = {{ best_k }}</strong> by silhouette ({{ silhouette }}). Layout is
+    <strong>t-SNE</strong> (neighbour-preserving). Hover a dot for the game.
+    <em>(testing view)</em>
+</p>
+
+{% if points %}
+    <div id="scatter" style="width:100%; height:680px;"></div>
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+    <script>
+        const pts = {{ points | tojson }};
+        const cnames = {{ cluster_names | tojson }};
+        // Group points into one trace per cluster (gives a colour + legend).
+        const byCluster = {};
+        pts.forEach(p => { (byCluster[p.cluster] ??= []).push(p); });
+        const palette = ['#22d3ee','#f472b6','#a3e635','#fb923c','#818cf8','#facc15',
+                         '#34d399','#f87171','#e879f9','#38bdf8','#fbbf24','#4ade80',
+                         '#c084fc','#fb7185','#2dd4bf','#a78bfa','#f59e0b','#60a5fa',
+                         '#f43f5e','#10b981'];
+        const traces = Object.keys(byCluster).sort((a,b)=>a-b).map(cid => {
+            const g = byCluster[cid];
+            const label = (cnames[cid] || ('Cluster ' + cid)) + ' (' + g.length + ')';
+            return {
+                x: g.map(p => p.x), y: g.map(p => p.y), text: g.map(p => p.name),
+                name: label, mode: 'markers', type: 'scattergl',
+                hovertemplate: '%{text}<br>' + label + '<extra></extra>',
+                marker: { size: 7, color: palette[cid % palette.length], opacity: 0.85,
+                          line: { color: '#0f172a', width: 0.5 } }
+            };
+        });
+        const layout = {
+            paper_bgcolor: '#0f172a', plot_bgcolor: '#0f172a',
+            font: { color: '#e2e8f0' }, showlegend: true,
+            legend: { bgcolor: 'rgba(0,0,0,0)' },
+            margin: { t: 20, r: 20, b: 40, l: 40 },
+            xaxis: { title: 't-SNE 1', gridcolor: '#1e2937', zerolinecolor: '#334155' },
+            yaxis: { title: 't-SNE 2', gridcolor: '#1e2937', zerolinecolor: '#334155' }
+        };
+        Plotly.newPlot('scatter', traces, layout, {responsive: true});
+    </script>
+{% else %}
+    <div class="empty">Not enough games with tags to plot yet (need at least 3).</div>
+{% endif %}
+
+<style>
+    .muted { color: var(--muted); margin-bottom: 20px; }
+    .empty {
+        background: var(--card); border: 1px dashed rgba(255,255,255,0.15);
+        border-radius: 18px; padding: 50px; text-align: center; color: var(--muted);
+    }
+</style>
+{% endblock %}

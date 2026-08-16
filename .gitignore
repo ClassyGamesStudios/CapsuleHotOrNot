@@ -1,0 +1,26 @@
+# Secrets — never commit
+secrets_local.py
+.env
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# Generated artifacts
+vectors_cache.json
+
+# User-uploaded media
+static/uploads/
+
+# Local tooling / editor
+.claude/
+.vscode/
+.idea/
+
+# Scratch / exploration scripts (contain keys/cookies, not part of the app)
+test.py
+test1.py
+more_like.py
+get_tags_test.py

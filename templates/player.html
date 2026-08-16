@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+{% block title %}Player Portal — GameDev Portal{% endblock %}
+
+{% block content %}
+<header>
+    <h1>🎮 Player Portal</h1>
+    {% if player %}
+        <a href="{{ url_for('player_logout') }}" class="link">Sign out</a>
+    {% endif %}
+</header>
+
+{% if player %}
+    <div class="player-card">
+        {% if player.avatar %}
+            <img class="avatar" src="{{ player.avatar }}" alt="{{ player.username }} avatar">
+        {% endif %}
+        <div class="player-info">
+            <h2>Welcome, {{ player.username }}</h2>
+            <p class="muted">Steam ID: {{ player.steam_id }}</p>
+            {% if player.profileurl %}
+                <a class="link" href="{{ player.profileurl }}" target="_blank" rel="noopener">
+                    View Steam profile →
+                </a>
+            {% endif %}
+        </div>
+        <form method="POST" action="{{ url_for('player_sync') }}" style="margin-left:auto;">
+            <button type="submit" class="btn">🔄 Sync my playtime</button>
+        </form>
+    </div>
+
+    {% macro tag_table(rows, show_percent=False) %}
+        {% if rows %}
+            <table class="tag-table">
+                <thead>
+                    <tr>
+                        <th>#</th><th>Tag</th><th>Hours</th>
+                        {% if show_percent %}<th>% of total</th>{% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in rows %}
+                    <tr>
+                        <td class="rank">{{ loop.index }}</td>
+                        <td>{{ row.tag_name }} <span class="tag-id">#{{ row.steam_tag_id }}</span></td>
+                        <td class="hours">{{ row.hours }} h</td>
+                        {% if show_percent %}<td class="percent">{{ row.percent }}%</td>{% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p class="muted">No tag data yet. Click “Sync my playtime” to compute your totals.</p>
+        {% endif %}
+    {% endmacro %}
+
+    {% if ranking %}
+    <section class="categories">
+        <h2>Best-fit categories</h2>
+        <p class="muted">How your playtime (multiplier) matches each genre cluster,
+            by cosine similarity. Your top 3 are highlighted.</p>
+        <ol class="cat-list">
+            {% for r in ranking %}
+            <li class="cat-row {{ 'top' if loop.index <= 3 else '' }}">
+                <span class="cat-rank">{{ loop.index }}</span>
+                <span class="cat-name">{{ r.name }}</span>
+                <span class="cat-bar"><span class="cat-fill" style="width: {{ (r.score * 100)|round(1) }}%"></span></span>
+                <span class="cat-score">{{ (r.score * 100)|round(1) }}%</span>
+            </li>
+            {% endfor %}
+        </ol>
+    </section>
+    {% endif %}
+
+    <section class="totals">
+        <h2>Your tag playtime</h2>
+        <div class="tabs">
+            <button class="tab active" data-tab="alltime">All time</button>
+            <button class="tab" data-tab="twoweeks">2 weeks</button>
+            <button class="tab" data-tab="multiplier">Multiplier ×{{ multiplier }}</button>
+        </div>
+
+        <div class="tab-panel active" id="tab-alltime">
+            <p class="muted">Lifetime hours per tag, from your whole owned library.</p>
+            {{ tag_table(tables.alltime) }}
+        </div>
+        <div class="tab-panel" id="tab-twoweeks">
+            <p class="muted">Hours per tag from games played in the last 2 weeks.</p>
+            {{ tag_table(tables.twoweeks) }}
+        </div>
+        <div class="tab-panel" id="tab-multiplier">
+            <p class="muted">All-time boosted by recent activity:
+                <code>alltime + 2&nbsp;weeks × ({{ multiplier }} − 1)</code>.
+                % of total = each tag's share of this column.</p>
+            {{ tag_table(tables.multiplier, show_percent=True) }}
+        </div>
+    </section>
+{% else %}
+    <div class="signin">
+        <p>Sign in with your Steam account to enter the player portal.</p>
+        <a href="{{ url_for('player_login') }}" class="steam-btn">
+            <span>🔑</span> Sign in with Steam
+        </a>
+    </div>
+{% endif %}
+
+<style>
+    .signin {
+        background: var(--card);
+        border-radius: 18px;
+        padding: 60px 40px;
+        text-align: center;
+        border: 1px solid rgba(255,255,255,0.08);
+    }
+    .signin p { color: var(--muted); font-size: 1.15rem; margin-bottom: 24px; }
+    .steam-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        background: #171a21;
+        color: #fff;
+        padding: 14px 32px;
+        border-radius: 9999px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 1.1rem;
+        border: 1px solid #66c0f4;
+        transition: 0.25s;
+    }
+    .steam-btn:hover { background: #1b2838; transform: translateY(-2px); }
+    .player-card {
+        background: var(--card);
+        border-radius: 18px;
+        padding: 32px;
+        display: flex;
+        align-items: center;
+        gap: 28px;
+        border: 1px solid rgba(255,255,255,0.08);
+    }
+    .avatar { width: 96px; height: 96px; border-radius: 16px; }
+    .player-info h2 { margin-bottom: 6px; }
+    .muted { color: var(--muted); margin-bottom: 10px; }
+
+    .categories { margin-top: 36px; }
+    .categories h2 { margin-bottom: 6px; }
+    .cat-list { list-style: none; margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+    .cat-row {
+        display: grid; grid-template-columns: 32px 1fr 220px 60px;
+        align-items: center; gap: 14px;
+        background: var(--card); border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 12px; padding: 12px 16px;
+    }
+    .cat-row.top { border-color: var(--primary); }
+    .cat-rank { color: var(--muted); font-weight: 600; }
+    .cat-row.top .cat-rank { color: var(--primary); }
+    .cat-name { font-weight: 600; }
+    .cat-bar { background: #334155; height: 10px; border-radius: 9999px; overflow: hidden; }
+    .cat-fill { display: block; height: 100%; background: var(--primary); }
+    .cat-score { color: var(--accent); font-weight: 600; text-align: right; }
+
+    .totals { margin-top: 36px; }
+    .totals h2 { margin-bottom: 12px; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .tab {
+        background: var(--card);
+        color: var(--muted);
+        border: 1px solid rgba(255,255,255,0.08);
+        padding: 10px 20px;
+        border-radius: 9999px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+    .tab:hover { color: var(--text); }
+    .tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .totals code {
+        background: rgba(255,255,255,0.06);
+        padding: 2px 8px;
+        border-radius: 6px;
+        font-size: 0.85rem;
+    }
+    .tag-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 16px;
+        background: var(--card);
+        border-radius: 14px;
+        overflow: hidden;
+    }
+    .tag-table th, .tag-table td {
+        text-align: left;
+        padding: 12px 18px;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .tag-table th { color: var(--muted); font-weight: 600; font-size: 0.9rem; }
+    .tag-table tbody tr:hover { background: rgba(255,255,255,0.03); }
+    .tag-table .rank { color: var(--muted); width: 40px; }
+    .tag-table .hours { color: var(--accent); font-weight: 600; white-space: nowrap; }
+    .tag-table .tag-id { color: var(--muted); font-size: 0.75rem; }
+    .tag-table .percent { color: var(--muted); white-space: nowrap; }
+</style>
+
+<script>
+    document.querySelectorAll('.tab').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+        });
+    });
+</script>
+{% endblock %}

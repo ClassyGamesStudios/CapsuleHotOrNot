@@ -1,0 +1,25 @@
+developer portal:
+
+- sign up (email)
+- upload game list
+	- steam page (to get steam id)
+	- ping steam to get tags to classify their category
+	- option 1:
+		- check if steam API returns order of tag priority or normal
+		- if not, ask developer to put these tags in priority
+		- put steam game link and we pull data
+	- option 2:
+		- add 5 titles which are similar to your game
+	- upload images
+	- from the uploaded images, which has the most likes.
+
+
+
+user portal:
+
+- option 1:
+	- login via steam (gotta see if we can do it)
+- option 2:
+	- what is your steam profile? give URL
+- get the top games of the profile. Sort by playtime and recently played.
+- collate the tags of these games and give the users profile those tags in priority.

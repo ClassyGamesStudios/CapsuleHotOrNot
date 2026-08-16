@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Add Game Profile — GameDev Portal{% endblock %}
+
+{% block content %}
+<header>
+    <h1>＋ Add New Game Profile</h1>
+    <a href="{{ url_for('profile') }}" class="link">← Back to profile</a>
+</header>
+
+<div class="add-card">
+    <form method="POST">
+        <label for="appid">Steam App ID</label>
+        <p class="hint">Find it in the store URL, e.g. store.steampowered.com/app/<strong>3891880</strong>/</p>
+        <input type="text" id="appid" name="appid" placeholder="e.g. 3891880"
+               inputmode="numeric" pattern="[0-9]*" required autofocus>
+        <button type="submit" class="btn" style="margin-top:20px;">Create Game Profile</button>
+    </form>
+</div>
+
+<style>
+    .add-card {
+        background: var(--card);
+        border-radius: 18px;
+        padding: 40px;
+        border: 1px solid rgba(255,255,255,0.08);
+        max-width: 560px;
+    }
+    label { display: block; font-size: 1.1rem; font-weight: 600; margin-bottom: 6px; }
+    .hint { color: var(--muted); font-size: 0.9rem; margin-bottom: 16px; }
+</style>
+{% endblock %}

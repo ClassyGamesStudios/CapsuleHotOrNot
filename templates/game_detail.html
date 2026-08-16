@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}{{ game.game_name }} — GameDev Portal{% endblock %}
+
+{% block content %}
+<header>
+    <h1>🎮 {{ game.game_name }}</h1>
+    <a href="{{ url_for('profile') }}" class="link">← Back to profile</a>
+</header>
+
+<div class="detail">
+    <div class="detail-media">
+        {% if game.capsule_url %}
+            <img src="{{ game.capsule_url }}" alt="{{ game.game_name }} capsule">
+        {% else %}
+            <div class="noimg">No capsule image</div>
+        {% endif %}
+        <p class="appid">Steam App ID: {{ game.game_appid }}</p>
+    </div>
+
+    <div class="detail-tags">
+        <h2>Tags <span class="count">({{ tags|length }})</span></h2>
+        {% if tags %}
+            <div class="tags">
+                {% for tag in tags %}
+                    <span class="tag" title="steam tag id {{ tag.steam_tag_id }}">
+                        {{ tag.tag_name or '#' ~ tag.steam_tag_id }}
+                        <span class="tag-id">#{{ tag.steam_tag_id }}</span>
+                        <span class="tag-weight">{{ '%.1f'|format(tag.weight) }}%</span>
+                    </span>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="muted">No tags recorded for this game.</p>
+        {% endif %}
+    </div>
+</div>
+
+<section class="assets">
+    <h2>Media assets</h2>
+
+    <form class="upload" method="POST" action="{{ url_for('upload_media', appid=game.game_appid) }}"
+          enctype="multipart/form-data">
+        <select name="category_id" required>
+            <option value="" disabled selected>Choose a category…</option>
+            {% for cat in categories %}
+                <option value="{{ cat.imageCategoryID }}">
+                    {{ cat.name }}
+                    {%- if cat.match_mode == 'either' %} ({{ cat.width }}px wide or {{ cat.height }}px tall)
+                    {%- else %} ({{ cat.width }}×{{ cat.height }}){% endif %}
+                </option>
+            {% endfor %}
+        </select>
+        <input type="file" name="image" accept="image/*" required>
+        <button type="submit" class="btn">Upload asset</button>
+    </form>
+
+    {% if media %}
+        <div class="media-grid">
+            {% for m in media %}
+            <div class="media-item">
+                <img src="{{ url_for('static', filename='uploads/' ~ m.path.split('/')[-1]) }}"
+                     alt="{{ m.category_name }}">
+                <div class="media-meta">
+                    <strong>{{ m.category_name or 'Unknown' }}</strong>
+                    <span class="muted">media #{{ m.mediaID }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="muted">No assets uploaded yet for this game.</p>
+    {% endif %}
+</section>
+
+<style>
+    .detail { display: grid; grid-template-columns: 616px 1fr; gap: 32px; align-items: start; }
+    @media (max-width: 1000px) { .detail { grid-template-columns: 1fr; } }
+    .detail-media img { width: 100%; max-width: 616px; border-radius: 16px; display: block; }
+    .detail-media .noimg {
+        width: 100%; height: 300px; background: var(--card); border-radius: 16px;
+        display: flex; align-items: center; justify-content: center; color: var(--muted);
+    }
+    .detail-media .appid { color: var(--muted); font-size: 0.9rem; margin-top: 12px; }
+    .detail-tags h2 { margin-bottom: 16px; }
+    .detail-tags .count { color: var(--muted); font-weight: 400; font-size: 1rem; }
+    .tags { display: flex; flex-wrap: wrap; gap: 10px; }
+    .tag {
+        background: var(--card);
+        border: 1px solid rgba(255,255,255,0.08);
+        padding: 8px 14px;
+        border-radius: 9999px;
+        font-size: 0.95rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .tag-id { color: var(--accent); font-size: 0.75rem; opacity: 0.85; }
+    .tag-weight {
+        background: var(--primary);
+        color: #fff;
+        font-size: 0.72rem;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 9999px;
+    }
+    .muted { color: var(--muted); }
+
+    .assets { margin-top: 44px; }
+    .assets h2 { margin-bottom: 16px; }
+    .upload {
+        display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+        background: var(--card); border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 14px; padding: 18px; margin-bottom: 24px;
+    }
+    .upload select, .upload input[type="file"] {
+        background: #334155; color: #fff; border: none;
+        padding: 10px 14px; border-radius: 10px; font-size: 0.95rem;
+    }
+    .upload select { min-width: 260px; }
+    .media-grid {
+        display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 18px;
+    }
+    .media-item {
+        background: var(--card); border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 14px; overflow: hidden;
+    }
+    .media-item img { width: 100%; display: block; background: #0b1220; }
+    .media-meta { padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; }
+    .media-meta .muted { font-size: 0.8rem; }
+</style>
+{% endblock %}
