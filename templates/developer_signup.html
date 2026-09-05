@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Developer Sign Up — CapsuleHotOrNot{% endblock %}
+
+{% block content %}
+<header>
+    <h1>🛠️ Developer Sign Up</h1>
+    <a href="{{ url_for('index') }}" class="link">← Home</a>
+</header>
+
+<div class="auth-card">
+    <form method="POST" action="{{ url_for('developer_signup') }}">
+        <label>Studio / Developer name</label>
+        <input type="text" name="name" required autofocus>
+        <label>Email</label>
+        <input type="email" name="email" required>
+        <label>Password</label>
+        <input type="password" name="password" required>
+        <button type="submit" class="btn" style="margin-top:18px;">Create account</button>
+    </form>
+    <p class="muted">Already have an account? <a class="link" href="{{ url_for('developer_login') }}">Sign in</a></p>
+</div>
+
+<style>
+    .auth-card { background: var(--card); border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 16px; padding: 32px; max-width: 460px; }
+    .auth-card label { display: block; font-weight: 600; margin: 14px 0 6px; }
+    .auth-card input { width: 100%; padding: 12px 14px; border: none; border-radius: 10px;
+        background: #334155; color: #fff; font-size: 1rem; }
+    .muted { color: var(--muted); margin-top: 16px; }
+</style>
+{% endblock %}

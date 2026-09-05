@@ -4,24 +4,35 @@
 {% block content %}
 <header>
     <h1>👤 {{ developer.developer_name }}'s Game Profiles</h1>
-    <a href="{{ url_for('add_profile') }}" class="btn">＋ Add New Game Profile</a>
+    <span style="display:flex; gap:10px; align-items:center;">
+        <a href="{{ url_for('developer_dashboard') }}" class="link">📊 Dashboard</a>
+        <a href="{{ url_for('developer_logout') }}" class="link">Sign out</a>
+        <a href="{{ url_for('add_profile') }}" class="btn">＋ Add New Game Profile</a>
+    </span>
 </header>
 
 {% if games %}
     <div class="game-grid">
         {% for game in games %}
-        <a class="game-card" href="{{ url_for('game_detail', appid=game.game_appid) }}">
-            {% if game.capsule_url %}
-                <img class="capsule" src="{{ game.capsule_url }}" alt="{{ game.game_name }} capsule">
-            {% else %}
-                <div class="capsule placeholder">No image</div>
-            {% endif %}
-            <div class="game-body">
-                <h3>{{ game.game_name }}</h3>
-                <p class="appid">App ID: {{ game.game_appid }} • {{ game.tag_id|length }} tags</p>
-                <span class="view">View profile →</span>
-            </div>
-        </a>
+        <div class="game-card">
+            <a class="card-link" href="{{ url_for('game_detail', appid=game.game_appid) }}">
+                {% if game.capsule_url %}
+                    <img class="capsule" src="{{ game.capsule_url }}" alt="{{ game.game_name }} capsule">
+                {% else %}
+                    <div class="capsule placeholder">No image</div>
+                {% endif %}
+                <div class="game-body">
+                    <h3>{{ game.game_name }}</h3>
+                    <p class="appid">App ID: {{ game.game_appid }} • {{ game.tag_id|length }} tags</p>
+                    <span class="view">View profile →</span>
+                </div>
+            </a>
+            <form method="POST" action="{{ url_for('delete_game_route', appid=game.game_appid) }}"
+                  class="del-form"
+                  onsubmit="return confirm('Remove {{ game.game_name }} from your profile? Your uploaded images for it will be deleted.');">
+                <button type="submit" class="del-btn">🗑 Remove</button>
+            </form>
+        </div>
         {% endfor %}
     </div>
 {% else %}
@@ -38,19 +49,24 @@
         gap: 24px;
     }
     .game-card {
-        display: block;
+        position: relative;
         background: var(--card);
         border-radius: 18px;
         overflow: hidden;
         border: 1px solid rgba(255,255,255,0.08);
         transition: transform 0.25s, box-shadow 0.25s;
-        color: inherit;
-        text-decoration: none;
     }
     .game-card:hover {
         transform: translateY(-6px);
         box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.5);
     }
+    .card-link { display: block; color: inherit; text-decoration: none; }
+    .del-form { position: absolute; top: 10px; right: 10px; }
+    .del-btn {
+        background: rgba(15,23,42,0.85); color: #f87171; border: 1px solid #f87171;
+        padding: 6px 12px; border-radius: 9999px; font-size: 0.8rem; font-weight: 600; cursor: pointer;
+    }
+    .del-btn:hover { background: #f87171; color: #fff; }
     .capsule { width: 100%; display: block; }
     .capsule.placeholder {
         height: 160px;

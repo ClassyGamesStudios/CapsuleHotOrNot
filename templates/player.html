@@ -5,7 +5,11 @@
 <header>
     <h1>🎮 Player Portal</h1>
     {% if player %}
-        <a href="{{ url_for('player_logout') }}" class="link">Sign out</a>
+        <span>
+            <a href="{{ url_for('player_feed') }}" class="link">🔥 Capsule feed</a>
+            &nbsp;·&nbsp;
+            <a href="{{ url_for('player_logout') }}" class="link">Sign out</a>
+        </span>
     {% endif %}
 </header>
 
@@ -26,6 +30,27 @@
         <form method="POST" action="{{ url_for('player_sync') }}" style="margin-left:auto;">
             <button type="submit" class="btn">🔄 Sync my playtime</button>
         </form>
+    </div>
+
+    <div class="points-bar">
+        <div class="pts">
+            <span class="pts-num">{{ player.points }}</span>
+            <span class="pts-lbl">points</span>
+        </div>
+        <div class="pts-meta">
+            <span>Vote multiplier: <strong>x{{ vote_mult }}</strong></span>
+            <span class="muted">{{ player.vote_count }} votes · +10 base points per vote</span>
+        </div>
+        <div class="pts-actions">
+            {% if not player.email_verified %}
+                <form method="POST" action="{{ url_for('player_verify_email') }}">
+                    <button type="submit" class="btn ghost">✉️ Verify email (+200)</button>
+                </form>
+            {% else %}
+                <span class="verified">✓ Email verified</span>
+            {% endif %}
+            <a href="{{ url_for('player_rewards') }}" class="btn">🎁 Cash in points</a>
+        </div>
     </div>
 
     {% macro tag_table(rows, show_percent=False) %}
@@ -139,6 +164,19 @@
     .avatar { width: 96px; height: 96px; border-radius: 16px; }
     .player-info h2 { margin-bottom: 6px; }
     .muted { color: var(--muted); margin-bottom: 10px; }
+
+    .points-bar {
+        display: flex; align-items: center; gap: 24px; flex-wrap: wrap;
+        background: var(--card); border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 16px; padding: 18px 24px; margin-top: 16px;
+    }
+    .pts { text-align: center; }
+    .pts-num { display: block; font-size: 2rem; font-weight: 700; color: var(--accent); }
+    .pts-lbl { color: var(--muted); font-size: 0.85rem; }
+    .pts-meta { display: flex; flex-direction: column; gap: 4px; }
+    .pts-actions { margin-left: auto; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .btn.ghost { background: transparent; border: 1px solid var(--primary); color: var(--primary); }
+    .verified { color: #4ade80; font-weight: 600; }
 
     .categories { margin-top: 36px; }
     .categories h2 { margin-bottom: 6px; }

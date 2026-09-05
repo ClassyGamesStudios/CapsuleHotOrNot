@@ -8,10 +8,11 @@
 </header>
 
 <p class="muted">
-    {{ count }} game{{ '' if count == 1 else 's' }} · {{ dim }}-dim binary tag vectors.
-    Clustered with K-means (cosine) in full {{ dim }}-D; optimal
-    <strong>k = {{ best_k }}</strong> by silhouette ({{ silhouette }}). Layout is
-    <strong>t-SNE</strong> (neighbour-preserving). Hover a dot for the game.
+    {{ count }} game{{ '' if count == 1 else 's' }} · {{ dim }}-dim tag vectors,
+    <strong>TF-IDF weighted</strong> (down-weights common tags for sharper genres).
+    K-means (cosine); optimal <strong>k = {{ best_k }}</strong> by silhouette
+    ({{ silhouette }}). Layout is <strong>t-SNE</strong>. Hover a dot for the game.
+    {% if dropped_tags %}<br>Dropped ubiquitous tags: {{ dropped_tags|join(', ') }}.{% endif %}
     <em>(testing view)</em>
 </p>
 

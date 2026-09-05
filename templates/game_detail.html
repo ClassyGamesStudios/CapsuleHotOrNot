@@ -4,7 +4,13 @@
 {% block content %}
 <header>
     <h1>🎮 {{ game.game_name }}</h1>
-    <a href="{{ url_for('profile') }}" class="link">← Back to profile</a>
+    <span style="display:flex; gap:12px; align-items:center;">
+        <a href="{{ url_for('profile') }}" class="link">← Back to profile</a>
+        <form method="POST" action="{{ url_for('delete_game_route', appid=game.game_appid) }}"
+              onsubmit="return confirm('Remove {{ game.game_name }} from your profile? Your uploaded images for it will be deleted.');">
+            <button type="submit" class="del-btn">🗑 Remove game</button>
+        </form>
+    </span>
 </header>
 
 <div class="detail">
@@ -63,6 +69,10 @@
                 <div class="media-meta">
                     <strong>{{ m.category_name or 'Unknown' }}</strong>
                     <span class="muted">media #{{ m.mediaID }}</span>
+                    <form method="POST" action="{{ url_for('delete_media_route', media_id=m.mediaID) }}"
+                          onsubmit="return confirm('Delete this image? This removes its match history too.');">
+                        <button type="submit" class="del-btn">🗑 Delete image</button>
+                    </form>
                 </div>
             </div>
             {% endfor %}
@@ -127,5 +137,11 @@
     .media-item img { width: 100%; display: block; background: #0b1220; }
     .media-meta { padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; }
     .media-meta .muted { font-size: 0.8rem; }
+    .del-btn {
+        margin-top: 8px; background: rgba(248,113,113,0.12); color: #f87171;
+        border: 1px solid #f87171; padding: 6px 12px; border-radius: 8px;
+        font-size: 0.8rem; font-weight: 600; cursor: pointer;
+    }
+    .del-btn:hover { background: #f87171; color: #fff; }
 </style>
 {% endblock %}

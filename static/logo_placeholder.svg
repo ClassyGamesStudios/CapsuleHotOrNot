@@ -1,0 +1,6 @@
+<!-- Temporary stand-in for the real CapsuleHotOrNot logo. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="220" height="56" viewBox="0 0 220 56" role="img" aria-label="Logo placeholder">
+    <rect x="1" y="1" width="218" height="54" rx="12" fill="#1e2937" stroke="#22d3ee" stroke-width="2" stroke-dasharray="6 5"/>
+    <text x="110" y="34" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif"
+          font-size="16" font-weight="700" letter-spacing="3" fill="#22d3ee">LOGO</text>
+</svg>

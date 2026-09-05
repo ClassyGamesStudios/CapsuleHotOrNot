@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Rewards — CapsuleHotOrNot{% endblock %}
+
+{% block content %}
+<header>
+    <h1>🎁 Cash in your points</h1>
+    <a href="{{ url_for('player_home') }}" class="link">← Back to profile</a>
+</header>
+
+<div class="balance">
+    <div>
+        <span class="bal-num">{{ balance }}</span>
+        <span class="bal-lbl">points available</span>
+    </div>
+    <div class="muted">Earning at <strong>x{{ multiplier }}</strong> per vote ·
+        keep voting to raise your multiplier (every 10 votes = +0.1x)</div>
+</div>
+
+<h2 class="sec">How you earn</h2>
+<ul class="earn">
+    <li>🔗 Link your Steam account — <strong>+300</strong> (sign-up bonus)</li>
+    <li>✉️ Verify your email — <strong>+200</strong></li>
+    <li>🔥 Each capsule vote — <strong>+10</strong> × your multiplier</li>
+    <li>📈 Multiplier: 1.0x → 1.1x at 10 votes → 1.2x at 20 → and so on</li>
+</ul>
+
+<h2 class="sec">Redeem for</h2>
+<p class="muted note">Redemption isn't live yet — this is a preview of the cash-out options coming soon.</p>
+<div class="reward-grid">
+    {% for r in rewards %}
+    <div class="reward {{ 'afford' if balance >= r.cost else 'locked' }}">
+        <div class="r-icon">{{ r.icon }}</div>
+        <div class="r-name">{{ r.name }}</div>
+        <div class="r-cost">{{ r.cost }} pts</div>
+        <button class="btn" disabled>{{ 'Redeem' if balance >= r.cost else 'Not enough' }}</button>
+    </div>
+    {% endfor %}
+</div>
+<p class="muted note">…and more to come: PSN cards, Nintendo eShop, crypto, charity donations, merch.</p>
+
+<style>
+    .balance {
+        display: flex; align-items: center; gap: 24px; flex-wrap: wrap;
+        background: var(--card); border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 16px; padding: 22px 26px; margin-bottom: 28px;
+    }
+    .bal-num { font-size: 2.4rem; font-weight: 700; color: var(--accent); }
+    .bal-lbl { color: var(--muted); margin-left: 8px; }
+    .sec { margin: 22px 0 12px; }
+    .earn { list-style: none; display: flex; flex-direction: column; gap: 8px; color: var(--text); }
+    .earn li { background: var(--card); border: 1px solid rgba(255,255,255,0.06);
+               border-radius: 10px; padding: 10px 16px; }
+    .note { margin: 8px 0 18px; }
+    .reward-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+    .reward {
+        background: var(--card); border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 14px; padding: 20px; text-align: center;
+    }
+    .reward.afford { border-color: var(--primary); }
+    .reward.locked { opacity: 0.6; }
+    .r-icon { font-size: 2rem; }
+    .r-name { font-weight: 600; margin: 8px 0 4px; }
+    .r-cost { color: var(--accent); font-size: 0.9rem; margin-bottom: 12px; }
+    .reward .btn { width: 100%; opacity: 0.7; cursor: not-allowed; }
+    .muted { color: var(--muted); }
+</style>
+{% endblock %}

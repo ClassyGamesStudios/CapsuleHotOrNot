@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Feed — CapsuleHotOrNot{% endblock %}
+
+{% block content %}
+<header>
+    <h1>🔥 Capsule Hot or Not</h1>
+    <a href="{{ url_for('player_home') }}" class="link">← Back to profile</a>
+</header>
+
+{% if matchup %}
+    <p class="prompt">
+        {% if matchup.category.score is not none %}
+            From your top category <strong>{{ matchup.category.name }}</strong>
+            ({{ (matchup.category.score * 100)|round(1) }}% fit) —
+        {% else %}
+            <strong>{{ matchup.category.name }}</strong> —
+        {% endif %}
+        which capsule do you like better? Click one.
+    </p>
+
+    <form method="POST" action="{{ url_for('player_vote') }}" class="versus">
+        <input type="hidden" name="media1" value="{{ matchup.media1.mediaID }}">
+        <input type="hidden" name="media2" value="{{ matchup.media2.mediaID }}">
+
+        <button type="submit" name="winner" value="{{ matchup.media1.mediaID }}" class="pick">
+            <img src="/{{ matchup.media1.path }}" alt="{{ matchup.media1.game_name }}">
+            <span class="cap">{{ matchup.media1.game_name }}</span>
+        </button>
+
+        <span class="vs">VS</span>
+
+        <button type="submit" name="winner" value="{{ matchup.media2.mediaID }}" class="pick">
+            <img src="/{{ matchup.media2.path }}" alt="{{ matchup.media2.game_name }}">
+            <span class="cap">{{ matchup.media2.game_name }}</span>
+        </button>
+    </form>
+{% else %}
+    <div class="empty">
+        <p>No new matchups to show right now.</p>
+        <p class="muted">Either you've seen every pairing in your top categories, or
+            your profile hasn't been synced yet. Sync your playtime on your
+            <a class="link" href="{{ url_for('player_home') }}">profile</a>.</p>
+    </div>
+{% endif %}
+
+<style>
+    .prompt { color: var(--text); font-size: 1.15rem; margin-bottom: 24px; }
+    .versus {
+        display: flex; align-items: center; justify-content: center; gap: 20px;
+        flex-wrap: wrap;
+    }
+    .pick {
+        background: var(--card); border: 2px solid rgba(255,255,255,0.08);
+        border-radius: 16px; padding: 0; cursor: pointer; overflow: hidden;
+        width: 460px; max-width: 100%; transition: 0.2s;
+        display: flex; flex-direction: column;
+    }
+    .pick:hover { border-color: var(--primary); transform: translateY(-4px); }
+    .pick img { width: 100%; display: block; }
+    .pick .cap { padding: 12px; font-weight: 600; color: var(--text); }
+    .vs { color: var(--muted); font-weight: 700; font-size: 1.4rem; }
+    .empty {
+        background: var(--card); border: 1px dashed rgba(255,255,255,0.15);
+        border-radius: 18px; padding: 50px; text-align: center;
+    }
+    .muted { color: var(--muted); }
+</style>
+{% endblock %}

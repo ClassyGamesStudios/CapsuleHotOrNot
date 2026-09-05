@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+{% block title %}Sign up as a player — CapsuleHotOrNot{% endblock %}
+
+{% block content %}
+<header class="topbar">
+    <a class="brand" href="{{ url_for('index') }}">
+        <img src="{{ url_for('static', filename='logo_placeholder.svg') }}" alt="CapsuleHotOrNot">
+    </a>
+    <div class="topbar-mid"></div>
+    <div class="topbar-actions">
+        <a href="{{ url_for('player_login') }}" class="btn">Log In</a>
+    </div>
+</header>
+
+<section class="band join-hero">
+    <div class="band-inner join-grid">
+        <div class="join-left">
+            <h1 class="pitch-title">VOTE ON GAMES<br>GET PAID</h1>
+            {% if cards %}
+            <div class="carousel">
+                <button type="button" class="arrow prev" aria-label="Previous">&#10094;</button>
+                <div class="viewport">
+                    <div class="track" id="cardTrack">
+                        {% for c in cards %}
+                        <div class="slide">
+                            <img src="{{ c.src }}" alt="{{ c.label }}">
+                            <span class="slide-label">{{ c.label }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <button type="button" class="arrow next" aria-label="Next">&#10095;</button>
+                <div class="dots" id="cardDots"></div>
+            </div>
+            {% endif %}
+            <p class="fine">Points convert straight into gift cards — no entries, no draws, no catch.</p>
+        </div>
+
+        <div class="join-right">
+            <h2 class="join-title">JOIN THE OTHER</h2>
+            <div class="join-num">{{ '{:,}'.format(players) }}</div>
+            <h2 class="join-title">PLAYERS</h2>
+            <a class="btn-steam" href="{{ url_for('player_login') }}">LOG IN VIA STEAM</a>
+            <p class="fine">No additional sign up required</p>
+            <ul class="perks">
+                <li>+300 points the moment you link Steam</li>
+                <li>+10 points a vote, rising with your multiplier</li>
+                <li>Matched to the genres you actually play</li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+<section class="quotes">
+    <h2 class="quotes-head">What players say</h2>
+    <div class="quote-grid">
+        {% for t in testimonials %}
+        <article class="quote">
+            <img class="q-avatar" src="{{ t.avatar }}" alt="">
+            <div class="q-body">
+                <div class="q-top">
+                    <span class="q-name">{{ t.name }}</span>
+                    <span class="q-rec">&#128077; Recommended</span>
+                </div>
+                <div class="q-meta">{{ t.meta }}</div>
+                <p class="q-text">{{ t.text }}</p>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+    <a class="signup-wide" href="{{ url_for('player_login') }}">LOG IN VIA STEAM &amp; START EARNING</a>
+</section>
+
+<style>
+    .topbar { display: flex; align-items: center; gap: 20px; margin-bottom: 26px; flex-wrap: wrap; }
+    .brand img { display: block; height: 44px; }
+    .topbar-mid { flex: 1; min-width: 40px; }
+    .topbar-actions .btn { padding: 9px 22px; font-size: .95rem; }
+
+    /* Full-bleed hero band. */
+    .band {
+        position: relative; left: 50%; transform: translateX(-50%);
+        width: 100vw; padding: 54px 20px;
+    }
+    .band-inner { max-width: 1100px; margin: 0 auto; }
+    .join-hero { background: linear-gradient(120deg, #0891b2 0%, #6d28d9 55%, #db2777 100%); }
+    .join-grid { display: grid; grid-template-columns: 1.15fr 1fr; gap: 40px; align-items: center; }
+
+    .pitch-title {
+        font-size: 2.4rem; line-height: 1.15; letter-spacing: 1px; color: #fff;
+        text-shadow: 0 3px 14px rgba(0,0,0,.35); margin-bottom: 22px;
+    }
+    .fine { color: rgba(255,255,255,.82); font-size: .85rem; margin-top: 12px; }
+
+    .carousel {
+        position: relative; background: rgba(0,0,0,.28); border: 1px solid rgba(255,255,255,.18);
+        border-radius: 16px; padding: 20px 54px 34px;
+    }
+    .viewport { overflow: hidden; }
+    .track { display: flex; transition: transform .45s cubic-bezier(.4,0,.2,1); }
+    .slide { min-width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .slide img { width: 100%; max-width: 300px; border-radius: 12px; display: block;
+                 box-shadow: 0 10px 26px rgba(0,0,0,.45); }
+    .slide-label { color: #fff; font-weight: 700; letter-spacing: 1px; font-size: .95rem; }
+    .arrow {
+        position: absolute; top: 50%; transform: translateY(-50%);
+        background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.25); color: #fff;
+        width: 34px; height: 34px; border-radius: 50%; cursor: pointer; font-size: .9rem; line-height: 1;
+    }
+    .arrow:hover { background: rgba(0,0,0,.6); }
+    .arrow.prev { left: 10px; } .arrow.next { right: 10px; }
+    .dots { position: absolute; bottom: 12px; left: 0; right: 0; display: flex; gap: 6px; justify-content: center; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,.35);
+           border: none; padding: 0; cursor: pointer; }
+    .dot.on { background: #fff; }
+
+    .join-right { text-align: center; }
+    .join-title { color: #fff; font-size: 1.7rem; letter-spacing: 2px; line-height: 1.2; }
+    .join-num { color: #fff; font-size: 3.4rem; font-weight: 800; line-height: 1.1; }
+    .btn-steam {
+        display: inline-block; margin-top: 20px; padding: 15px 40px; border-radius: 10px;
+        background: #fff; color: #0f172a; font-weight: 800; letter-spacing: 2px;
+        text-decoration: none; font-size: .95rem; transition: .25s;
+    }
+    .btn-steam:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,0,0,.4); }
+    .perks { list-style: none; margin-top: 22px; display: flex; flex-direction: column; gap: 8px;
+             color: rgba(255,255,255,.9); font-size: .9rem; }
+    .perks li::before { content: '✓ '; font-weight: 800; }
+
+    .quotes { margin-top: 56px; }
+    .quotes-head { text-align: center; margin-bottom: 24px; }
+    .quote-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 18px; }
+    .quote {
+        display: flex; gap: 14px; background: var(--card);
+        border: 1px solid rgba(255,255,255,.08); border-radius: 14px; padding: 16px;
+    }
+    .q-avatar { width: 92px; height: 92px; border-radius: 8px; flex-shrink: 0; display: block; }
+    .q-body { min-width: 0; }
+    .q-top { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+    .q-name { font-weight: 700; }
+    .q-rec { color: var(--accent); font-size: .8rem; font-weight: 600; }
+    .q-meta { color: var(--muted); font-size: .78rem; margin: 2px 0 8px; }
+    .q-text { font-size: .92rem; line-height: 1.5; color: var(--text); }
+
+    .signup-wide {
+        display: block; width: 100%; max-width: 520px; margin: 34px auto 0;
+        padding: 16px 24px; border: none; border-radius: 12px; background: #fff; color: #0f172a;
+        font-size: .95rem; font-weight: 800; letter-spacing: 2px; text-align: center;
+        text-decoration: none; transition: .25s;
+    }
+    .signup-wide:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,0,0,.45); }
+
+    @media (max-width: 860px) {
+        .join-grid { grid-template-columns: 1fr; }
+        .quote-grid { grid-template-columns: 1fr; }
+    }
+</style>
+
+<script>
+    // Gift-card carousel: auto-advances, arrows and dots jump straight to a card.
+    (function () {
+        const track = document.getElementById('cardTrack');
+        if (!track) return;
+        const slides = track.children.length;
+        const dots = document.getElementById('cardDots');
+        let i = 0, timer;
+
+        for (let n = 0; n < slides; n++) {
+            const d = document.createElement('button');
+            d.type = 'button'; d.className = 'dot'; d.setAttribute('aria-label', 'Card ' + (n + 1));
+            d.addEventListener('click', function () { go(n); });
+            dots.appendChild(d);
+        }
+        function go(n) {
+            i = (n + slides) % slides;
+            track.style.transform = 'translateX(' + (-i * 100) + '%)';
+            dots.querySelectorAll('.dot').forEach(function (d, idx) { d.classList.toggle('on', idx === i); });
+            clearInterval(timer);
+            timer = setInterval(function () { go(i + 1); }, 3500);
+        }
+        document.querySelector('.arrow.prev').addEventListener('click', function () { go(i - 1); });
+        document.querySelector('.arrow.next').addEventListener('click', function () { go(i + 1); });
+        go(0);
+    })();
+</script>
+{% endblock %}

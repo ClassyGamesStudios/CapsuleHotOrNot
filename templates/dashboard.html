@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Developer Dashboard — CapsuleHotOrNot{% endblock %}
+
+{% block content %}
+<header>
+    <h1>📊 {{ developer.developer_name }} — Dashboard</h1>
+    <span>
+        <a href="{{ url_for('profile') }}" class="link">My games</a> ·
+        <a href="{{ url_for('developer_logout') }}" class="link">Sign out</a>
+    </span>
+</header>
+
+<div class="summary">
+    <div class="s"><span class="n">{{ summary.images }}</span><span class="l">images</span></div>
+    <div class="s"><span class="n">{{ summary.matchups }}</span><span class="l">matchups</span></div>
+    <div class="s"><span class="n">{{ summary.wins }}</span><span class="l">wins</span></div>
+    <div class="s"><span class="n">{{ summary.avg_winrate }}%</span><span class="l">avg win rate</span></div>
+</div>
+
+{% if kpis %}
+<table class="kpi">
+    <thead>
+        <tr>
+            <th>Image</th><th>Game</th><th>Category</th>
+            <th>Matchups</th><th>Wins</th><th>Losses</th><th>Win rate</th><th>Percentile</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for k in kpis %}
+        <tr>
+            <td><img class="thumb" src="/{{ k.path }}" alt=""></td>
+            <td>{{ k.game_name or k.appID }}</td>
+            <td>{{ k.category_name }}</td>
+            <td>{{ k.shown }}</td>
+            <td class="win">{{ k.upvotes }}</td>
+            <td class="lose">{{ k.losses }}</td>
+            <td><strong>{{ k.winrate|round(1) }}%</strong></td>
+            <td>{{ (k.percentile ~ 'th') if k.percentile is not none else '—' }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<p class="muted">Percentile = how this image's win rate ranks against every image on the platform
+    (higher is better). Matchups = times it was shown in a head-to-head.</p>
+{% else %}
+<div class="empty">
+    <p>You haven't uploaded any images yet.</p>
+    <p class="muted">Add a game on <a class="link" href="{{ url_for('profile') }}">your games page</a>,
+        open it, and upload a capsule to start collecting head-to-head stats.</p>
+</div>
+{% endif %}
+
+<style>
+    .summary { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 26px; }
+    .summary .s { background: var(--card); border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 14px; padding: 18px 28px; text-align: center; }
+    .summary .n { display: block; font-size: 1.9rem; font-weight: 700; color: var(--accent); }
+    .summary .l { color: var(--muted); font-size: 0.85rem; }
+    .kpi { width: 100%; border-collapse: collapse; background: var(--card);
+        border-radius: 14px; overflow: hidden; }
+    .kpi th, .kpi td { padding: 10px 14px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.06); vertical-align: middle; }
+    .kpi th { color: var(--muted); font-size: 0.85rem; }
+    .kpi .thumb { width: 120px; border-radius: 6px; display: block; }
+    .kpi .win { color: #4ade80; } .kpi .lose { color: #f87171; }
+    .empty { background: var(--card); border: 1px dashed rgba(255,255,255,0.15);
+        border-radius: 16px; padding: 44px; text-align: center; }
+    .muted { color: var(--muted); }
+</style>
+{% endblock %}

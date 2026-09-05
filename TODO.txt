@@ -120,3 +120,70 @@ go to cluster A
 pick 2 games
 pick 2 images
 battle.
+
+
+
+get capsule images for all games
+populate it in their respective categories
+for now only main capsules
+
+https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/10/capsule_616x353.jpg
+the 10 is the game app id.
+
+scrape all the images and populate.
+then build the feed of the player profile where he sees this.
+so we pick his top category and we pick 2 game at random and from there pick 2 images from different games and record them as match up. remember that pic 1 vs pic 2 is same as pic 2 vs pic 1 and we dont show that as different. they are the same thing. this goes to the player profile feed and he selects which he likes. the image selected gets incremented 1 in upvotes. both of them get 1 in viewed, but only one of them increments in upvote. and then once that is done, the next match up is created.
+
+
+
+points system per player
+for testing:
+only upload the main capsule category
+main capsule size 1232x706
+
+UX design. we dont want a vibe coded website.
+
+developer dashboard:
+for each image:
+- how many matchups?
+- win rate?
+- players with tag A has this much winrate
+- players with tag B has this much winrate
+- think of other data points
+
+
+home page:
+- how many games on the platform 
+- sign up/sign for developer and player
+- how many players on platform?
+- how many matches?
+- show real numbers but boost them up.
+- live feed of the most recent match
+	- show the most recent match and show winner on who wins. use the db.
+
+player profile:
+- points system
+- 10 points per vote
+- page to see how they cash in their points
+- steam gift cards / amazon gift cards for them to buy (obviously that wont be active but we show the player this is what will be there)
+- wide variety of cash out systems, gift cards or other things
+- when they link steam account, 300 points on sign up.
+- when they verify their email, 200 points
+- after 10 votes, points multiplier goes to 1.1x, 20 goes to 1.2x and so on.
+
+
+----------------------------------------------------------------------------------------------------
+- take down the word winner
+
+- refer to https://classygames.jp.larksuite.com/docx/ELVxdrOZhoWXmSx0FhnjwNJXpTh?blockId=doxjp257u9OXeyLNCjW0a2zmXvc&blockToken=RcXtw8rwRhUJ6pbSCnDjDTeipMd&blockType=whiteboard&doc_app_id=501
+
+- have a directory where we put images of develooers and it comes on the wall of developers area.
+
+- in player sign up page:
+	- how to motivate them?
+	- vote and earn points
+	- show what you can win
+	- there's already X number of players. join now!
+	- testimonials (fake)
+	- have to look like from steam accounts
+	- carousel of gift cards
