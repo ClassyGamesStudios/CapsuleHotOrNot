@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% block title %}Player Portal — GameDev Portal{% endblock %}
+{% block title %}Your profile — CapsuleHotOrNot{% endblock %}
 
 {% block content %}
 <header>
-    <h1>🎮 Player Portal</h1>
+    <h1>🎮 Your profile</h1>
     {% if player %}
         <span>
-            <a href="{{ url_for('player_feed') }}" class="link">🔥 Capsule feed</a>
+            <a href="{{ url_for('player_feed') }}" class="link">🔥 Play</a>
             &nbsp;·&nbsp;
             <a href="{{ url_for('player_logout') }}" class="link">Sign out</a>
         </span>
@@ -14,240 +14,163 @@
 </header>
 
 {% if player %}
+    {# popup only fires once per login; the claim row below is the fallback #}
+    {% with reward = popup_reward %}{% include "_daily_reward.html" %}{% endwith %}
+
+    {% if not reward.claimed_today %}
+    <form class="claim-row" method="POST" action="{{ url_for('player_claim_daily') }}">
+        <span>🎁 <strong>Day {{ reward.day }}</strong> login bonus is waiting —
+            {{ reward.points }} points</span>
+        <button type="submit" class="btn">Claim</button>
+    </form>
+    {% endif %}
+
     <div class="player-card">
         {% if player.avatar %}
-            <img class="avatar" src="{{ player.avatar }}" alt="{{ player.username }} avatar">
+            <img class="avatar" src="{{ player.avatar }}" alt="">
         {% endif %}
         <div class="player-info">
-            <h2>Welcome, {{ player.username }}</h2>
-            <p class="muted">Steam ID: {{ player.steam_id }}</p>
+            <h2>{{ player.username }}</h2>
             {% if player.profileurl %}
                 <a class="link" href="{{ player.profileurl }}" target="_blank" rel="noopener">
                     View Steam profile →
                 </a>
             {% endif %}
         </div>
-        <form method="POST" action="{{ url_for('player_sync') }}" style="margin-left:auto;">
-            <button type="submit" class="btn">🔄 Sync my playtime</button>
-        </form>
-    </div>
-
-    <div class="points-bar">
-        <div class="pts">
-            <span class="pts-num">{{ player.points }}</span>
-            <span class="pts-lbl">points</span>
-        </div>
-        <div class="pts-meta">
-            <span>Vote multiplier: <strong>x{{ vote_mult }}</strong></span>
-            <span class="muted">{{ player.vote_count }} votes · +10 base points per vote</span>
-        </div>
-        <div class="pts-actions">
-            {% if not player.email_verified %}
-                <form method="POST" action="{{ url_for('player_verify_email') }}">
-                    <button type="submit" class="btn ghost">✉️ Verify email (+200)</button>
-                </form>
-            {% else %}
-                <span class="verified">✓ Email verified</span>
-            {% endif %}
-            <a href="{{ url_for('player_rewards') }}" class="btn">🎁 Cash in points</a>
+        <div class="balance">
+            <span class="bal-num">{{ '{:,}'.format(player.points) }}</span>
+            <span class="bal-lbl">points</span>
         </div>
     </div>
 
-    {% macro tag_table(rows, show_percent=False) %}
-        {% if rows %}
-            <table class="tag-table">
-                <thead>
-                    <tr>
-                        <th>#</th><th>Tag</th><th>Hours</th>
-                        {% if show_percent %}<th>% of total</th>{% endif %}
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for row in rows %}
-                    <tr>
-                        <td class="rank">{{ loop.index }}</td>
-                        <td>{{ row.tag_name }} <span class="tag-id">#{{ row.steam_tag_id }}</span></td>
-                        <td class="hours">{{ row.hours }} h</td>
-                        {% if show_percent %}<td class="percent">{{ row.percent }}%</td>{% endif %}
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+    <div class="quick">
+        <a href="{{ url_for('player_feed') }}" class="cta-play">
+            <span class="cta-big">Play the capsule game</span>
+            <span class="cta-sub">Pick the better capsule · earn points every vote</span>
+        </a>
+        <div class="side-cards">
+            <div class="mini">
+                <span class="mini-n">{{ player.vote_count }}</span>
+                <span class="mini-l">votes cast</span>
+            </div>
+            <div class="mini">
+                <span class="mini-n">Day {{ reward.claimed_days if reward.claimed_today else reward.day - 1 }}</span>
+                <span class="mini-l">login streak</span>
+            </div>
+        </div>
+    </div>
+
+    <section class="refer">
+        <h2>🎁 Invite a friend — earn {{ referral_bonus }} points</h2>
+        <p class="muted">Your link is yours alone: when a friend joins through it, the
+            {{ referral_bonus }}-point bonus lands on <strong>your</strong> balance.</p>
+        <div class="ref-row">
+            <input type="text" id="refUrl" readonly
+                   value="{{ url_for('referral_link', code=referral_code, _external=True) }}">
+            <button type="button" class="btn" id="refCopy">Copy link</button>
+        </div>
+        <p class="muted small">Referral code: <strong>{{ referral_code }}</strong> ·
+            {{ referral_stats.count }} friend{{ '' if referral_stats.count == 1 else 's' }} joined ·
+            {{ referral_stats.points }} points earned from invites</p>
+    </section>
+
+    <div class="foot-actions">
+        {% if not player.email_verified %}
+            <form method="POST" action="{{ url_for('player_verify_email') }}">
+                <button type="submit" class="btn ghost">✉️ Verify email (+200)</button>
+            </form>
         {% else %}
-            <p class="muted">No tag data yet. Click “Sync my playtime” to compute your totals.</p>
+            <span class="verified">✓ Email verified</span>
         {% endif %}
-    {% endmacro %}
-
-    {% if ranking %}
-    <section class="categories">
-        <h2>Best-fit categories</h2>
-        <p class="muted">How your playtime (multiplier) matches each genre cluster,
-            by cosine similarity. Your top 3 are highlighted.</p>
-        <ol class="cat-list">
-            {% for r in ranking %}
-            <li class="cat-row {{ 'top' if loop.index <= 3 else '' }}">
-                <span class="cat-rank">{{ loop.index }}</span>
-                <span class="cat-name">{{ r.name }}</span>
-                <span class="cat-bar"><span class="cat-fill" style="width: {{ (r.score * 100)|round(1) }}%"></span></span>
-                <span class="cat-score">{{ (r.score * 100)|round(1) }}%</span>
-            </li>
-            {% endfor %}
-        </ol>
-    </section>
-    {% endif %}
-
-    <section class="totals">
-        <h2>Your tag playtime</h2>
-        <div class="tabs">
-            <button class="tab active" data-tab="alltime">All time</button>
-            <button class="tab" data-tab="twoweeks">2 weeks</button>
-            <button class="tab" data-tab="multiplier">Multiplier ×{{ multiplier }}</button>
-        </div>
-
-        <div class="tab-panel active" id="tab-alltime">
-            <p class="muted">Lifetime hours per tag, from your whole owned library.</p>
-            {{ tag_table(tables.alltime) }}
-        </div>
-        <div class="tab-panel" id="tab-twoweeks">
-            <p class="muted">Hours per tag from games played in the last 2 weeks.</p>
-            {{ tag_table(tables.twoweeks) }}
-        </div>
-        <div class="tab-panel" id="tab-multiplier">
-            <p class="muted">All-time boosted by recent activity:
-                <code>alltime + 2&nbsp;weeks × ({{ multiplier }} − 1)</code>.
-                % of total = each tag's share of this column.</p>
-            {{ tag_table(tables.multiplier, show_percent=True) }}
-        </div>
-    </section>
+        <a href="{{ url_for('player_rewards') }}" class="btn">🎁 Cash in points</a>
+    </div>
 {% else %}
     <div class="signin">
         <p>Sign in with your Steam account to enter the player portal.</p>
         <a href="{{ url_for('player_login') }}" class="steam-btn">
             <span>🔑</span> Sign in with Steam
         </a>
+        <p class="muted" style="margin-top:18px;">
+            Not a member yet? <a class="link" href="{{ url_for('player_join') }}">Join the waitlist →</a>
+        </p>
     </div>
 {% endif %}
 
 <style>
     .signin {
-        background: var(--card);
-        border-radius: 18px;
-        padding: 60px 40px;
-        text-align: center;
+        background: var(--card); border-radius: 18px; padding: 60px 40px; text-align: center;
         border: 1px solid rgba(255,255,255,0.08);
     }
     .signin p { color: var(--muted); font-size: 1.15rem; margin-bottom: 24px; }
     .steam-btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 10px;
-        background: #171a21;
-        color: #fff;
-        padding: 14px 32px;
-        border-radius: 9999px;
-        text-decoration: none;
-        font-weight: 600;
-        font-size: 1.1rem;
-        border: 1px solid #66c0f4;
-        transition: 0.25s;
+        display: inline-flex; align-items: center; gap: 10px; background: #171a21; color: #fff;
+        padding: 14px 32px; border-radius: 9999px; text-decoration: none; font-weight: 600;
+        font-size: 1.1rem; border: 1px solid #66c0f4; transition: 0.25s;
     }
     .steam-btn:hover { background: #1b2838; transform: translateY(-2px); }
+
+    .claim-row {
+        display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+        background: rgba(0,180,216,.1); border: 1px solid var(--primary);
+        border-radius: 14px; padding: 14px 20px; margin-bottom: 16px;
+    }
+    .claim-row button { margin-left: auto; }
     .player-card {
-        background: var(--card);
-        border-radius: 18px;
-        padding: 32px;
-        display: flex;
-        align-items: center;
-        gap: 28px;
+        background: var(--card); border-radius: 18px; padding: 26px 30px;
+        display: flex; align-items: center; gap: 24px; flex-wrap: wrap;
         border: 1px solid rgba(255,255,255,0.08);
     }
-    .avatar { width: 96px; height: 96px; border-radius: 16px; }
-    .player-info h2 { margin-bottom: 6px; }
-    .muted { color: var(--muted); margin-bottom: 10px; }
+    .avatar { width: 78px; height: 78px; border-radius: 14px; }
+    .player-info h2 { margin-bottom: 4px; }
+    .balance { margin-left: auto; text-align: right; }
+    .bal-num { display: block; font-size: 2.4rem; font-weight: 800; color: var(--accent); line-height: 1; }
+    .bal-lbl { color: var(--muted); font-size: .85rem; }
 
-    .points-bar {
-        display: flex; align-items: center; gap: 24px; flex-wrap: wrap;
-        background: var(--card); border: 1px solid rgba(255,255,255,0.08);
-        border-radius: 16px; padding: 18px 24px; margin-top: 16px;
+    .quick { display: flex; gap: 16px; margin-top: 18px; flex-wrap: wrap; }
+    .cta-play {
+        flex: 1 1 420px; text-decoration: none; border-radius: 18px; padding: 28px 30px;
+        background: linear-gradient(120deg, #0891b2, #6d28d9); color: #fff;
+        display: flex; flex-direction: column; gap: 6px; transition: .25s;
     }
-    .pts { text-align: center; }
-    .pts-num { display: block; font-size: 2rem; font-weight: 700; color: var(--accent); }
-    .pts-lbl { color: var(--muted); font-size: 0.85rem; }
-    .pts-meta { display: flex; flex-direction: column; gap: 4px; }
-    .pts-actions { margin-left: auto; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .cta-play:hover { transform: translateY(-3px); box-shadow: 0 14px 30px rgba(0,0,0,.45); }
+    .cta-big { font-size: 1.5rem; font-weight: 800; }
+    .cta-sub { opacity: .85; font-size: .9rem; }
+    .side-cards { display: flex; gap: 16px; flex-wrap: wrap; }
+    .mini {
+        background: var(--card); border: 1px solid rgba(255,255,255,.08); border-radius: 16px;
+        padding: 22px 26px; text-align: center; min-width: 140px;
+        display: flex; flex-direction: column; justify-content: center;
+    }
+    .mini-n { font-size: 1.6rem; font-weight: 800; color: var(--accent); }
+    .mini-l { color: var(--muted); font-size: .82rem; }
+
+    .refer { margin-top: 30px; background: var(--card); border: 1px solid rgba(255,255,255,.08);
+             border-radius: 16px; padding: 24px 26px; }
+    .refer h2 { font-size: 1.2rem; margin-bottom: 6px; }
+    .ref-row { display: flex; gap: 10px; margin: 16px 0 10px; flex-wrap: wrap; }
+    .ref-row input {
+        flex: 1 1 320px; background: #334155; color: #fff; border: none;
+        padding: 12px 14px; border-radius: 10px; font-size: .92rem;
+    }
+    .muted { color: var(--muted); }
+    .muted.small { font-size: .84rem; }
+
+    .foot-actions { display: flex; gap: 12px; align-items: center; margin-top: 24px; flex-wrap: wrap; }
     .btn.ghost { background: transparent; border: 1px solid var(--primary); color: var(--primary); }
     .verified { color: #4ade80; font-weight: 600; }
-
-    .categories { margin-top: 36px; }
-    .categories h2 { margin-bottom: 6px; }
-    .cat-list { list-style: none; margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
-    .cat-row {
-        display: grid; grid-template-columns: 32px 1fr 220px 60px;
-        align-items: center; gap: 14px;
-        background: var(--card); border: 1px solid rgba(255,255,255,0.08);
-        border-radius: 12px; padding: 12px 16px;
-    }
-    .cat-row.top { border-color: var(--primary); }
-    .cat-rank { color: var(--muted); font-weight: 600; }
-    .cat-row.top .cat-rank { color: var(--primary); }
-    .cat-name { font-weight: 600; }
-    .cat-bar { background: #334155; height: 10px; border-radius: 9999px; overflow: hidden; }
-    .cat-fill { display: block; height: 100%; background: var(--primary); }
-    .cat-score { color: var(--accent); font-weight: 600; text-align: right; }
-
-    .totals { margin-top: 36px; }
-    .totals h2 { margin-bottom: 12px; }
-    .tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
-    .tab {
-        background: var(--card);
-        color: var(--muted);
-        border: 1px solid rgba(255,255,255,0.08);
-        padding: 10px 20px;
-        border-radius: 9999px;
-        font-size: 0.95rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: 0.2s;
-    }
-    .tab:hover { color: var(--text); }
-    .tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
-    .tab-panel { display: none; }
-    .tab-panel.active { display: block; }
-    .totals code {
-        background: rgba(255,255,255,0.06);
-        padding: 2px 8px;
-        border-radius: 6px;
-        font-size: 0.85rem;
-    }
-    .tag-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 16px;
-        background: var(--card);
-        border-radius: 14px;
-        overflow: hidden;
-    }
-    .tag-table th, .tag-table td {
-        text-align: left;
-        padding: 12px 18px;
-        border-bottom: 1px solid rgba(255,255,255,0.06);
-    }
-    .tag-table th { color: var(--muted); font-weight: 600; font-size: 0.9rem; }
-    .tag-table tbody tr:hover { background: rgba(255,255,255,0.03); }
-    .tag-table .rank { color: var(--muted); width: 40px; }
-    .tag-table .hours { color: var(--accent); font-weight: 600; white-space: nowrap; }
-    .tag-table .tag-id { color: var(--muted); font-size: 0.75rem; }
-    .tag-table .percent { color: var(--muted); white-space: nowrap; }
 </style>
 
 <script>
-    document.querySelectorAll('.tab').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-            btn.classList.add('active');
-            document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    const copyBtn = document.getElementById('refCopy');
+    if (copyBtn) {
+        copyBtn.addEventListener('click', function () {
+            const field = document.getElementById('refUrl');
+            field.select();
+            navigator.clipboard.writeText(field.value).then(function () {
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function () { copyBtn.textContent = 'Copy link'; }, 1600);
+            });
         });
-    });
+    }
 </script>
 {% endblock %}

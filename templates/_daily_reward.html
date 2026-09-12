@@ -1,0 +1,93 @@
+{# Daily login streak popup. Expects `reward` (db.daily_reward_state) and
+   `reward_days`. Shows day 1..N, every day up to today's lit, today's pulsing. #}
+{% if reward and not reward.claimed_today %}
+<div class="reward-backdrop" id="rewardModal">
+    <div class="reward-modal">
+        <button type="button" class="reward-close" data-reward-close aria-label="Close">&#10005;</button>
+        <h2>Daily login bonus</h2>
+        <p class="reward-sub">
+            {% if reward.day == 1 %}
+                Log in on consecutive days to climb the streak — day 10 pays 100 points.
+            {% else %}
+                Day {{ reward.day }} of your streak. Miss a day and it starts over at day 1.
+            {% endif %}
+        </p>
+
+        <div class="reward-days">
+            {% for d in range(1, reward_days + 1) %}
+            <div class="rday {% if d < reward.day %}done{% elif d == reward.day %}today{% endif %}">
+                <span class="rday-n">Day {{ d }}</span>
+                <span class="rday-p">+{{ d * 10 }}</span>
+            </div>
+            {% endfor %}
+        </div>
+
+        <form method="POST" action="{{ url_for('player_claim_daily') }}">
+            <button type="submit" class="reward-claim">Claim {{ reward.points }} points</button>
+        </form>
+    </div>
+</div>
+
+<style>
+    .reward-backdrop {
+        position: fixed; inset: 0; background: rgba(3,7,18,.8); z-index: 80;
+        display: flex; align-items: center; justify-content: center; padding: 20px;
+    }
+    .reward-backdrop.hidden { display: none; }
+    .reward-modal {
+        position: relative; background: rgba(30,41,55,.97); border: 1px solid rgba(255,255,255,.12);
+        border-radius: 18px; padding: 30px 28px; max-width: 640px; width: 100%; text-align: center;
+        box-shadow: 0 24px 60px rgba(0,0,0,.6);
+    }
+    .reward-modal h2 { margin-bottom: 8px; }
+    .reward-sub { color: var(--muted); font-size: .9rem; margin-bottom: 20px; }
+    .reward-close {
+        position: absolute; top: 10px; right: 12px; background: none; border: none;
+        color: var(--muted); font-size: 1.1rem; cursor: pointer; padding: 6px;
+    }
+    .reward-days {
+        display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 22px;
+    }
+    .rday {
+        border: 1px solid rgba(255,255,255,.12); border-radius: 10px; padding: 10px 4px;
+        background: rgba(255,255,255,.04); display: flex; flex-direction: column; gap: 2px;
+    }
+    .rday-n { font-size: .72rem; color: var(--muted); }
+    .rday-p { font-weight: 800; color: var(--muted); }
+    /* every day already earned in this streak */
+    .rday.done { background: rgba(34,197,94,.16); border-color: #22c55e; }
+    .rday.done .rday-n, .rday.done .rday-p { color: #4ade80; }
+    /* today's claimable box */
+    .rday.today {
+        background: rgba(0,180,216,.18); border-color: var(--primary);
+        animation: rpulse 1.4s ease-in-out infinite;
+    }
+    .rday.today .rday-n { color: var(--text); }
+    .rday.today .rday-p { color: var(--accent); }
+    @keyframes rpulse {
+        0%, 100% { transform: scale(1); box-shadow: 0 0 0 rgba(0,180,216,0); }
+        50% { transform: scale(1.06); box-shadow: 0 0 16px rgba(0,180,216,.45); }
+    }
+    .reward-claim {
+        background: var(--primary); color: #fff; border: none; border-radius: 10px;
+        padding: 14px 30px; font-weight: 800; letter-spacing: 1px; cursor: pointer;
+        font-size: 1rem; transition: .2s;
+    }
+    .reward-claim:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(0,0,0,.4); }
+    @media (max-width: 560px) { .reward-days { grid-template-columns: repeat(2, 1fr); } }
+</style>
+
+<script>
+    (function () {
+        const modal = document.getElementById('rewardModal');
+        if (!modal) return;
+        function close() { modal.classList.add('hidden'); }
+        modal.addEventListener('click', function (e) {
+            if (e.target === modal || e.target.closest('[data-reward-close]')) close();
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') close();
+        });
+    })();
+</script>
+{% endif %}

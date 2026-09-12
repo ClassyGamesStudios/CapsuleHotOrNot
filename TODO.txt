@@ -187,3 +187,38 @@ player profile:
 	- testimonials (fake)
 	- have to look like from steam accounts
 	- carousel of gift cards
+
+
+----------------------------------------------------------------------------------------------------
+
+
+when click sign up as player or developer:
+
+- popup: join waitlist
+- in player sign up page, instead of log in, show drop down and get his email and say join waitlist,
+
+remove sync my playtime. cache system
+when login, check if its been 3 days since last sync. if so, then sync. save last sync date.
+show player multiplier on the capsule game 
+best place to host for live.
+
+remove best fit category from player profile view. WE need to see this. Admin page where we can see this for each player.
+
+in capsule game, both images MUST be new.
+daily login
+each day, color day 1 and 2nd day do day 2
+point bonus
+day 1, 10 additional points
+day 2, 20 additional points and so on
+
+goes until 10 days.
+
+refer a friend,
+this player can generate URL or referral code for his friend and when he sign up via that URL, he gets 100 points
+also for developer.
+come up with proper URL system.
+
+developer page give him option to upload his logo and show in top left
+to add game, have the invisible plus sign and add game in that silhouette.
+dashboard needs to be per game
+since each game has their own main capsule images.

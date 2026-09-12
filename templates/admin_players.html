@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Players — Admin{% endblock %}
+
+{% block content %}
+<header>
+    <h1>🛠 Players <span class="count">({{ players|length }})</span></h1>
+    <span>
+        <a href="{{ url_for('dev_vectors') }}" class="link">🧭 Clusters</a> ·
+        <a href="{{ url_for('admin_logout') }}" class="link">Sign out</a>
+    </span>
+</header>
+
+<table class="adm">
+    <thead>
+        <tr>
+            <th></th><th>Player</th><th>Points</th><th>Votes</th><th>Mult</th>
+            <th>Streak</th><th>Referred by</th><th>Invites</th><th>Last sync</th><th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for p in players %}
+        <tr>
+            <td>{% if p.avatar %}<img class="av" src="{{ p.avatar }}" alt="">{% endif %}</td>
+            <td>
+                <a class="link" href="{{ url_for('admin_player_detail', steam_id=p.steam_id) }}">
+                    {{ p.username or p.steam_id }}</a>
+                <div class="sid">{{ p.steam_id }}</div>
+            </td>
+            <td class="num">{{ '{:,}'.format(p.points) }}</td>
+            <td class="num">{{ p.vote_count }}</td>
+            <td class="num">x{{ p.multiplier }}</td>
+            <td class="num">{{ p.streak_day or 0 }}{% if p.last_reward_date %}
+                <span class="sid">{{ p.last_reward_date }}</span>{% endif %}</td>
+            <td>{{ p.referred_by or '—' }}</td>
+            <td>{{ p.referral_code or '—' }}</td>
+            <td>{{ p.last_sync.strftime('%Y-%m-%d %H:%M') if p.last_sync else 'never' }}</td>
+            <td><a class="link" href="{{ url_for('admin_player_detail', steam_id=p.steam_id) }}">
+                genre fit →</a></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h2 class="sec">Waitlist <span class="count">({{ waitlist_total }})</span></h2>
+{% if waitlist %}
+<table class="adm">
+    <thead><tr><th>Email</th><th>Role</th><th>Referral code</th><th>Joined</th></tr></thead>
+    <tbody>
+        {% for w in waitlist %}
+        <tr>
+            <td>{{ w.email }}</td>
+            <td>{{ w.role }}</td>
+            <td>{{ w.referral_code or '—' }}</td>
+            <td>{{ w.created_at.strftime('%Y-%m-%d %H:%M') if w.created_at else '' }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="muted">Nobody on the waitlist yet.</p>
+{% endif %}
+
+<style>
+    .count { color: var(--muted); font-weight: 400; font-size: 1rem; }
+    .sec { margin: 36px 0 14px; }
+    .adm { width: 100%; border-collapse: collapse; background: var(--card);
+           border-radius: 14px; overflow: hidden; }
+    .adm th, .adm td { padding: 10px 14px; text-align: left;
+                       border-bottom: 1px solid rgba(255,255,255,.06); vertical-align: middle; }
+    .adm th { color: var(--muted); font-size: .82rem; }
+    .adm .num { text-align: right; white-space: nowrap; }
+    .av { width: 34px; height: 34px; border-radius: 8px; display: block; }
+    .sid { color: var(--muted); font-size: .72rem; }
+    .muted { color: var(--muted); }
+</style>
+{% endblock %}

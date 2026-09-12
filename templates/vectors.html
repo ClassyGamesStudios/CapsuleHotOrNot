@@ -10,11 +10,23 @@
 <p class="muted">
     {{ count }} game{{ '' if count == 1 else 's' }} · {{ dim }}-dim tag vectors,
     <strong>TF-IDF weighted</strong> (down-weights common tags for sharper genres).
-    K-means (cosine); optimal <strong>k = {{ best_k }}</strong> by silhouette
-    ({{ silhouette }}). Layout is <strong>t-SNE</strong>. Hover a dot for the game.
+    <strong>spherical (cosine) k-means</strong>; best <strong>k = {{ best_k }}</strong>
+    by silhouette ({{ silhouette }}). Layout is <strong>t-SNE</strong>. Hover a dot for the game.
     {% if dropped_tags %}<br>Dropped ubiquitous tags: {{ dropped_tags|join(', ') }}.{% endif %}
     <em>(testing view)</em>
 </p>
+
+{% if stale %}
+<p class="stale-warn">
+    ⚠️ This clustering is out of date: <strong>{{ missing_games }}</strong> game{{ '' if missing_games == 1 else 's' }}
+    have been added since it was built, so they sit in no cluster and can't be genre-matched in the feed.
+    <a class="link" href="{{ url_for('dev_vectors', refresh=1) }}">Recompute now</a> (takes a few minutes).
+</p>
+<style>
+    .stale-warn { background: rgba(245,158,11,.12); border: 1px solid #f59e0b;
+                  border-radius: 10px; padding: 12px 16px; margin-bottom: 18px; }
+</style>
+{% endif %}
 
 {% if points %}
     <div id="scatter" style="width:100%; height:680px;"></div>

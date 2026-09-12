@@ -1,18 +1,34 @@
 """
-MySQL layer for the GameDev Portal.
+MySQL layer for CapsuleHotOrNot.
 
 Database: game_profiles_db
 Tables:
-  developer_profile(developer_id PK auto, developer_name, game_appid JSON list)
-  game_profile(game_appid PK, game_name, tag_id JSON list, capsule_url)
+  developer_profile(developer_id PK, developer_name, email UNIQUE, password_hash,
+                    email_verified, verification_token, game_appid JSON, mediaIDs JSON)
+  game_profile(game_appid PK, game_name, tag_id JSON, capsule_url, vector JSON,
+               comingSoonFlag, releaseDateFlag)
   tags(tag_id PK auto, steam_tag_id UNIQUE, tag_name)
+  players_profile(player_id PK, steam_id UNIQUE, username, profileurl, avatar,
+                  tags_totals_alltime/_2weeks/_multiplier JSON, matchupIDs JSON,
+                  points, vote_count, email_verified)
+  image_categories(imageCategoryID PK, name UNIQUE, width, height, match_mode)
+  media(mediaID PK, appID, categoryID, path, developerID)
+  media_score_log(mediaScoreLogID PK, mediaID UNIQUE, numberTimesShown,
+                  numberUpVotes, winrate)
+  matchups(matchUpID PK, pic1MediaID, pic2MediaID)  -- UNIQUE unordered pair
+  matchup_log(logID PK, playerID, matchupID, winnerMediaID, timestamp,
+              playerIDVoted)                        -- UNIQUE(playerID, matchupID)
 
 List-type columns are stored as native MySQL JSON. Connection config can be
 overridden with env vars DB_HOST / DB_USER / DB_PASSWORD / DB_NAME.
+init_db() is idempotent: it creates what's missing and runs the column/index
+migrations, so it's safe to call on every start.
 """
 
 import os
 import json
+import datetime
+import secrets
 import importlib.util
 import pymysql
 
@@ -179,6 +195,76 @@ def init_db():
         _ensure_column(cur, 'players_profile', 'points', 'points INT NOT NULL DEFAULT 0')
         _ensure_column(cur, 'players_profile', 'vote_count', 'vote_count INT NOT NULL DEFAULT 0')
         _ensure_column(cur, 'players_profile', 'email_verified', 'email_verified TINYINT NOT NULL DEFAULT 0')
+
+        # Playtime sync cache: syncing scrapes Steam for minutes, so it runs at
+        # most every SYNC_INTERVAL_DAYS instead of on a button press.
+        _ensure_column(cur, 'players_profile', 'last_sync', 'last_sync DATETIME')
+        # Daily login streak (day 1..10, consecutive days only).
+        _ensure_column(cur, 'players_profile', 'streak_day', 'streak_day INT NOT NULL DEFAULT 0')
+        _ensure_column(cur, 'players_profile', 'last_reward_date', 'last_reward_date DATE')
+        # Referrals: own code to share, plus the code this account signed up with.
+        _ensure_column(cur, 'players_profile', 'referral_code', 'referral_code VARCHAR(16)')
+        _ensure_column(cur, 'players_profile', 'referred_by', 'referred_by VARCHAR(16)')
+        _ensure_index(cur, 'players_profile', 'uniq_player_referral',
+                      'UNIQUE KEY uniq_player_referral (referral_code)')
+
+        # Developer profile picture (shown top-left) + referrals + points.
+        _ensure_column(cur, 'developer_profile', 'logo_path', 'logo_path VARCHAR(500)')
+        _ensure_column(cur, 'developer_profile', 'referral_code', 'referral_code VARCHAR(16)')
+        _ensure_column(cur, 'developer_profile', 'points', 'points INT NOT NULL DEFAULT 0')
+        _ensure_index(cur, 'developer_profile', 'uniq_dev_referral',
+                      'UNIQUE KEY uniq_dev_referral (referral_code)')
+
+        # Waitlist — sign-up is closed, both portals collect emails instead.
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS waitlist (
+                waitlistID    INT AUTO_INCREMENT PRIMARY KEY,
+                email         VARCHAR(255) NOT NULL UNIQUE,
+                role          VARCHAR(20),
+                referral_code VARCHAR(16),
+                created_at    DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        # One row per successful referral. referred_ref is the waitlist email or
+        # the new player's steam id, and it's UNIQUE so a referrer can never be
+        # paid twice for the same friend.
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS referrals (
+                referralID    INT AUTO_INCREMENT PRIMARY KEY,
+                code          VARCHAR(16) NOT NULL,
+                referrer_kind VARCHAR(10) NOT NULL,
+                referrer_id   INT NOT NULL,
+                referred_kind VARCHAR(10) NOT NULL,
+                referred_ref  VARCHAR(255) NOT NULL,
+                points        INT NOT NULL DEFAULT 0,
+                created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uniq_referred (referred_kind, referred_ref)
+            )
+        """)
+
+        # One vote per player per matchup, enforced by the database (a resubmitted
+        # vote form used to award points again and inflate the score counters).
+        # Existing duplicates are collapsed to the earliest vote first.
+        cur.execute("""
+            DELETE l FROM matchup_log l
+            JOIN (SELECT playerID, matchupID, MIN(logID) keep
+                  FROM matchup_log GROUP BY playerID, matchupID HAVING COUNT(*) > 1) d
+              ON d.playerID <=> l.playerID AND d.matchupID <=> l.matchupID
+            WHERE l.logID > d.keep
+        """)
+        _ensure_index(cur, 'matchup_log', 'uniq_player_matchup',
+                      'UNIQUE KEY uniq_player_matchup (playerID, matchupID)')
+
+        # Indexes for the hot lookups (feed pool, dashboards, live feed).
+        _ensure_index(cur, 'media', 'idx_media_app', 'KEY idx_media_app (appID)')
+        _ensure_index(cur, 'media', 'idx_media_category', 'KEY idx_media_category (categoryID)')
+        _ensure_index(cur, 'media', 'idx_media_developer', 'KEY idx_media_developer (developerID)')
+        _ensure_index(cur, 'matchup_log', 'idx_log_player', 'KEY idx_log_player (playerID)')
+        _ensure_index(cur, 'matchup_log', 'idx_log_matchup', 'KEY idx_log_matchup (matchupID)')
+        _ensure_index(cur, 'matchups', 'idx_pair_pic2', 'KEY idx_pair_pic2 (pic2MediaID)')
+        _ensure_index(cur, 'game_profile', 'idx_game_upcoming',
+                      'KEY idx_game_upcoming (comingSoonFlag, releaseDateFlag)')
     conn.close()
 
 
@@ -244,6 +330,17 @@ def _column_exists(cur, table, column):
 def _ensure_column(cur, table, column, ddl):
     if not _column_exists(cur, table, column):
         cur.execute(f"ALTER TABLE {table} ADD COLUMN {ddl}")
+
+
+def _ensure_index(cur, table, index, ddl):
+    """Add an index if it isn't there (MySQL has no ADD INDEX IF NOT EXISTS)."""
+    cur.execute(
+        """SELECT COUNT(*) AS c FROM information_schema.STATISTICS
+           WHERE TABLE_SCHEMA=%s AND TABLE_NAME=%s AND INDEX_NAME=%s""",
+        (DB_NAME, table, index),
+    )
+    if cur.fetchone()['c'] == 0:
+        cur.execute(f"ALTER TABLE {table} ADD {ddl}")
 
 
 # --- Tag reference table -----------------------------------------------------
@@ -403,24 +500,77 @@ def verify_developer_token(token):
 
 
 # --- Developer dashboard / media KPIs ---------------------------------------
-def get_developer_media_kpis(developer_id):
-    """Per-uploaded-image stats for the developer dashboard."""
+def get_developer_media_kpis(developer_id, appid=None):
+    """Per-uploaded-image stats for the developer dashboard. Pass `appid` for
+    one game's images only (the dashboard now lives on each game's page)."""
+    sql = """SELECT m.mediaID, m.appID, m.path,
+                    g.game_name, c.name AS category_name,
+                    COALESCE(s.numberTimesShown, 0) AS shown,
+                    COALESCE(s.numberUpVotes, 0)    AS upvotes,
+                    COALESCE(s.winrate, 0)          AS winrate
+             FROM media m
+             LEFT JOIN game_profile g ON g.game_appid = m.appID
+             LEFT JOIN image_categories c ON c.imageCategoryID = m.categoryID
+             LEFT JOIN media_score_log s ON s.mediaID = m.mediaID
+             WHERE m.developerID = %s"""
+    args = [developer_id]
+    if appid is not None:
+        sql += " AND m.appID = %s"
+        args.append(appid)
+    sql += " ORDER BY shown DESC, winrate DESC"
+    conn = get_connection()
+    with conn.cursor() as cur:
+        cur.execute(sql, args)
+        rows = cur.fetchall()
+    conn.close()
+    return rows
+
+
+def set_developer_logo(developer_id, path):
+    conn = get_connection()
+    with conn.cursor() as cur:
+        cur.execute("UPDATE developer_profile SET logo_path=%s WHERE developer_id=%s",
+                    (path, developer_id))
+    conn.close()
+
+
+def get_seen_media_for_player(player_id):
+    """Every mediaID this player has already voted on — the feed prefers images
+    they have never seen so the same capsule doesn't keep reappearing."""
     conn = get_connection()
     with conn.cursor() as cur:
         cur.execute(
-            """SELECT m.mediaID, m.appID, m.path,
-                      g.game_name, c.name AS category_name,
-                      COALESCE(s.numberTimesShown, 0) AS shown,
-                      COALESCE(s.numberUpVotes, 0)    AS upvotes,
-                      COALESCE(s.winrate, 0)          AS winrate
-               FROM media m
-               LEFT JOIN game_profile g ON g.game_appid = m.appID
-               LEFT JOIN image_categories c ON c.imageCategoryID = m.categoryID
-               LEFT JOIN media_score_log s ON s.mediaID = m.mediaID
-               WHERE m.developerID = %s
-               ORDER BY shown DESC, winrate DESC""",
-            (developer_id,),
+            """SELECT DISTINCT mu.pic1MediaID a, mu.pic2MediaID b
+               FROM matchup_log l JOIN matchups mu ON mu.matchUpID = l.matchupID
+               WHERE l.playerID = %s""",
+            (player_id,),
         )
+        seen = set()
+        for r in cur.fetchall():
+            seen.add(r['a'])
+            seen.add(r['b'])
+    conn.close()
+    return seen
+
+
+def get_all_players():
+    """Every player row (admin view), newest first."""
+    conn = get_connection()
+    with conn.cursor() as cur:
+        cur.execute("""SELECT player_id, steam_id, username, avatar, points, vote_count,
+                              email_verified, streak_day, last_reward_date, last_sync,
+                              referral_code, referred_by
+                       FROM players_profile ORDER BY player_id DESC""")
+        rows = cur.fetchall()
+    conn.close()
+    return rows
+
+
+def get_waitlist(limit=200):
+    conn = get_connection()
+    with conn.cursor() as cur:
+        cur.execute("""SELECT email, role, referral_code, created_at FROM waitlist
+                       ORDER BY waitlistID DESC LIMIT %s""", (limit,))
         rows = cur.fetchall()
     conn.close()
     return rows
@@ -439,36 +589,6 @@ def get_scored_winrates(min_shown=1):
 
 
 # --- Matchup pools -----------------------------------------------------------
-def get_developer_uploaded_media(category_id):
-    """Developer-uploaded images in a category (developerID not null)."""
-    conn = get_connection()
-    with conn.cursor() as cur:
-        cur.execute(
-            """SELECT m.mediaID, m.appID, m.path, g.game_name
-               FROM media m LEFT JOIN game_profile g ON g.game_appid = m.appID
-               WHERE m.categoryID = %s AND m.developerID IS NOT NULL""",
-            (category_id,),
-        )
-        rows = cur.fetchall()
-    conn.close()
-    return rows
-
-
-def get_all_media_in_category(category_id):
-    """All images in a category (mediaID, appID, path, game_name) — opponent pool."""
-    conn = get_connection()
-    with conn.cursor() as cur:
-        cur.execute(
-            """SELECT m.mediaID, m.appID, m.path, g.game_name
-               FROM media m LEFT JOIN game_profile g ON g.game_appid = m.appID
-               WHERE m.categoryID = %s""",
-            (category_id,),
-        )
-        rows = cur.fetchall()
-    conn.close()
-    return rows
-
-
 def get_eligible_media_in_category(category_id):
     """Images of UPCOMING games only (coming soon OR future release date), with
     developerID so callers can prefer developer-uploaded ones. This is the pool
@@ -489,24 +609,6 @@ def get_eligible_media_in_category(category_id):
 
 
 # --- Developer ---------------------------------------------------------------
-def get_or_create_developer(name):
-    conn = get_connection()
-    with conn.cursor() as cur:
-        cur.execute("SELECT * FROM developer_profile WHERE developer_name=%s", (name,))
-        row = cur.fetchone()
-        if row is None:
-            cur.execute(
-                "INSERT INTO developer_profile (developer_name, game_appid) VALUES (%s, %s)",
-                (name, json.dumps([])),
-            )
-            cur.execute("SELECT * FROM developer_profile WHERE developer_name=%s", (name,))
-            row = cur.fetchone()
-    conn.close()
-    row['game_appid'] = _as_list(row['game_appid'])
-    row['mediaIDs'] = _as_list(row.get('mediaIDs'))
-    return row
-
-
 def delete_media(media_id):
     """Delete a media row and everything referencing it (matchups, their logs,
     and its score row). Returns the deleted media row (for file cleanup) or None."""
@@ -636,7 +738,10 @@ def get_game(appid):
         row = cur.fetchone()
     conn.close()
     if row:
+        # Decode both JSON columns, matching get_all_games (callers shouldn't
+        # have to know which accessor hands back a raw string).
         row['tag_id'] = _as_list(row['tag_id'])
+        row['vector'] = _as_list(row['vector'])
     return row
 
 
@@ -650,25 +755,6 @@ def set_game_release(appid, coming_soon, release_date):
         )
     conn.close()
 
-
-def get_feed_eligible_appids(appids):
-    """Of the given appids, those eligible for the feed: coming soon, OR a
-    release date strictly in the future (upcoming games only)."""
-    if not appids:
-        return set()
-    conn = get_connection()
-    with conn.cursor() as cur:
-        placeholders = ','.join(['%s'] * len(appids))
-        cur.execute(
-            f"""SELECT game_appid FROM game_profile
-                WHERE game_appid IN ({placeholders})
-                  AND (comingSoonFlag = 1
-                       OR (releaseDateFlag IS NOT NULL AND releaseDateFlag > CURDATE()))""",
-            list(appids),
-        )
-        eligible = {r['game_appid'] for r in cur.fetchall()}
-    conn.close()
-    return eligible
 
 
 def set_game_vector(appid, vector):
@@ -793,21 +879,6 @@ def get_media(media_id):
     return row
 
 
-def get_media_by_appids(appids, category_id):
-    """Return {appID: media_row} for games that have media in a category."""
-    if not appids:
-        return {}
-    conn = get_connection()
-    with conn.cursor() as cur:
-        placeholders = ','.join(['%s'] * len(appids))
-        cur.execute(
-            f"SELECT * FROM media WHERE categoryID=%s AND appID IN ({placeholders})",
-            [category_id] + list(appids),
-        )
-        rows = cur.fetchall()
-    conn.close()
-    return {r['appID']: r for r in rows}
-
 
 # --- Matchups / voting -------------------------------------------------------
 def get_platform_stats():
@@ -824,6 +895,16 @@ def get_platform_stats():
         developers = cur.fetchone()['n']
     conn.close()
     return {'games': games, 'players': players, 'matches': matches, 'developers': developers}
+
+
+def count_games():
+    """Number of game_profile rows — used to detect a stale cluster cache."""
+    conn = get_connection()
+    with conn.cursor() as cur:
+        cur.execute("SELECT COUNT(*) n FROM game_profile")
+        n = cur.fetchone()['n']
+    conn.close()
+    return n
 
 
 def get_capsule_wall(category_id, limit=40):
@@ -866,22 +947,11 @@ def get_recent_matches(limit=12):
     conn.close()
     return [
         {'p1': r['p1'], 'n1': r['n1'] or 'Game', 'p2': r['p2'], 'n2': r['n2'] or 'Game',
+         'm1': r['pic1MediaID'], 'm2': r['pic2MediaID'],
          'winner_side': 1 if r['winnerMediaID'] == r['pic1MediaID'] else 2}
         for r in rows
     ]
 
-
-def find_matchup(media_a, media_b):
-    """Return the matchUpID for an unordered image pair, or None if not created."""
-    lo, hi = sorted((media_a, media_b))
-    conn = get_connection()
-    with conn.cursor() as cur:
-        cur.execute(
-            "SELECT matchUpID FROM matchups WHERE pic1MediaID=%s AND pic2MediaID=%s", (lo, hi)
-        )
-        row = cur.fetchone()
-    conn.close()
-    return row['matchUpID'] if row else None
 
 
 def get_or_create_matchup(media_a, media_b):
@@ -922,19 +992,46 @@ def bump_media_score(media_id, upvote):
 
 
 def log_matchup(player_id, matchup_id, winner_media_id, player_id_voted):
+    """Log one vote. Returns False if this player already voted this matchup
+    (the uniq_player_matchup index rejects it), which is how a resubmitted vote
+    form is stopped from scoring twice."""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """INSERT INTO matchup_log (playerID, matchupID, winnerMediaID, playerIDVoted)
+                   VALUES (%s, %s, %s, %s)""",
+                (player_id, matchup_id, winner_media_id, player_id_voted),
+            )
+    except pymysql.err.IntegrityError:
+        return False
+    finally:
+        conn.close()
+    return True
+
+
+def get_seen_pairs_for_player(player_id):
+    """Every (pic1MediaID, pic2MediaID) pair this player has already voted on,
+    as a set — one query, so candidate filtering happens in memory instead of a
+    round trip per candidate pair."""
     conn = get_connection()
     with conn.cursor() as cur:
         cur.execute(
-            """INSERT INTO matchup_log (playerID, matchupID, winnerMediaID, playerIDVoted)
-               VALUES (%s, %s, %s, %s)""",
-            (player_id, matchup_id, winner_media_id, player_id_voted),
+            """SELECT DISTINCT mu.pic1MediaID a, mu.pic2MediaID b
+               FROM matchup_log l JOIN matchups mu ON mu.matchUpID = l.matchupID
+               WHERE l.playerID = %s""",
+            (player_id,),
         )
+        pairs = {(r['a'], r['b']) for r in cur.fetchall()}
     conn.close()
+    return pairs
 
 
 def add_matchup_to_player(player_id, matchup_id):
-    """Append a matchUpID to the player's seen list (no duplicates)."""
+    """Append a matchUpID to the player's seen list. Returns True if it was
+    newly added, False if the player had already seen it."""
     conn = get_connection()
+    added = False
     with conn.cursor() as cur:
         cur.execute("SELECT matchupIDs FROM players_profile WHERE player_id=%s", (player_id,))
         row = cur.fetchone()
@@ -945,7 +1042,9 @@ def add_matchup_to_player(player_id, matchup_id):
                 "UPDATE players_profile SET matchupIDs=%s WHERE player_id=%s",
                 (json.dumps(ids), player_id),
             )
+            added = True
     conn.close()
+    return added
 
 
 def get_media_for_game(appid, developer_id):
@@ -1036,6 +1135,216 @@ def award_vote_points(player_id):
         new_total = (row['points'] if row else 0) + awarded
     conn.close()
     return awarded, mult, new_total
+
+
+# --- Playtime sync cache -----------------------------------------------------
+SYNC_INTERVAL_DAYS = 3   # a player's tag playtime is refreshed at most this often
+
+
+def mark_player_synced(steam_id):
+    conn = get_connection()
+    with conn.cursor() as cur:
+        cur.execute("UPDATE players_profile SET last_sync=NOW() WHERE steam_id=%s", (steam_id,))
+    conn.close()
+
+
+def sync_is_due(player, interval_days=SYNC_INTERVAL_DAYS):
+    """True if this player has never been synced or the cache has expired."""
+    last = player.get('last_sync')
+    if not last:
+        return True
+    return (datetime.datetime.now() - last).days >= interval_days
+
+
+# --- Daily login rewards -----------------------------------------------------
+DAILY_REWARD_DAYS = 10           # streak length before it starts over
+DAILY_REWARD_STEP = 10           # day N pays N * STEP points
+
+
+def daily_reward_points(day):
+    return day * DAILY_REWARD_STEP
+
+
+def daily_reward_state(player):
+    """What the login popup should show: the day about to be claimed, whether
+    it's already claimed today, and how far the streak currently runs.
+
+    A missed day resets the streak, so a player who logs in on days 1-3 and
+    then skips a day is back to day 1.
+    """
+    today = datetime.date.today()
+    last = player.get('last_reward_date')
+    streak = player.get('streak_day') or 0
+
+    if last == today:
+        return {'day': streak, 'claimed_today': True, 'claimed_days': streak,
+                'points': daily_reward_points(streak)}
+    if last == today - datetime.timedelta(days=1) and 0 < streak < DAILY_REWARD_DAYS:
+        day = streak + 1                      # streak continues
+    else:
+        day = 1                               # first visit, gap, or past day 10
+    return {'day': day, 'claimed_today': False, 'claimed_days': day - 1,
+            'points': daily_reward_points(day)}
+
+
+def claim_daily_reward(player_id):
+    """Award today's streak bonus. Returns (day, points) or (day, 0) if the
+    player already claimed today."""
+    conn = get_connection()
+    with conn.cursor() as cur:
+        cur.execute("""SELECT streak_day, last_reward_date FROM players_profile
+                       WHERE player_id=%s""", (player_id,))
+        row = cur.fetchone()
+        if not row:
+            conn.close()
+            return 0, 0
+        state = daily_reward_state(row)
+        if state['claimed_today']:
+            conn.close()
+            return state['day'], 0
+        day, points = state['day'], state['points']
+        cur.execute("""UPDATE players_profile
+                       SET streak_day=%s, last_reward_date=CURDATE(), points=points+%s
+                       WHERE player_id=%s""", (day, points, player_id))
+    conn.close()
+    return day, points
+
+
+# --- Referrals ---------------------------------------------------------------
+REFERRAL_BONUS = 100     # points the referrer earns per friend who signs up
+_REFERRAL_TABLE = {'player': ('players_profile', 'player_id'),
+                   'developer': ('developer_profile', 'developer_id')}
+
+
+def _new_referral_code():
+    # Uppercase, no lookalike characters — these get typed by hand.
+    alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+    return ''.join(secrets.choice(alphabet) for _ in range(8))
+
+
+def get_or_create_referral_code(kind, row_id):
+    """The account's own share code, minted on first use. Unique across both
+    account types because a code has to identify exactly one beneficiary."""
+    table, pk = _REFERRAL_TABLE[kind]
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(f"SELECT referral_code FROM {table} WHERE {pk}=%s", (row_id,))
+            row = cur.fetchone()
+            if row and row['referral_code']:
+                return row['referral_code']
+            for _ in range(10):               # retry on the unique-index collision
+                code = _new_referral_code()
+                if resolve_referral_code(code):
+                    continue
+                try:
+                    cur.execute(f"UPDATE {table} SET referral_code=%s WHERE {pk}=%s",
+                                (code, row_id))
+                    return code
+                except pymysql.err.IntegrityError:
+                    continue
+    finally:
+        conn.close()
+    return None
+
+
+def resolve_referral_code(code):
+    """Who does this code belong to? -> {'kind', 'id', 'name'} or None."""
+    if not code:
+        return None
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""SELECT player_id, username FROM players_profile
+                           WHERE referral_code=%s""", (code,))
+            row = cur.fetchone()
+            if row:
+                return {'kind': 'player', 'id': row['player_id'],
+                        'name': row['username'] or 'a player'}
+            cur.execute("""SELECT developer_id, developer_name FROM developer_profile
+                           WHERE referral_code=%s""", (code,))
+            row = cur.fetchone()
+            if row:
+                return {'kind': 'developer', 'id': row['developer_id'],
+                        'name': row['developer_name'] or 'a developer'}
+    finally:
+        conn.close()
+    return None
+
+
+def credit_referral(code, referred_kind, referred_ref):
+    """Pay the owner of `code` for bringing in `referred_ref` (a waitlist email
+    or a new steam id). Returns (referrer, points) or (None, 0).
+
+    Ignores self-referral and, thanks to UNIQUE(referred_kind, referred_ref),
+    pays at most once per referred person.
+    """
+    owner = resolve_referral_code(code)
+    if not owner:
+        return None, 0
+    if owner['kind'] == referred_kind and str(owner['id']) == str(referred_ref):
+        return None, 0
+    table, pk = _REFERRAL_TABLE[owner['kind']]
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            try:
+                cur.execute("""INSERT INTO referrals
+                                 (code, referrer_kind, referrer_id, referred_kind,
+                                  referred_ref, points)
+                               VALUES (%s, %s, %s, %s, %s, %s)""",
+                            (code, owner['kind'], owner['id'], referred_kind,
+                             str(referred_ref), REFERRAL_BONUS))
+            except pymysql.err.IntegrityError:
+                return None, 0                # this friend was already credited
+            cur.execute(f"UPDATE {table} SET points=points+%s WHERE {pk}=%s",
+                        (REFERRAL_BONUS, owner['id']))
+    finally:
+        conn.close()
+    return owner, REFERRAL_BONUS
+
+
+def set_player_referred_by(player_id, code):
+    conn = get_connection()
+    with conn.cursor() as cur:
+        cur.execute("UPDATE players_profile SET referred_by=%s WHERE player_id=%s",
+                    (code, player_id))
+    conn.close()
+
+
+def get_referral_stats(kind, row_id):
+    """How many friends this account has brought in, and the points earned."""
+    conn = get_connection()
+    with conn.cursor() as cur:
+        cur.execute("""SELECT COUNT(*) n, COALESCE(SUM(points), 0) pts FROM referrals
+                       WHERE referrer_kind=%s AND referrer_id=%s""", (kind, row_id))
+        row = cur.fetchone()
+    conn.close()
+    return {'count': row['n'], 'points': int(row['pts'])}
+
+
+# --- Waitlist ----------------------------------------------------------------
+def add_to_waitlist(email, role, referral_code=None):
+    """Returns (True, None) or (False, message) if the email is already on it."""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""INSERT INTO waitlist (email, role, referral_code)
+                           VALUES (%s, %s, %s)""", (email, role, referral_code))
+    except pymysql.err.IntegrityError:
+        return False, "You're already on the waitlist — we'll be in touch."
+    finally:
+        conn.close()
+    return True, None
+
+
+def waitlist_count():
+    conn = get_connection()
+    with conn.cursor() as cur:
+        cur.execute("SELECT COUNT(*) n FROM waitlist")
+        n = cur.fetchone()['n']
+    conn.close()
+    return n
 
 
 def verify_player_email(player_id):

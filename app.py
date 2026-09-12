@@ -38,20 +38,28 @@ import json
 import io
 import os
 import random
+import bisect
+import threading
+import html as html_lib
 from urllib.parse import urlencode
-from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 import secrets as secrets_lib
 from PIL import Image
 import numpy as np
-from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from sklearn.manifold import TSNE
 
 import db
 
 app = Flask(__name__)
-app.secret_key = 'dev_secret_key_change_in_production'
+# Session signing key: from secrets_local.py (gitignored) or the environment.
+# The dev fallback is only safe on localhost — with a known key anyone can forge
+# a session cookie, so a real deployment MUST set one of the two.
+try:
+    from secrets_local import SECRET_KEY as _SECRET_KEY
+except ImportError:
+    _SECRET_KEY = os.environ.get('SECRET_KEY', '')
+app.secret_key = _SECRET_KEY or 'dev-only-insecure-key'
 
 # Uploaded media lives under static/uploads so Flask can serve it directly.
 UPLOAD_FOLDER = os.path.join(app.static_folder, 'uploads')
@@ -134,7 +142,9 @@ def fetch_game_data(appid):
     name = None
     nm = re.search(r'<div[^>]*class="apphub_AppName"[^>]*>([^<]+)</div>', html)
     if nm:
-        name = nm.group(1).strip()
+        # Unescape: the store page HTML-encodes names ("Might &amp; Magic"), and
+        # storing the entity makes it render literally everywhere downstream.
+        name = html_lib.unescape(nm.group(1)).strip()
 
     if not tag_ids and not capsule_image and not name:
         return None
@@ -237,17 +247,74 @@ def current_player():
     return db.get_player_by_steam_id(steam_id) if steam_id else None
 
 
+_CACHE_MEMO = {}      # {'mtime': float, 'data': dict} — see _load_cluster_cache
+
+
 def _load_cluster_cache():
-    """Load the cached clustering (centroids + names). Compute if missing/stale."""
+    """Load the cached clustering (centroids + names), computing it only if the
+    file is missing or unusable.
+
+    Games added since the cache was built are invisible to clustering, so the
+    result carries `stale` / `missing_games` (surfaced on /dev/vectors). We do
+    NOT recompute automatically: it takes minutes and would hang a page load.
+    Refresh deliberately with /dev/vectors?refresh=1.
+    """
+    data = None
     if os.path.exists(VECTORS_CACHE_FILE):
-        with open(VECTORS_CACHE_FILE, encoding='utf-8') as f:
-            data = json.load(f)
-        if data.get('centroids') and data.get('idf'):
-            return data
-    data = compute_vector_scatter()
+        # Memoized on file mtime — the cache is multi-MB JSON and several
+        # requests (feed, player page) read it more than once per request.
+        mtime = os.path.getmtime(VECTORS_CACHE_FILE)
+        if _CACHE_MEMO.get('mtime') != mtime:
+            with open(VECTORS_CACHE_FILE, encoding='utf-8') as f:
+                _CACHE_MEMO.update(mtime=mtime, data=json.load(f))
+        data = _CACHE_MEMO['data']
+        if not (data.get('centroids') and data.get('idf')):
+            data = None
+    if data is None:
+        data = compute_vector_scatter()
+        save_cluster_cache(data)
+
+    total = db.count_games()
+    cached = data.get('source_games') or data.get('count') or 0
+    data['missing_games'] = max(0, total - cached)
+    data['stale'] = data['missing_games'] > 0
+    return data
+
+
+def save_cluster_cache(data):
     with open(VECTORS_CACHE_FILE, 'w', encoding='utf-8') as f:
         json.dump(data, f)
-    return data
+    _CACHE_MEMO.clear()
+    _CLUSTER_INDEX.clear()
+
+
+_CLUSTER_INDEX = {}   # {'mtime': float, 'of_appid': {...}, 'neighbours': {...}}
+
+
+def cluster_index():
+    """(appid -> cluster, cluster -> neighbour clusters ordered nearest-first).
+
+    Neighbours come from centroid cosine and let a thin cluster borrow from the
+    genre next door instead of falling back to the whole upcoming pool.
+    """
+    data = _load_cluster_cache()
+    mtime = _CACHE_MEMO.get('mtime')
+    if _CLUSTER_INDEX.get('mtime') == mtime and mtime is not None:
+        return _CLUSTER_INDEX['of_appid'], _CLUSTER_INDEX['neighbours']
+
+    of_appid = {p['appid']: p['cluster'] for p in data.get('points', [])}
+    cents = {int(c): np.array(v, dtype=float) for c, v in (data.get('centroids') or {}).items()}
+    for c, v in cents.items():                       # centroids are stored normalized
+        n = np.linalg.norm(v)
+        if n > 0:
+            cents[c] = v / n
+    neighbours = {}
+    for c, v in cents.items():
+        sims = sorted(((float(v @ w), other) for other, w in cents.items() if other != c),
+                      reverse=True)
+        neighbours[c] = [other for _, other in sims]
+    _CLUSTER_INDEX.update(mtime=mtime, of_appid=of_appid, neighbours=neighbours)
+    return of_appid, neighbours
 
 
 def player_tag_vector(player):
@@ -309,67 +376,108 @@ def _label(media, name_by_appid=None):
 
 
 def next_matchup_for_player(player, category_id=None):
-    """Pick an unseen matchup — ALWAYS between two UPCOMING games (the platform
-    only compares brand-new games).
+    """Pick an unseen matchup — ALWAYS two UPCOMING games of the SAME GENRE.
 
-    PHASE 1: a developer-uploaded upcoming image vs any other upcoming image
-             (developer submissions get priority for exposure/dashboard data).
-    PHASE 2: upcoming games from the player's best-fit genre clusters.
-    PHASE 3: any two upcoming games (if clusters are exhausted).
+    PHASE 1: a developer-uploaded upcoming image vs another upcoming game from
+             its own genre cluster (nearest neighbour cluster if that one is too
+             thin). Developer submissions keep their exposure priority, but a
+             cosy farming game is never pitted against a horror shooter.
+    PHASE 2: two upcoming games from the player's own best-fit clusters.
+    PHASE 3: any two upcoming games — last resort when every genre pool for this
+             player is exhausted.
     """
     if category_id is None:
         category_id = _main_category_id()
-    seen = set(player.get('matchupIDs') or [])
 
     eligible = db.get_eligible_media_in_category(category_id)   # upcoming games only
     if len(eligible) < 2:
         return None
 
+    # Two queries for everything this player has already voted on, then all
+    # candidate filtering happens in memory.
+    seen_pairs = db.get_seen_pairs_for_player(player['player_id'])
+    seen_media = db.get_seen_media_for_player(player['player_id'])
+
     def unseen(m1, m2):
-        existing = db.find_matchup(m1['mediaID'], m2['mediaID'])
-        return existing is None or existing not in seen
+        return tuple(sorted((m1['mediaID'], m2['mediaID']))) not in seen_pairs
 
-    # PHASE 1 — developer-uploaded (upcoming) images take precedence.
-    dev_eligible = [m for m in eligible if m['developerID'] is not None]
-    random.shuffle(dev_eligible)
-    for m1 in dev_eligible[:40]:
-        for _ in range(15):
-            m2 = random.choice(eligible)
-            if m2['mediaID'] == m1['mediaID'] or m2['appID'] == m1['appID']:
-                continue
-            if unseen(m1, m2):
-                return {'category': {'name': 'Featured developer submissions', 'score': None},
-                        'media1': _label(m1), 'media2': _label(m2)}
+    def both_fresh(m1, m2):
+        """Prefer capsules the player has never been shown — otherwise the same
+        few images keep coming back paired with someone new."""
+        return m1['mediaID'] not in seen_media and m2['mediaID'] not in seen_media
 
-    # PHASE 2 — player's best-fit genre clusters (upcoming games only).
-    elig_by_appid = {}
+    cluster_of, neighbours = cluster_index()
+    data = _load_cluster_cache()
+    cluster_names = data.get('cluster_names', {})
+    name_by_appid = {p['appid']: p['name'] for p in data.get('points', [])}
+
+    by_cluster = {}
     for m in eligible:
-        elig_by_appid.setdefault(m['appID'], m)
-    ranking = player_category_ranking(player)
-    if ranking:
-        data = _load_cluster_cache()
-        points = data.get('points', [])
-        name_by_appid = {p['appid']: p['name'] for p in points}
-        for cat in ranking:
-            pool = [elig_by_appid[p['appid']] for p in points
-                    if p['cluster'] == cat['cluster'] and p['appid'] in elig_by_appid]
-            if len(pool) < 2:
-                continue
-            for _ in range(50):
-                a, b = random.sample(pool, 2)
-                if unseen(a, b):
-                    return {'category': cat, 'media1': _label(a, name_by_appid),
-                            'media2': _label(b, name_by_appid)}
+        cid = cluster_of.get(m['appID'])
+        if cid is not None:
+            by_cluster.setdefault(cid, []).append(m)
 
-    # PHASE 3 — any two upcoming games.
-    for _ in range(50):
-        a, b = random.sample(eligible, 2)
-        if a['appID'] == b['appID']:
-            continue
-        if unseen(a, b):
-            return {'category': {'name': 'Upcoming games', 'score': None},
-                    'media1': _label(a), 'media2': _label(b)}
-    return None
+    def genre_label(cid, prefix=''):
+        name = cluster_names.get(str(cid)) or cluster_names.get(cid) or f'Cluster {cid}'
+        return {'name': prefix + name, 'score': None, 'cluster': cid}
+
+    def same_genre_pool(m1, cid):
+        """Opponents for m1: its own cluster first, then nearest clusters until
+        there's something to show."""
+        pool = [m for m in by_cluster.get(cid, []) if m['appID'] != m1['appID']]
+        for nb in neighbours.get(cid, []):
+            if pool:
+                break
+            pool = [m for m in by_cluster.get(nb, []) if m['appID'] != m1['appID']]
+        return pool
+
+    def pick(require_fresh):
+        """Run all three phases under one freshness rule."""
+        def ok(a, b):
+            return unseen(a, b) and (both_fresh(a, b) if require_fresh else True)
+
+        # PHASE 1 — developer uploads first, but matched within their genre.
+        dev_eligible = [m for m in eligible if m['developerID'] is not None]
+        if require_fresh:
+            dev_eligible = [m for m in dev_eligible if m['mediaID'] not in seen_media]
+        random.shuffle(dev_eligible)
+        for m1 in dev_eligible[:40]:
+            cid = cluster_of.get(m1['appID'])
+            if cid is None:
+                continue
+            pool = same_genre_pool(m1, cid)
+            random.shuffle(pool)
+            for m2 in pool[:60]:
+                if ok(m1, m2):
+                    return {'category': genre_label(cid, 'Featured: '),
+                            'media1': _label(m1, name_by_appid),
+                            'media2': _label(m2, name_by_appid)}
+
+        # PHASE 2 — the player's best-fit genre clusters.
+        for cat in player_category_ranking(player):
+            candidates = list(by_cluster.get(cat['cluster'], []))
+            if len(candidates) < 2:
+                continue
+            random.shuffle(candidates)
+            for i, a in enumerate(candidates):
+                for b in candidates[i + 1:]:
+                    if a['appID'] != b['appID'] and ok(a, b):
+                        return {'category': cat, 'media1': _label(a, name_by_appid),
+                                'media2': _label(b, name_by_appid)}
+
+        # PHASE 3 — any two upcoming games (genre pools exhausted for this player).
+        for _ in range(200):
+            a, b = random.sample(eligible, 2)
+            if a['appID'] != b['appID'] and ok(a, b):
+                return {'category': {'name': 'Upcoming games', 'score': None},
+                        'media1': _label(a, name_by_appid),
+                        'media2': _label(b, name_by_appid)}
+        return None
+
+    # Both capsules should be ones this player has never seen. Only once the
+    # pool of fresh capsules runs dry do we allow a repeat image (still never a
+    # repeat pairing).
+    return pick(require_fresh=True) or pick(require_fresh=False)
 
 
 def fetch_owned_games(steam_id):
@@ -536,11 +644,27 @@ def gift_card_art():
     return cards
 
 
+def _no_repeat_run(matches):
+    """Reorder the live-feed reel so no two consecutive matches share a capsule.
+
+    Straight recency ordering kept showing the same image twice in a row against
+    a different opponent, which reads like a bug. An image can come back later,
+    just not back-to-back.
+    """
+    remaining, out = list(matches), []
+    while remaining:
+        prev = {out[-1]['m1'], out[-1]['m2']} if out else set()
+        pick = next((i for i, m in enumerate(remaining)
+                     if not prev & {m['m1'], m['m2']}), 0)
+        out.append(remaining.pop(pick))
+    return out
+
+
 @app.route('/')
 def index():
     real = db.get_platform_stats()
     stats = {k: real[k] * STAT_BOOST[k]['mult'] + STAT_BOOST[k]['base'] for k in real}
-    recent = db.get_recent_matches(12)
+    recent = _no_repeat_run(db.get_recent_matches(24))
     wall = db.get_capsule_wall(_main_category_id(), 40)
     return render_template('home.html', stats=stats, recent=recent,
                            wall=wall, dev_logos=developer_logos())
@@ -552,7 +676,11 @@ def profile():
     if not dev:
         return redirect(url_for('developer_login'))
     games = db.get_games(dev['game_appid'])
-    return render_template('profile.html', developer=dev, games=games)
+    return render_template(
+        'profile.html', developer=dev, games=games,
+        referral_code=db.get_or_create_referral_code('developer', dev['developer_id']),
+        referral_stats=db.get_referral_stats('developer', dev['developer_id']),
+        referral_bonus=db.REFERRAL_BONUS)
 
 
 @app.route('/game/<int:appid>')
@@ -571,8 +699,12 @@ def game_detail(appid):
     # (the image_categories table is unchanged).
     categories = [c for c in db.get_image_categories() if c['name'] == 'main']
     media = db.get_media_for_game(appid, dev['developer_id'])
-    return render_template('game_detail.html', game=game, tags=tags,
-                           categories=categories, media=media)
+    # Per-game dashboard: each game's capsules are judged against each other,
+    # so the KPIs belong on the game page rather than one account-wide table.
+    kpis, summary = media_kpis(dev['developer_id'], appid)
+    return render_template('game_detail.html', game=game, tags=tags, developer=dev,
+                           categories=categories, media=media,
+                           kpis=kpis, summary=summary)
 
 
 def _dimensions_ok(width, height, category):
@@ -766,63 +898,147 @@ def developer_verify_email(token):
     return redirect(url_for(dest))
 
 
-@app.route('/developer/dashboard')
-def developer_dashboard():
-    dev = current_developer()
-    if not dev:
-        return redirect(url_for('developer_login'))
-    kpis = db.get_developer_media_kpis(dev['developer_id'])
+def media_kpis(developer_id, appid=None):
+    """Per-image KPIs plus a summary row, for one game or the whole account."""
+    kpis = db.get_developer_media_kpis(developer_id, appid)
     winrates = sorted(db.get_scored_winrates(min_shown=1))
-    import bisect
     n = len(winrates)
     for k in kpis:
         k['losses'] = k['shown'] - k['upvotes']
         k['percentile'] = (round(bisect.bisect_right(winrates, k['winrate']) / n * 100)
                            if (k['shown'] > 0 and n > 0) else None)
+    scored = [k for k in kpis if k['shown'] > 0]
     summary = {
         'images': len(kpis),
         'matchups': sum(k['shown'] for k in kpis),
         'wins': sum(k['upvotes'] for k in kpis),
-        'avg_winrate': round(sum(k['winrate'] for k in kpis) / len(kpis), 1) if kpis else 0,
+        'avg_winrate': round(sum(k['winrate'] for k in scored) / len(scored), 1) if scored else 0,
     }
-    return render_template('dashboard.html', developer=dev, kpis=kpis, summary=summary)
+    return kpis, summary
+
+
+@app.route('/developer/logo', methods=['POST'])
+def developer_logo_upload():
+    """Upload the studio's profile picture (shown top-left across the portal)."""
+    dev = current_developer()
+    if not dev:
+        return redirect(url_for('developer_login'))
+    file = request.files.get('logo')
+    if not file or not file.filename:
+        flash('Choose an image file for your logo.')
+        return redirect(url_for('profile'))
+    ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
+    if ext not in WALL_IMAGE_EXT:
+        flash(f'Unsupported file type. Allowed: {", ".join(sorted(WALL_IMAGE_EXT))}.')
+        return redirect(url_for('profile'))
+
+    data = file.read()
+    if ext != 'svg':                       # sanity-check raster uploads
+        try:
+            with Image.open(io.BytesIO(data)) as img:
+                img.size
+        except Exception:
+            flash("Couldn't read that file as an image.")
+            return redirect(url_for('profile'))
+
+    filename = f"logo_dev_{dev['developer_id']}.{ext}"
+    with open(os.path.join(UPLOAD_FOLDER, filename), 'wb') as f:
+        f.write(data)
+    db.set_developer_logo(dev['developer_id'], f'static/uploads/{filename}')
+    flash('Logo updated.')
+    return redirect(url_for('profile'))
+
+
+_SYNCING = set()      # steam ids with a background sync in flight
+
+
+def _run_player_sync(steam_id):
+    try:
+        alltime, twoweeks, multiplier = compute_player_tags(steam_id)
+        db.update_player_tags(steam_id, alltime, twoweeks, multiplier)
+        db.mark_player_synced(steam_id)
+    finally:
+        _SYNCING.discard(steam_id)
+
+
+def sync_player_if_due(player):
+    """Refresh a player's tag playtime if the cache has expired.
+
+    Playtime drives genre matching but changes slowly, and a full sync scrapes
+    Steam for minutes — so it runs at most once every SYNC_INTERVAL_DAYS, on
+    login, with no button for the player to find. It runs on a background
+    thread so signing in stays instant; the fresh data lands in time for the
+    next page. _SYNCING keeps a second login from starting a duplicate run.
+    """
+    if not player or not db.sync_is_due(player):
+        return False
+    steam_id = player['steam_id']
+    if steam_id in _SYNCING:
+        return False
+    _SYNCING.add(steam_id)
+    threading.Thread(target=_run_player_sync, args=(steam_id,), daemon=True).start()
+    return True
+
+
+def _login_popup_reward(player):
+    """Daily-reward state for the popup, but only the first time it's asked in
+    this session — otherwise an unclaimed bonus would re-block every page."""
+    reward = db.daily_reward_state(player)
+    if reward['claimed_today'] or session.get('reward_popup_shown'):
+        return None
+    session['reward_popup_shown'] = True
+    return reward
 
 
 @app.route('/player')
 def player_home():
+    """The player's own view: points, streak, invite link and the game. No
+    playtime tables and no genre breakdown — that's admin-only now."""
     player = current_player()
-    tables = {'alltime': [], 'twoweeks': [], 'multiplier': []}
-    if player:
-        tables['alltime'] = build_tag_rows(player.get('tags_totals_alltime'))
-        tables['twoweeks'] = build_tag_rows(player.get('tags_totals_2weeks'))
-        tables['multiplier'] = build_tag_rows(player.get('tags_totals_multiplier'), with_percent=True)
-    ranking = player_category_ranking(player)
-    vote_mult = db.vote_multiplier(player['vote_count']) if player else 1.0
-    return render_template('player.html', player=player, tables=tables,
-                           multiplier=RECENCY_MULTIPLIER, ranking=ranking,
-                           vote_mult=vote_mult)
+    if not player:
+        return render_template('player.html', player=None)
+    reward = db.daily_reward_state(player)
+    return render_template(
+        'player.html', player=player, popup_reward=_login_popup_reward(player),
+        vote_mult=db.vote_multiplier(player['vote_count']),
+        reward=reward, reward_days=db.DAILY_REWARD_DAYS,
+        reward_step=db.DAILY_REWARD_STEP,
+        referral_code=db.get_or_create_referral_code('player', player['player_id']),
+        referral_stats=db.get_referral_stats('player', player['player_id']),
+        referral_bonus=db.REFERRAL_BONUS)
 
 
-@app.route('/player/sync', methods=['POST'])
-def player_sync():
-    """Compute all-time, 2-week and multiplier tag totals; store on the row."""
-    steam_id = session.get('steam_id')
-    if not steam_id:
+@app.route('/player/claim-daily', methods=['POST'])
+def player_claim_daily():
+    """Claim the daily login bonus (day N of a consecutive streak = N x 10)."""
+    player = current_player()
+    if not player:
         return redirect(url_for('player_home'))
-    alltime, twoweeks, multiplier = compute_player_tags(steam_id)
-    db.update_player_tags(steam_id, alltime, twoweeks, multiplier)
-    flash(f'Synced — {len(alltime)} all-time tags, {len(twoweeks)} from the last 2 weeks.')
-    return redirect(url_for('player_home'))
+    day, points = db.claim_daily_reward(player['player_id'])
+    if points:
+        flash(f'Day {day} claimed — +{points} points!')
+    else:
+        flash("You've already claimed today. Come back tomorrow to keep the streak.")
+    return redirect(request.referrer or url_for('player_home'))
 
 
 @app.route('/player/feed')
 def player_feed():
-    """Show the player one unseen same-category image matchup to vote on."""
+    """The capsule game: one unseen, genre-matched, upcoming-vs-upcoming pair.
+
+    The multiplier lives here rather than on the profile — you only see it while
+    you're playing, and it animates up whenever a vote pushes it to a new tier.
+    """
     player = current_player()
     if not player:
         return redirect(url_for('player_home'))
     matchup = next_matchup_for_player(player)
-    return render_template('feed.html', player=player, matchup=matchup)
+    return render_template(
+        'feed.html', player=player, matchup=matchup,
+        vote_mult=db.vote_multiplier(player['vote_count']),
+        votes_to_next=10 - (player['vote_count'] % 10),
+        mult_up=session.pop('mult_up', None),      # set by the vote that levelled up
+        reward=_login_popup_reward(player), reward_days=db.DAILY_REWARD_DAYS)
 
 
 @app.route('/player/vote', methods=['POST'])
@@ -846,13 +1062,24 @@ def player_vote():
     loser = media2 if winner == media1 else media1
 
     matchup_id = db.get_or_create_matchup(media1, media2)
+
+    # One vote per player per matchup. log_matchup is the gate: the
+    # uniq_player_matchup index makes a resubmitted form (refresh, double click,
+    # replayed POST) return False, so scores and points are never counted twice.
+    if not db.log_matchup(player['player_id'], matchup_id, winner, player['player_id']):
+        flash("You've already voted on that pair — here's a new one.")
+        return redirect(url_for('player_feed'))
+
     db.bump_media_score(winner, upvote=True)   # shown +1, upvote +1
     db.bump_media_score(loser, upvote=False)   # shown +1
-    db.log_matchup(player['player_id'], matchup_id, winner, player['player_id'])
     db.add_matchup_to_player(player['player_id'], matchup_id)
 
-    awarded, mult, total = db.award_vote_points(player['player_id'])
-    flash(f'+{awarded} points (x{mult}) — you now have {total}.')
+    awarded, mult, _total = db.award_vote_points(player['player_id'])
+    # Did this vote push them into a new multiplier tier? The feed animates it.
+    new_mult = db.vote_multiplier(player['vote_count'] + 1)
+    if new_mult > mult:
+        session['mult_up'] = new_mult
+    session['last_award'] = awarded
     return redirect(url_for('player_feed'))
 
 
@@ -908,12 +1135,80 @@ TESTIMONIALS = [
 
 @app.route('/player/join')
 def player_join():
-    """Sign-up pitch shown before Steam login: what you can win, how many players
-    are already in, and what other players say. Steam login IS the sign-up."""
+    """Sign-up pitch shown before joining: what you can win, how many players
+    are already in, and what other players say. Sign-up is a waitlist for now."""
     real = db.get_platform_stats()
     players = real['players'] * STAT_BOOST['players']['mult'] + STAT_BOOST['players']['base']
     return render_template('player_join.html', players=players,
-                           cards=gift_card_art(), testimonials=TESTIMONIALS)
+                           cards=gift_card_art(), testimonials=TESTIMONIALS,
+                           roles=WAITLIST_ROLES, referrer=_pending_referrer())
+
+
+# --- Waitlist + referrals ----------------------------------------------------
+# Sign-up is closed: both portals collect emails instead of creating accounts.
+WAITLIST_ROLES = [
+    ('player', 'Player — I want to vote and earn points'),
+    ('developer', 'Developer / Publisher — I have a game'),
+    ('press', 'Press, creator or influencer'),
+]
+
+
+def _pending_referrer():
+    """Who (if anyone) referred the visitor currently in this session."""
+    return db.resolve_referral_code(session.get('ref'))
+
+
+@app.route('/r/<code>')
+def referral_link(code):
+    """Share link: /r/<CODE> remembers the referrer, then drops the visitor on
+    the join page. The code identifies exactly one account, so only that account
+    gets paid when this visitor signs up."""
+    owner = db.resolve_referral_code(code.strip().upper())
+    if owner:
+        session['ref'] = code.strip().upper()
+        flash(f"You were invited by {owner['name']} — join and they'll earn "
+              f"{db.REFERRAL_BONUS} points.")
+    else:
+        flash("That invite link isn't valid, but you can still join the waitlist.")
+    dest = 'developer_join' if owner and owner['kind'] == 'developer' else 'player_join'
+    return redirect(url_for(dest))
+
+
+@app.route('/waitlist', methods=['POST'])
+def waitlist_join():
+    """Collect an email (+ role) for the waitlist and credit the referrer."""
+    email = request.form.get('email', '').strip().lower()
+    role = request.form.get('role', '').strip() or 'player'
+    back = request.form.get('next') or url_for('player_join')
+    if '@' not in email or '.' not in email.split('@')[-1]:
+        flash('Please enter a valid email address.')
+        return redirect(back)
+    if role not in dict(WAITLIST_ROLES):
+        role = 'player'
+
+    code = session.get('ref')
+    ok, err = db.add_to_waitlist(email, role, code)
+    if not ok:
+        flash(err)
+        return redirect(back)
+
+    owner, points = db.credit_referral(code, 'waitlist', email) if code else (None, 0)
+    if owner:
+        flash(f"You're on the waitlist — and {owner['name']} earned {points} points "
+              f"for the invite. We'll email you when your spot opens.")
+    else:
+        flash("You're on the waitlist! We'll email you as soon as your spot opens.")
+    return redirect(back)
+
+
+@app.route('/developer/join')
+def developer_join():
+    """Developer-side waitlist page (sign-up is closed)."""
+    real = db.get_platform_stats()
+    devs = real['developers'] * STAT_BOOST['developers']['mult'] + STAT_BOOST['developers']['base']
+    return render_template('developer_join.html', developers=devs,
+                           logos=developer_logos(), roles=WAITLIST_ROLES,
+                           referrer=_pending_referrer())
 
 
 @app.route('/player/rewards')
@@ -963,15 +1258,32 @@ def player_callback():
         flash('Steam verification failed.')
         return redirect(url_for('player_home'))
 
-    # Only fetch summary + insert for a steam_id we haven't seen before.
-    if not db.get_player_by_steam_id(steam_id):
+    _log_player_in(steam_id)
+    return redirect(url_for('player_home'))
+
+
+def _log_player_in(steam_id):
+    """Shared login tail: create the row for a first-time steam id, credit
+    whoever referred them, then refresh their playtime cache if it's due."""
+    player = db.get_player_by_steam_id(steam_id)
+    if not player:
         summary = fetch_player_summary(steam_id)
-        if summary:
-            db.insert_player(steam_id, summary['username'],
-                             summary['profileurl'], summary['avatar'])
+        db.insert_player(steam_id,
+                         summary['username'] if summary else None,
+                         summary['profileurl'] if summary else None,
+                         summary['avatar'] if summary else None)
+        player = db.get_player_by_steam_id(steam_id)
+        code = session.pop('ref', None)
+        if code and player:
+            owner, points = db.credit_referral(code, 'player', steam_id)
+            if owner:
+                db.set_player_referred_by(player['player_id'], code)
+                flash(f"Welcome! {owner['name']} earned {points} points for inviting you.")
 
     session['steam_id'] = steam_id
-    return redirect(url_for('player_home'))
+    if player and sync_player_if_due(player):
+        flash('Refreshing your Steam playtime in the background…')
+    return player
 
 
 @app.route('/player/logout')
@@ -986,13 +1298,85 @@ def player_test_login(steam_id):
     Remove this route once real Steam login testing is done."""
     if not steam_id.isdigit():
         abort(404)
-    if not db.get_player_by_steam_id(steam_id):
-        summary = fetch_player_summary(steam_id)
-        if summary:
-            db.insert_player(steam_id, summary['username'],
-                             summary['profileurl'], summary['avatar'])
-    session['steam_id'] = steam_id
+    _log_player_in(steam_id)
     return redirect(url_for('player_home'))
+
+
+# --- Admin (internal) --------------------------------------------------------
+# Password from secrets_local.py / $ADMIN_PASSWORD. The genre-fit data players
+# used to see on their own profile lives here now.
+try:
+    from secrets_local import ADMIN_PASSWORD as _ADMIN_PASSWORD
+except ImportError:
+    _ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', '')
+ADMIN_PASSWORD = _ADMIN_PASSWORD or 'admin'
+
+
+def is_admin():
+    return bool(session.get('is_admin'))
+
+
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    if request.method == 'POST':
+        if request.form.get('password', '') == ADMIN_PASSWORD:
+            session['is_admin'] = True
+            return redirect(url_for('admin_players'))
+        flash('Wrong password.')
+        return redirect(url_for('admin_login'))
+    return render_template('admin_login.html')
+
+
+@app.route('/admin/logout')
+def admin_logout():
+    session.pop('is_admin', None)
+    return redirect(url_for('admin_login'))
+
+
+@app.route('/admin')
+@app.route('/admin/players')
+def admin_players():
+    """Every player, with points, streak, referrals and sync state."""
+    if not is_admin():
+        return redirect(url_for('admin_login'))
+    players = db.get_all_players()
+    for p in players:
+        p['multiplier'] = db.vote_multiplier(p['vote_count'])
+    return render_template('admin_players.html', players=players,
+                           waitlist=db.get_waitlist(50),
+                           waitlist_total=db.waitlist_count())
+
+
+@app.route('/admin/player/<steam_id>')
+def admin_player_detail(steam_id):
+    """One player's genre fit + playtime — the view removed from /player."""
+    if not is_admin():
+        return redirect(url_for('admin_login'))
+    player = db.get_player_by_steam_id(steam_id)
+    if not player:
+        abort(404)
+    tables = {
+        'alltime': build_tag_rows(player.get('tags_totals_alltime')),
+        'twoweeks': build_tag_rows(player.get('tags_totals_2weeks')),
+        'multiplier': build_tag_rows(player.get('tags_totals_multiplier'), with_percent=True),
+    }
+    return render_template('admin_player.html', player=player, tables=tables,
+                           ranking=player_category_ranking(player),
+                           multiplier=RECENCY_MULTIPLIER,
+                           vote_mult=db.vote_multiplier(player['vote_count']),
+                           reward=db.daily_reward_state(player))
+
+
+@app.route('/admin/player/<steam_id>/sync', methods=['POST'])
+def admin_player_sync(steam_id):
+    """Force a playtime re-sync, ignoring the 3-day cache (admin only)."""
+    if not is_admin():
+        return redirect(url_for('admin_login'))
+    alltime, twoweeks, multiplier = compute_player_tags(steam_id)
+    db.update_player_tags(steam_id, alltime, twoweeks, multiplier)
+    db.mark_player_synced(steam_id)
+    flash(f'Synced — {len(alltime)} all-time tags, {len(twoweeks)} from the last 2 weeks.')
+    return redirect(url_for('admin_player_detail', steam_id=steam_id))
 
 
 # Tags present in at least this fraction of games are dropped before clustering
@@ -1014,9 +1398,55 @@ def _l2_normalize(M):
     return M / norms
 
 
-def cluster_vectors(matrix, k_min=2, k_max=20):
-    """K-means on L2-normalized vectors (so Euclidean ~ cosine); pick k by the
-    best silhouette (cosine). Returns (labels, best_k, best_score, scores)."""
+# Genre clustering searches this k range. It used to be 2..20, which was the
+# problem: silhouette rises almost monotonically with k on sparse tag vectors,
+# so the search always returned the ceiling (k=19) and everything that didn't
+# fit a big genre was dumped into one 514-game catch-all. k in the 30s-50s
+# splits real sub-genres (farming/life sim, otome, bullet hell) while leaving
+# enough upcoming games per cluster to still form matchups.
+K_MIN, K_MAX = 30, 60
+K_STEP = 5
+
+
+def spherical_kmeans(Xn, k, iters=60, seed=0):
+    """Cosine k-means on L2-normalized rows: assign by largest dot product, then
+    re-normalize each centroid.
+
+    Plain KMeans minimizes ||x - mu||^2 = 1 - 2 x.mu + ||mu||^2, so a diffuse
+    cluster (short mean vector) wins points purely for being incoherent — that's
+    what built the catch-all cluster. Re-normalizing the centroids every step
+    removes the ||mu||^2 term, making assignment pure cosine, which is also the
+    metric player_category_ranking uses. Returns (labels, centroids).
+    """
+    rng = np.random.default_rng(seed)
+    C = Xn[rng.choice(len(Xn), k, replace=False)].copy()
+    labels = np.full(len(Xn), -1)
+    for _ in range(iters):
+        new = (Xn @ C.T).argmax(axis=1)
+        if (new == labels).all():
+            break
+        labels = new
+        for c in range(k):
+            members = Xn[labels == c]
+            if len(members):
+                v = members.sum(axis=0)
+                norm = np.linalg.norm(v)
+                C[c] = v / norm if norm > 0 else Xn[rng.integers(len(Xn))]
+            else:                                  # empty cluster: reseed it
+                C[c] = Xn[rng.integers(len(Xn))]
+    return labels, C
+
+
+def cluster_vectors(matrix, k_min=None, k_max=None, step=None):
+    """Cosine k-means over a range of k; pick the best silhouette (cosine).
+    Returns (labels, best_k, best_score, scores).
+
+    The range defaults to the K_MIN/K_MAX/K_STEP module constants, read at call
+    time so they stay the single source of truth (and are overridable in tests).
+    """
+    k_min = K_MIN if k_min is None else k_min
+    k_max = K_MAX if k_max is None else k_max
+    step = K_STEP if step is None else step
     X = np.array(matrix, dtype=float)
     norms = np.linalg.norm(X, axis=1, keepdims=True)
     norms[norms == 0] = 1.0
@@ -1026,11 +1456,13 @@ def cluster_vectors(matrix, k_min=2, k_max=20):
     k_hi = min(k_max, n - 1)
     best = None
     scores = {}
-    for k in range(k_min, k_hi + 1):
-        labels = KMeans(n_clusters=k, n_init=10, random_state=0).fit_predict(Xn)
-        if len(set(labels)) < 2:
+    for k in range(min(k_min, k_hi), k_hi + 1, step):
+        labels, _ = spherical_kmeans(Xn, k)
+        if len(set(labels.tolist())) < 2:
             continue
-        score = float(silhouette_score(Xn, labels, metric='cosine'))
+        # sample_size keeps the O(n^2) silhouette affordable on 3.5k+ games
+        score = float(silhouette_score(Xn, labels, metric='cosine',
+                                       sample_size=min(3000, n), random_state=0))
         scores[k] = round(score, 4)
         if best is None or score > best[2]:
             best = (labels.tolist(), k, score)
@@ -1105,10 +1537,23 @@ def compute_vector_scatter():
     Xw_raw, X = Xw_raw[keep], X[keep]
     names = [names[i] for i in range(len(names)) if keep[i]]
     appids = [appids[i] for i in range(len(appids)) if keep[i]]
+    if len(names) < 3:
+        # Tiny or single-genre libraries: every tag clears UBIQUITOUS_DF and
+        # gets zeroed, leaving nothing to cluster. Degrade instead of crashing.
+        return {'points': [], 'count': len(names), 'dim': dim, 'best_k': 0,
+                'silhouette': 0, 'scores': {}, 'cluster_names': {}, 'centroids': {},
+                'idf': idf.round(6).tolist(), 'dropped_tags': dropped_tags,
+                'source_games': db.count_games()}
     Xw = _l2_normalize(Xw_raw)                        # tf-idf, L2-normalized
 
     labels_list, best_k, score, scores = cluster_vectors(Xw)  # cluster in tf-idf space
     labels = np.array(labels_list)
+    # Relabel 0..k-1 (an empty cluster can leave a gap in the label space).
+    used = sorted(set(labels.tolist()))
+    if used != list(range(best_k)):
+        remap = {old: new for new, old in enumerate(used)}
+        labels = np.array([remap[l] for l in labels.tolist()])
+        best_k = len(used)
 
     cluster_names = name_clusters(X * (idf > 0), labels, best_k)  # names exclude dropped tags
 
@@ -1122,8 +1567,13 @@ def compute_vector_scatter():
                   random_state=0).fit_transform(X_pca)
 
     # Cluster centroids in tf-idf space — used to match players (same weighting).
-    centroids = {int(c): Xw[labels == c].mean(axis=0).round(6).tolist()
-                 for c in range(best_k)}
+    # Stored L2-normalized so game assignment and player matching use the exact
+    # same cosine geometry.
+    centroids = {}
+    for c in range(best_k):
+        mean = Xw[labels == c].mean(axis=0)
+        norm = np.linalg.norm(mean)
+        centroids[int(c)] = (mean / norm if norm > 0 else mean).round(6).tolist()
 
     points = [{'x': round(float(coords[i, 0]), 3), 'y': round(float(coords[i, 1]), 3),
                'name': names[i], 'appid': int(appids[i]), 'cluster': int(labels[i])}
@@ -1131,7 +1581,8 @@ def compute_vector_scatter():
     return {'points': points, 'count': len(points), 'dim': dim,
             'best_k': best_k, 'silhouette': round(score, 4), 'scores': scores,
             'cluster_names': cluster_names, 'centroids': centroids,
-            'idf': idf.round(6).tolist(), 'dropped_tags': dropped_tags}
+            'idf': idf.round(6).tolist(), 'dropped_tags': dropped_tags,
+            'source_games': db.count_games()}   # to detect a stale cache
 
 
 @app.route('/dev/vectors')
@@ -1139,13 +1590,12 @@ def dev_vectors():
     """TESTING ONLY: scatter of every game's binary tag vector (PCA to 2D),
     color-coded by K-means cluster (auto-k via silhouette). Result is cached to
     disk since it takes minutes to compute; add ?refresh=1 to recompute."""
-    if request.args.get('refresh') or not os.path.exists(VECTORS_CACHE_FILE):
+    if request.args.get('refresh'):
         data = compute_vector_scatter()
-        with open(VECTORS_CACHE_FILE, 'w', encoding='utf-8') as f:
-            json.dump(data, f)
+        save_cluster_cache(data)
+        data['stale'], data['missing_games'] = False, 0
     else:
-        with open(VECTORS_CACHE_FILE, encoding='utf-8') as f:
-            data = json.load(f)
+        data = _load_cluster_cache()
     return render_template('vectors.html', **data)
 
 
@@ -1159,4 +1609,10 @@ if __name__ == '__main__':
         print('No tags_data.py / tags.json found yet — tags table left empty '
               '(game pages will show tag ids until you seed it).')
     print(f'Seeded {cats} image categories.')
-    app.run(debug=True)
+    if app.secret_key == 'dev-only-insecure-key':
+        print('WARNING: using the insecure dev secret key — set SECRET_KEY in '
+              'secrets_local.py or the environment before exposing this app.')
+    # Debugger off unless explicitly asked for: the Werkzeug console is remote
+    # code execution for anyone who can reach the port.
+    debug = os.environ.get('FLASK_DEBUG', '').lower() in ('1', 'true', 'yes')
+    app.run(debug=debug)

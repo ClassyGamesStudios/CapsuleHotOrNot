@@ -8,7 +8,7 @@
     </a>
     <div class="topbar-mid"></div>{# reserved — nav goes here later #}
     <div class="topbar-actions">
-        <button type="button" class="btn" data-open="signup">Sign Up</button>
+        <button type="button" class="btn" data-open="signup">Join Waitlist</button>
         <button type="button" class="btn ghost" data-open="login">Log In</button>
     </div>
 </header>
@@ -42,7 +42,7 @@
         </p>
     </div>
 
-    <button type="button" class="signup-wide" data-open="signup">SIGN UP</button>
+    <button type="button" class="signup-wide" data-open="signup">JOIN THE WAITLIST</button>
 </section>
 
 <section class="stats">
@@ -68,6 +68,7 @@
         {% endif %}
 
         <a class="signup-wide narrow" href="{{ url_for('player_join') }}">SIGN UP AS A PLAYER</a>
+        {# both sign-up buttons land on the role's waitlist page, no popup #}
     </div>
 </section>
 
@@ -85,7 +86,7 @@
         </div>
         {% endif %}
 
-        <a class="signup-wide narrow" href="{{ url_for('developer_signup') }}">SIGN UP AS A DEVELOPER</a>
+        <a class="signup-wide narrow" href="{{ url_for('developer_join') }}">SIGN UP AS A DEVELOPER</a>
     </div>
 </section>
 
@@ -93,25 +94,25 @@
 <div class="modal-backdrop" id="authModal" hidden>
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
         <button type="button" class="modal-close" data-close aria-label="Close">&#10005;</button>
-        <h2 class="modal-title" id="authModalTitle">Join CapsuleHotOrNot</h2>
+        <h2 class="modal-title" id="authModalTitle">Join the waitlist</h2>
         <div class="choices">
             <a class="choice" data-role="player"
-               data-signup-href="{{ url_for('player_join') }}" data-signup-cta="Sign Up &rarr;"
+               data-signup-href="{{ url_for('player_join') }}" data-signup-cta="Join Waitlist &rarr;"
                data-login-href="{{ url_for('player_login') }}" data-login-cta="Log In &rarr;"
                href="{{ url_for('player_join') }}">
                 <h3>Player</h3>
                 <p>Vote on the capsule art of upcoming games, earn points on every vote and trade them
-                   in for rewards. Free — sign in with Steam.</p>
-                <span class="choice-cta">Sign Up &rarr;</span>
+                   in for gift cards. Free to join.</p>
+                <span class="choice-cta">Join Waitlist &rarr;</span>
             </a>
             <a class="choice" data-role="developer"
-               data-signup-href="{{ url_for('developer_signup') }}" data-signup-cta="Sign Up &rarr;"
-               data-login-href="{{ url_for('developer_login') }}"   data-login-cta="Log In &rarr;"
-               href="{{ url_for('developer_signup') }}">
+               data-signup-href="{{ url_for('developer_join') }}" data-signup-cta="Join Waitlist &rarr;"
+               data-login-href="{{ url_for('developer_login') }}" data-login-cta="Log In &rarr;"
+               href="{{ url_for('developer_join') }}">
                 <h3>Developer, Publisher or Studio</h3>
                 <p>Upload your capsules and see which one players actually pick — win rates, matchups
                    and audience fit for your unreleased games.</p>
-                <span class="choice-cta">Sign Up &rarr;</span>
+                <span class="choice-cta">Join Waitlist &rarr;</span>
             </a>
         </div>
     </div>
@@ -253,7 +254,7 @@
     (function () {
         const modal = document.getElementById('authModal');
         const title = document.getElementById('authModalTitle');
-        const TITLES = { signup: 'Join CapsuleHotOrNot', login: 'Welcome back' };
+        const TITLES = { signup: 'Join the waitlist', login: 'Welcome back' };
 
         function open(mode) {
             title.textContent = TITLES[mode];

@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}{{ player.username }} — Admin{% endblock %}
+
+{% block content %}
+<header>
+    <h1>🛠 {{ player.username or player.steam_id }}</h1>
+    <span style="display:flex; gap:12px; align-items:center;">
+        <a href="{{ url_for('admin_players') }}" class="link">← All players</a>
+        <form method="POST" action="{{ url_for('admin_player_sync', steam_id=player.steam_id) }}">
+            <button type="submit" class="btn">🔄 Force re-sync</button>
+        </form>
+    </span>
+</header>
+
+<div class="facts">
+    <div class="f"><span class="n">{{ '{:,}'.format(player.points) }}</span><span class="l">points</span></div>
+    <div class="f"><span class="n">{{ player.vote_count }}</span><span class="l">votes</span></div>
+    <div class="f"><span class="n">x{{ vote_mult }}</span><span class="l">multiplier</span></div>
+    <div class="f"><span class="n">{{ player.streak_day or 0 }}</span><span class="l">streak day</span></div>
+    <div class="f"><span class="n">{{ 'yes' if player.email_verified else 'no' }}</span><span class="l">email verified</span></div>
+    <div class="f"><span class="n">{{ player.last_sync.strftime('%d %b %H:%M') if player.last_sync else 'never' }}</span><span class="l">last sync</span></div>
+</div>
+<p class="muted">Steam ID {{ player.steam_id }}
+    {%- if player.referred_by %} · referred by code <strong>{{ player.referred_by }}</strong>{% endif %}
+    {%- if player.referral_code %} · own code <strong>{{ player.referral_code }}</strong>{% endif %}</p>
+
+{% if ranking %}
+<section class="categories">
+    <h2>Best-fit genre clusters</h2>
+    <p class="muted">Cosine similarity between this player's tf-idf weighted playtime vector and
+        each cluster centroid. Top 3 highlighted — these drive phase 2 of their feed.</p>
+    <ol class="cat-list">
+        {% for r in ranking[:12] %}
+        <li class="cat-row {{ 'top' if loop.index <= 3 else '' }}">
+            <span class="cat-rank">{{ loop.index }}</span>
+            <span class="cat-name">{{ r.name }}</span>
+            <span class="cat-bar"><span class="cat-fill" style="width: {{ (r.score * 100)|round(1) }}%"></span></span>
+            <span class="cat-score">{{ (r.score * 100)|round(1) }}%</span>
+        </li>
+        {% endfor %}
+    </ol>
+</section>
+{% else %}
+<p class="muted">No genre fit yet — this player has no synced playtime.</p>
+{% endif %}
+
+{% macro tag_table(rows, show_percent=False) %}
+    {% if rows %}
+        <table class="tag-table">
+            <thead>
+                <tr><th>#</th><th>Tag</th><th>Hours</th>
+                    {% if show_percent %}<th>% of total</th>{% endif %}</tr>
+            </thead>
+            <tbody>
+                {% for row in rows[:40] %}
+                <tr>
+                    <td class="rank">{{ loop.index }}</td>
+                    <td>{{ row.tag_name }} <span class="tag-id">#{{ row.steam_tag_id }}</span></td>
+                    <td class="hours">{{ row.hours }} h</td>
+                    {% if show_percent %}<td class="percent">{{ row.percent }}%</td>{% endif %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p class="muted">No data.</p>
+    {% endif %}
+{% endmacro %}
+
+<section class="totals">
+    <h2>Tag playtime</h2>
+    <div class="tabs">
+        <button class="tab active" data-tab="alltime">All time</button>
+        <button class="tab" data-tab="twoweeks">2 weeks</button>
+        <button class="tab" data-tab="multiplier">Multiplier ×{{ multiplier }}</button>
+    </div>
+    <div class="tab-panel active" id="tab-alltime">{{ tag_table(tables.alltime) }}</div>
+    <div class="tab-panel" id="tab-twoweeks">{{ tag_table(tables.twoweeks) }}</div>
+    <div class="tab-panel" id="tab-multiplier">{{ tag_table(tables.multiplier, show_percent=True) }}</div>
+</section>
+
+<style>
+    .facts { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+    .facts .f { background: var(--card); border: 1px solid rgba(255,255,255,.08);
+                border-radius: 12px; padding: 14px 20px; text-align: center; min-width: 110px; }
+    .facts .n { display: block; font-size: 1.3rem; font-weight: 700; color: var(--accent); }
+    .facts .l { color: var(--muted); font-size: .76rem; }
+    .muted { color: var(--muted); }
+
+    .categories { margin-top: 30px; }
+    .cat-list { list-style: none; margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+    .cat-row { display: grid; grid-template-columns: 32px 1fr 220px 60px; align-items: center; gap: 14px;
+               background: var(--card); border: 1px solid rgba(255,255,255,.08);
+               border-radius: 12px; padding: 10px 16px; }
+    .cat-row.top { border-color: var(--primary); }
+    .cat-rank { color: var(--muted); font-weight: 600; }
+    .cat-name { font-weight: 600; }
+    .cat-bar { background: #334155; height: 10px; border-radius: 9999px; overflow: hidden; }
+    .cat-fill { display: block; height: 100%; background: var(--primary); }
+    .cat-score { color: var(--accent); font-weight: 600; text-align: right; }
+
+    .totals { margin-top: 34px; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .tab { background: var(--card); color: var(--muted); border: 1px solid rgba(255,255,255,.08);
+           padding: 9px 18px; border-radius: 9999px; font-size: .9rem; font-weight: 600; cursor: pointer; }
+    .tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .tag-table { width: 100%; border-collapse: collapse; margin-top: 14px;
+                 background: var(--card); border-radius: 14px; overflow: hidden; }
+    .tag-table th, .tag-table td { text-align: left; padding: 9px 16px;
+                                   border-bottom: 1px solid rgba(255,255,255,.06); }
+    .tag-table th { color: var(--muted); font-size: .85rem; }
+    .tag-table .rank { color: var(--muted); width: 40px; }
+    .tag-table .hours { color: var(--accent); font-weight: 600; white-space: nowrap; }
+    .tag-table .tag-id { color: var(--muted); font-size: .72rem; }
+    .tag-table .percent { color: var(--muted); }
+</style>
+
+<script>
+    document.querySelectorAll('.tab').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+        });
+    });
+</script>
+{% endblock %}

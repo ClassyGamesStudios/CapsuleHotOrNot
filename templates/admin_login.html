@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Admin — CapsuleHotOrNot{% endblock %}
+
+{% block content %}
+<header>
+    <h1>🔐 Admin</h1>
+    <a href="{{ url_for('index') }}" class="link">← Home</a>
+</header>
+
+<div class="auth-card">
+    <form method="POST" action="{{ url_for('admin_login') }}">
+        <label>Admin password</label>
+        <input type="password" name="password" required autofocus>
+        <button type="submit" class="btn" style="margin-top:18px;">Sign in</button>
+    </form>
+    <p class="muted">Internal view: player genre fit, playtime, points and the waitlist.</p>
+</div>
+
+<style>
+    .auth-card { background: var(--card); border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 16px; padding: 32px; max-width: 420px; }
+    .auth-card label { display: block; font-weight: 600; margin: 14px 0 6px; }
+    .auth-card input { width: 100%; padding: 12px 14px; border: none; border-radius: 10px;
+        background: #334155; color: #fff; font-size: 1rem; }
+    .muted { color: var(--muted); margin-top: 16px; font-size: .88rem; }
+</style>
+{% endblock %}

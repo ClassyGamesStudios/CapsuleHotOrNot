@@ -40,11 +40,28 @@
             <h2 class="join-title">JOIN THE OTHER</h2>
             <div class="join-num">{{ '{:,}'.format(players) }}</div>
             <h2 class="join-title">PLAYERS</h2>
-            <a class="btn-steam" href="{{ url_for('player_login') }}">LOG IN VIA STEAM</a>
-            <p class="fine">No additional sign up required</p>
+
+            {% if referrer %}
+            <p class="invited">🎁 Invited by <strong>{{ referrer.name }}</strong></p>
+            {% endif %}
+
+            <form class="wait-form" method="POST" action="{{ url_for('waitlist_join') }}">
+                <input type="hidden" name="next" value="{{ url_for('player_join') }}">
+                <select name="role" required>
+                    <option value="" disabled selected>I'm a…</option>
+                    {% for value, label in roles %}
+                    <option value="{{ value }}" {{ 'selected' if value == 'player' }}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+                <input type="email" name="email" placeholder="you@email.com" required>
+                <button type="submit" class="btn-steam">JOIN WAITLIST</button>
+            </form>
+            <p class="fine">We'll email you the moment your spot opens — no spam.</p>
+
             <ul class="perks">
                 <li>+300 points the moment you link Steam</li>
                 <li>+10 points a vote, rising with your multiplier</li>
+                <li>Daily login streak bonuses up to 100 points</li>
                 <li>Matched to the genres you actually play</li>
             </ul>
         </div>
@@ -68,7 +85,8 @@
         </article>
         {% endfor %}
     </div>
-    <a class="signup-wide" href="{{ url_for('player_login') }}">LOG IN VIA STEAM &amp; START EARNING</a>
+    <a class="signup-wide" href="#top" onclick="document.querySelector('.wait-form input[name=email]').focus(); return false;">
+        JOIN THE WAITLIST &amp; START EARNING</a>
 </section>
 
 <style>
@@ -118,11 +136,23 @@
     .join-title { color: #fff; font-size: 1.7rem; letter-spacing: 2px; line-height: 1.2; }
     .join-num { color: #fff; font-size: 3.4rem; font-weight: 800; line-height: 1.1; }
     .btn-steam {
-        display: inline-block; margin-top: 20px; padding: 15px 40px; border-radius: 10px;
+        display: inline-block; padding: 15px 40px; border-radius: 10px; border: none;
         background: #fff; color: #0f172a; font-weight: 800; letter-spacing: 2px;
-        text-decoration: none; font-size: .95rem; transition: .25s;
+        text-decoration: none; font-size: .95rem; transition: .25s; cursor: pointer;
     }
     .btn-steam:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,0,0,.4); }
+    .wait-form {
+        display: flex; flex-direction: column; gap: 10px; margin: 20px auto 0; max-width: 360px;
+    }
+    .wait-form select, .wait-form input {
+        width: 100%; padding: 13px 14px; border: none; border-radius: 10px;
+        background: rgba(255,255,255,.92); color: #0f172a; font-size: .95rem;
+    }
+    .invited {
+        background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.35);
+        border-radius: 9999px; padding: 7px 16px; display: inline-block; margin-top: 14px;
+        color: #fff; font-size: .85rem;
+    }
     .perks { list-style: none; margin-top: 22px; display: flex; flex-direction: column; gap: 8px;
              color: rgba(255,255,255,.9); font-size: .9rem; }
     .perks li::before { content: '✓ '; font-weight: 800; }

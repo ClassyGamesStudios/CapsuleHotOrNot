@@ -3,7 +3,12 @@
 
 {% block content %}
 <header>
-    <h1>🎮 {{ game.game_name }}</h1>
+    <span class="title-wrap">
+        {% if developer.logo_path %}
+        <img class="dp-mini" src="/{{ developer.logo_path }}" alt="">
+        {% endif %}
+        <h1>🎮 {{ game.game_name }}</h1>
+    </span>
     <span style="display:flex; gap:12px; align-items:center;">
         <a href="{{ url_for('profile') }}" class="link">← Back to profile</a>
         <form method="POST" action="{{ url_for('delete_game_route', appid=game.game_appid) }}"
@@ -82,6 +87,46 @@
     {% endif %}
 </section>
 
+{# Dashboard lives per game: these capsules compete as this title's art. #}
+<section class="assets">
+    <h2>📊 {{ game.game_name }} — image performance</h2>
+
+    <div class="summary">
+        <div class="s"><span class="n">{{ summary.images }}</span><span class="l">images</span></div>
+        <div class="s"><span class="n">{{ summary.matchups }}</span><span class="l">matchups</span></div>
+        <div class="s"><span class="n">{{ summary.wins }}</span><span class="l">wins</span></div>
+        <div class="s"><span class="n">{{ summary.avg_winrate }}%</span><span class="l">avg win rate</span></div>
+    </div>
+
+    {% if kpis %}
+    <table class="kpi">
+        <thead>
+            <tr>
+                <th>Image</th><th>Category</th><th>Matchups</th>
+                <th>Wins</th><th>Losses</th><th>Win rate</th><th>Percentile</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for k in kpis %}
+            <tr>
+                <td><img class="thumb" src="/{{ k.path }}" alt=""></td>
+                <td>{{ k.category_name }}</td>
+                <td>{{ k.shown }}</td>
+                <td class="win">{{ k.upvotes }}</td>
+                <td class="lose">{{ k.losses }}</td>
+                <td><strong>{{ k.winrate|round(1) }}%</strong></td>
+                <td>{{ (k.percentile ~ 'th') if k.percentile is not none else '—' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <p class="muted">Percentile = how this image's win rate ranks against every scored image on
+        the platform. Matchups = times it was shown head-to-head.</p>
+    {% else %}
+    <p class="muted">Upload a capsule above to start collecting head-to-head stats for this game.</p>
+    {% endif %}
+</section>
+
 <style>
     .detail { display: grid; grid-template-columns: 616px 1fr; gap: 32px; align-items: start; }
     @media (max-width: 1000px) { .detail { grid-template-columns: 1fr; } }
@@ -143,5 +188,21 @@
         font-size: 0.8rem; font-weight: 600; cursor: pointer;
     }
     .del-btn:hover { background: #f87171; color: #fff; }
+
+    .title-wrap { display: flex; align-items: center; gap: 12px; }
+    .dp-mini { width: 42px; height: 42px; border-radius: 10px; object-fit: cover; display: block; }
+
+    .summary { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 20px; }
+    .summary .s { background: var(--card); border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 14px; padding: 16px 24px; text-align: center; }
+    .summary .n { display: block; font-size: 1.7rem; font-weight: 700; color: var(--accent); }
+    .summary .l { color: var(--muted); font-size: 0.82rem; }
+    .kpi { width: 100%; border-collapse: collapse; background: var(--card);
+        border-radius: 14px; overflow: hidden; margin-bottom: 12px; }
+    .kpi th, .kpi td { padding: 10px 14px; text-align: left;
+        border-bottom: 1px solid rgba(255,255,255,0.06); vertical-align: middle; }
+    .kpi th { color: var(--muted); font-size: 0.85rem; }
+    .kpi .thumb { width: 120px; border-radius: 6px; display: block; }
+    .kpi .win { color: #4ade80; } .kpi .lose { color: #f87171; }
 </style>
 {% endblock %}
