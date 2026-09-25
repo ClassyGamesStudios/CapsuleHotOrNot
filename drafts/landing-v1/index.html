@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CapsuleHotOrNot — landing v1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400..800&display=swap" rel="stylesheet">
+<style>
+/* Landing v1. Tokens from docs/brand-design-system.html (v1, approved 2026-09-25).
+   Hero is 100vh, every other section 70vh. Artwork is real Steam main capsules (616x353, pulled by collect_capsules.py).
+   Only artwork gets a card, and capsules have no frame or border. Text sits straight on the panel. No label of ours is ever placed on artwork. */
+:root {
+  color-scheme: dark;
+  --bg-base: #07090f; --bg-elevated: #0f172a; --bg-highlight: #1e2937; --bg-press: #334155; --bg-tinted: #475569;
+  --text-base: #e2e8f0; --text-subdued: #94a3b8; --text-muted: #64748b;
+  --accent: #22d3ee; --on-accent: #07090f; --accent-deep: #00b4d8;
+  --inverted: #ffffff; --on-inverted: #07090f;
+  --promo-cyan: #0891b2; --promo-violet: #6d28d9; --promo-pink: #db2777;
+  --win: #16a34a;
+  --font-sans: "Figtree", system-ui, -apple-system, "Segoe UI", "Helvetica Neue", arial, sans-serif;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px; --space-6: 24px; --space-8: 32px;
+  --radius-sm: 4px; --radius-md: 8px; --radius-lg: 16px; --radius-pill: 9999px; --radius-circle: 50%;
+  --control-lg: 48px;
+}
+* { box-sizing: border-box; }
+html { background: var(--bg-base); }
+body { margin: 0; background: var(--bg-base); color: var(--text-base); font: 400 16px/1.5 var(--font-sans); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+a { color: inherit; text-decoration: none; }
+h1, h2, h3, p { margin: 0; }
+.page { max-width: 1400px; margin: 0 auto; padding: var(--space-2); display: flex; flex-direction: column; gap: var(--space-2); }
+.panel { background: var(--bg-elevated); border-radius: var(--radius-md); }
+.eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--text-subdued); }
+
+/* Artwork: Steam main capsule 616x353, cover-fit at radius-sm */
+.art { display: block; width: 100%; aspect-ratio: 616 / 353; object-fit: cover; border-radius: var(--radius-sm); background: var(--bg-highlight); }
+
+/* Buttons */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); border: 0; border-radius: var(--radius-pill); font: 700 16px/1 var(--font-sans); cursor: pointer; white-space: nowrap; transition: transform 33ms, color 33ms; }
+.btn:hover { transform: scale(1.04); } .btn:active { transform: scale(1); opacity: .7; }
+.btn:focus-visible, .g-card:focus-visible, .icon-btn:focus-visible { outline: 3px solid var(--text-base); outline-offset: 2px; }
+.btn-lg { min-height: var(--control-lg); padding: var(--space-2) var(--space-8); }
+.btn-primary { background: var(--inverted); color: var(--on-inverted); }
+.btn-text { background: transparent; color: var(--text-subdued); padding: var(--space-2) var(--space-3); font-size: 14px; }
+.btn-text:hover { color: var(--text-base); transform: none; }
+.icon-btn { width: var(--control-lg); height: var(--control-lg); border-radius: var(--radius-circle); border: 0; background: var(--bg-highlight); color: var(--text-subdued); display: inline-grid; place-items: center; cursor: pointer; flex: none; transition: background-color 100ms, transform 33ms; }
+.icon-btn:hover { background: var(--bg-press); color: var(--text-base); transform: scale(1.04); }
+.icon-btn svg { width: 24px; height: 24px; fill: currentColor; }
+
+/* First screen: nav + hero = 100vh */
+.fold { min-height: calc(100vh - 16px); min-height: calc(100svh - 16px); display: flex; flex-direction: column; gap: var(--space-2); }
+.topbar { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-1) var(--space-2); }
+.wordmark { font-weight: 700; font-size: 18px; letter-spacing: -.01em; padding: 0 var(--space-3) 0 var(--space-2); }
+.topbar .grow { flex: 1; }
+.hero { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: var(--space-8) var(--space-4); }
+.hero h1 { font-size: clamp(40px, 6vw, 64px); line-height: 1; letter-spacing: -.02em; font-weight: 700; text-wrap: balance; }
+.hero .pitch { color: var(--text-subdued); max-width: 52ch; margin-top: var(--space-4); }
+
+.pair { display: grid; grid-template-columns: minmax(0, 380px) auto minmax(0, 380px); gap: var(--space-4); align-items: center; width: 100%; justify-content: center; margin-top: var(--space-8); transition: opacity .25s, transform .25s; }
+.pair.swap { opacity: 0; transform: translateY(8px); }
+.vs { color: var(--text-subdued); font-weight: 700; font-size: 14px; }
+.slot { position: relative; padding-bottom: 28px; }              /* room for the next matches waiting behind */
+.ghost { position: absolute; left: 0; right: 0; top: 0; bottom: 28px; border-radius: var(--radius-sm); background: var(--bg-highlight) center / cover no-repeat; }
+.ghost.g1 { transform: translateY(15px) scale(.94); opacity: .55; }
+.ghost.g2 { transform: translateY(28px) scale(.88); opacity: .3; }
+.g-card { position: relative; z-index: 2; display: block; width: 100%; appearance: none; border: 0; padding: 0; background: none; border-radius: var(--radius-sm); cursor: pointer; color: inherit; font: inherit; transition: opacity .25s, transform 120ms; }
+.g-card:hover { transform: scale(1.02); }
+.g-card .art { transition: box-shadow .2s; }
+.g-card.picked { animation: bump .32s ease-out; }
+@keyframes bump { 0% { transform: scale(1); } 40% { transform: scale(1.06); } 100% { transform: scale(1); } }
+.g-card.win .art { box-shadow: 0 0 36px 6px rgba(34, 211, 238, .55); }    /* the glow on a pick */
+.g-card.lose { opacity: .45; }
+
+.score { margin-top: var(--space-2); display: flex; flex-direction: column; align-items: center; gap: var(--space-1); }
+.score .num { font-size: 48px; line-height: 1.05; font-weight: 700; letter-spacing: -.01em; font-variant-numeric: tabular-nums; transition: transform .2s; }
+.score .num.bump { transform: scale(1.12); }
+
+/* Match 5: waitlist prompt with the 3 steps. Text only, no card fills. */
+.g-end { display: none; flex-direction: column; align-items: center; gap: var(--space-4); margin-top: var(--space-6); width: 100%; max-width: 720px; }
+.g-end h2 { font-size: 32px; line-height: 1.2; font-weight: 700; letter-spacing: -.01em; }
+.g-end p { color: var(--text-subdued); }
+.steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-8); width: 100%; margin: var(--space-4) 0; text-align: left; }
+.step b { display: block; font-size: 32px; line-height: 1; margin-bottom: var(--space-2); }
+.step span { font-size: 14px; color: var(--text-subdued); }
+.hero.done .pair, .hero.done .score { display: none; }
+.hero.done .g-end { display: flex; }
+
+/* Sections: 70vh. Copy sits directly on the panel, no card behind it. */
+.band { min-height: 70vh; min-height: 70svh; padding: var(--space-8); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-8) 64px; align-items: center; }
+.copy { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-3); }
+.copy h2 { font-size: 40px; line-height: 1.15; font-weight: 700; letter-spacing: -.015em; text-wrap: balance; }
+.copy p:not(.eyebrow) { color: var(--text-subdued); max-width: 46ch; }
+.copy .btn-text { padding-left: 0; font-size: 16px; color: var(--text-base); margin-top: var(--space-2); }
+
+/* Players: gift-card carousel. Same mechanics as /player/join (auto-advance, arrows, dots jump to a card),
+   drawn with the design system's neutral reward card: value and points first, brand as plain text. */
+.carousel { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); min-width: 0; }
+.car-stage { display: flex; align-items: center; gap: var(--space-3); width: 100%; }
+.viewport { flex: 1; min-width: 0; overflow: hidden; border-radius: var(--radius-md); }
+.track { display: flex; transition: transform .45s cubic-bezier(.4, 0, .2, 1); }
+.slide { min-width: 100%; display: flex; justify-content: center; }
+.gift { width: min(100%, 360px); aspect-ratio: 5 / 3; background: var(--bg-highlight); border-radius: var(--radius-md); padding: var(--space-6); display: flex; flex-direction: column; justify-content: space-between; }
+.gift .val { font-size: 64px; line-height: 1; font-weight: 700; letter-spacing: -.02em; }
+.gift .name { font-size: 14px; color: var(--text-subdued); margin-top: var(--space-1); }
+.dots { display: flex; gap: var(--space-2); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--bg-tinted); border: 0; padding: 0; cursor: pointer; }
+.dot.on { background: var(--text-base); }
+
+/* Developers: the best capsule stands out (glow), the rest sit back (dim + dark overlay), the stat card floats */
+.dev-col { min-width: 0; }
+.dev-stage { position: relative; height: min(58vh, 500px); overflow: hidden; border-radius: var(--radius-md); min-width: 0; }
+.dcard { position: absolute; width: 46%; border-radius: var(--radius-sm); overflow: hidden; z-index: 1; }
+.dcard img { opacity: .6; }
+.dcard::after { content: ""; position: absolute; inset: 0; background: rgba(7, 9, 15, .55); }
+.dcard.tl { top: -6%; left: 0; } .dcard.tr { top: -6%; right: 0; } .dcard.bl { bottom: -6%; left: 3%; } .dcard.br { bottom: -6%; right: 3%; }
+.dcard.best { width: 62%; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 5; overflow: visible; }
+.dcard.best::after { display: none; }
+.dcard.best img { opacity: 1; box-shadow: 0 0 44px 4px rgba(34, 211, 238, .5), 0 18px 34px rgba(0, 0, 0, .45); }
+.stat { position: absolute; z-index: 6; background: var(--bg-highlight); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); box-shadow: 0 10px 24px rgba(0, 0, 0, .4); }   /* floating dashboard cards */
+.stat .k { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text-subdued); }
+.stat .big { font-size: 32px; line-height: 1.1; font-weight: 700; letter-spacing: -.01em; margin-top: var(--space-1); }
+.stat .sub { font-size: 12px; color: var(--text-subdued); }
+.stat-ctr { top: 6%; right: 3%; min-width: 168px; }
+.stat-heat { left: 3%; bottom: 6%; }
+.stat-nums { right: 3%; bottom: 6%; display: grid; grid-template-columns: repeat(2, auto); gap: var(--space-2) var(--space-6); }
+.stat-nums b { display: block; font-size: 20px; line-height: 1.15; font-weight: 700; } .stat-nums span { font-size: 12px; color: var(--text-subdued); }
+.heat { display: grid; grid-template-columns: repeat(6, 16px); gap: 3px; margin-top: var(--space-2); }
+.heat i { height: 16px; border-radius: 2px; background: var(--accent-deep); }
+.heat i.hot { background: var(--accent); }
+
+/* Finale: 70vh. The wall is only a background. A dark overlay sits over it and the copy is the focus. */
+.finale { position: relative; min-height: 70vh; min-height: 70svh; overflow: hidden; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; text-align: center; padding: var(--space-8) var(--space-4); }
+.wall-cols { position: absolute; inset: 0; display: flex; gap: var(--space-2); }
+.wall-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--space-2); animation: wallUp var(--dur, 60s) linear var(--delay, 0s) infinite; }
+@keyframes wallUp { from { transform: translateY(0); } to { transform: translateY(calc(-50% - 4px)); } }
+.wall-col .art { flex: none; }
+.finale::before { content: ""; position: absolute; inset: 0; z-index: 1; background: radial-gradient(ellipse at center, rgba(7, 9, 15, .94) 0%, rgba(7, 9, 15, .84) 45%, rgba(7, 9, 15, .68) 100%); }
+.finale .copy-c { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: var(--space-4); max-width: 640px; }
+.finale h2 { font-size: clamp(36px, 5vw, 56px); line-height: 1.05; font-weight: 700; letter-spacing: -.02em; text-wrap: balance; }
+.finale p { color: var(--text-base); opacity: .85; font-size: 18px; }
+
+footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px; line-height: 1.5; color: var(--text-muted); display: flex; flex-direction: column; gap: var(--space-2); max-width: 90ch; }
+
+@media (max-width: 900px) {
+  .band { grid-template-columns: 1fr; padding: var(--space-4); }
+  .copy h2 { font-size: 32px; }
+  .pair { grid-template-columns: minmax(0, 380px); }
+  .vs { text-align: center; }
+  .steps { grid-template-columns: 1fr; gap: var(--space-4); }
+  .wall-col:nth-child(n+4) { display: none; }
+  .dcard { width: 52%; } .dcard.best { width: 70%; }
+  .topbar .links { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; } .wall-col { animation: none; } .track { transition: none; } .g-card.picked { animation: none; }
+  .btn:hover, .icon-btn:hover { transform: none; }
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m9.5 16.6-4.1-4.1L4 13.9l5.5 5.5L20 8.9l-1.4-1.4-9.1 9.1Z"/></symbol>
+  <symbol id="i-prev" viewBox="0 0 24 24"><path d="M14.7 5.3 8 12l6.7 6.7 1.4-1.4L10.8 12l5.3-5.3z"/></symbol>
+  <symbol id="i-next" viewBox="0 0 24 24"><path d="M9.3 5.3 8 6.7l5.3 5.3L8 17.3l1.3 1.4L16 12z"/></symbol>
+</svg>
+
+<div class="page">
+
+  <!-- FIRST SCREEN: nav + hero, 100vh -->
+  <section class="fold">
+    <header class="topbar">
+      <a class="wordmark" href="#">CapsuleHotOrNot</a>
+      <span class="links"><a class="btn btn-text" href="#players">Players</a><a class="btn btn-text" href="#developers">Developers</a></span>
+      <span class="grow"></span>
+      <a class="btn btn-text" href="#">Log in</a>
+      <a class="btn btn-lg btn-primary" href="#">Join the waitlist</a>
+    </header>
+
+    <div class="hero panel" id="hero">
+      <h1>Two capsules. One click.</h1>
+      <p class="pitch">Tap the capsule you'd click on Steam. Every matchup is a real vote from a real Steam library, yours included once you're in.</p>
+
+      <div class="pair" id="pair">
+        <div class="slot"><i class="ghost g2"></i><i class="ghost g1"></i>
+          <button type="button" class="g-card" id="c0" aria-label="Pick the left capsule"><img class="art" id="a0" alt=""></button></div>
+        <span class="vs">vs</span>
+        <div class="slot"><i class="ghost g2"></i><i class="ghost g1"></i>
+          <button type="button" class="g-card" id="c1" aria-label="Pick the right capsule"><img class="art" id="a1" alt=""></button></div>
+      </div>
+
+      <div class="score"><span class="num" id="score">105</span><span class="eyebrow">Points</span></div>
+
+      <!-- Match 5: prompt to join the waitlist. Steps and bonus come from the wireframe (200 pts);
+           the Sep 24 meeting notes said 250, so confirm the number. -->
+      <div class="g-end" id="gend">
+        <h2>Keep your points. Get 200 more.</h2>
+        <p>You're on <strong id="finalScore">0</strong> points. Finish three steps to add the bonus.</p>
+        <div class="steps">
+          <div class="step"><b>1</b><span>Join the waitlist</span></div>
+          <div class="step"><b>2</b><span>Log in</span></div>
+          <div class="step"><b>3</b><span>Get 200 more points</span></div>
+        </div>
+        <a class="btn btn-lg btn-primary" href="#">Join the waitlist</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- PLAYERS: carousel left, copy right. 70vh -->
+  <section class="panel band" id="players">
+    <div class="carousel" id="car">
+      <div class="car-stage">
+        <button class="icon-btn" id="prev" aria-label="Previous gift card"><svg><use href="#i-prev"/></svg></button>
+        <div class="viewport"><div class="track" id="cardTrack"></div></div>
+        <button class="icon-btn" id="next" aria-label="Next gift card"><svg><use href="#i-next"/></svg></button>
+      </div>
+      <div class="dots" id="dots"></div>
+    </div>
+    <div class="copy">
+      <p class="eyebrow">For players</p>
+      <h2>Vote on games. Get paid.</h2>
+      <p>Join and play for free, at no cost. Every pick earns points. Points convert straight into gift cards, with no entries, no draws and no catch.</p>
+      <a class="btn btn-text" href="#">Join as a player &rarr;</a>
+    </div>
+  </section>
+
+  <!-- DEVELOPERS: copy left, capsule set right. 70vh -->
+  <section class="panel band" id="developers">
+    <div class="copy">
+      <p class="eyebrow">For developers and studios</p>
+      <h2>Know which capsule wins before you spend on marketing.</h2>
+      <p>Upload your variants and get a head-to-head win rate from players whose Steam library matches your genre. Real signal before launch, not after.</p>
+      <a class="btn btn-text" href="#">Join as a developer &rarr;</a>
+    </div>
+    <div class="dev-col"><div class="dev-stage" id="devStage" aria-hidden="true"></div></div>
+  </section>
+
+  <!-- FINALE: wall as a dimmed background, copy on top. 70vh -->
+  <section class="finale" id="wall">
+    <div class="wall-cols" id="wallCols" aria-hidden="true"></div>
+    <div class="copy-c">
+      <h2>Get in before the first vote.</h2>
+      <p>Free for players. No cost to join the developer waitlist either.</p>
+      <a class="btn btn-lg btn-primary" href="#">Join the waitlist</a>
+    </div>
+  </section>
+
+  <footer>
+    <p>Steam and the Steam logo are trademarks and/or registered trademarks of Valve Corporation in the U.S. and/or other countries. CapsuleHotOrNot is not affiliated with or endorsed by Valve Corporation.</p>
+    <p>Gift card brands are trademarks of their respective owners and are not sponsors of or affiliated with CapsuleHotOrNot.</p>
+  </footer>
+</div>
+
+<script>
+/* Real capsules (developer art pulled from Steam by collect_capsules.py): static/uploads/main_<appid>.jpg, copied to ./art. All src values go through artUrl(). */
+function artUrl(n) { return 'art/' + n; }
+var HERO = ["main_2771630.jpg", "main_3593620.jpg", "main_1001520.jpg", "main_4062790.jpg", "main_3338240.jpg", "main_581150.jpg", "main_2398100.jpg", "main_4600800.jpg", "main_3298140.jpg", "main_4692380.jpg"];   // 2 per match, 5 matches
+var DEV  = ["main_3174440.jpg", "main_1730600.jpg", "main_2217040.jpg", "main_4598970.jpg", "main_4690740.jpg"];   // [0] = best result, the rest sit behind it
+var WALL = ["main_1001520.jpg", "main_1730600.jpg", "main_2195450.jpg", "main_2217040.jpg", "main_2326200.jpg", "main_2398100.jpg", "main_2771630.jpg", "main_3120770.jpg", "main_3174440.jpg", "main_3298140.jpg", "main_3338240.jpg", "main_3474620.jpg", "main_3593620.jpg", "main_4062790.jpg", "main_4240600.jpg", "main_4598970.jpg", "main_4600800.jpg", "main_4647110.jpg", "main_4690740.jpg", "main_4692380.jpg", "main_4697010.jpg", "main_4698730.jpg", "main_4825820.jpg", "main_4958620.jpg", "main_5070330.jpg", "main_5079330.jpg", "main_5086800.jpg", "main_5222780.jpg", "main_581150.jpg", "main_746530.jpg", "main_876240.jpg", "main_3664750.jpg", "main_1111150.jpg", "main_2826260.jpg"];
+
+/* Hero mini-game. Pick a capsule, score bumps, the next matches step up from behind, match 5 asks for the waitlist.
+   The player never sees how many matches there are: no dots, no counter. */
+(function () {
+  var MAX = 5;
+  var pair = document.getElementById('pair'), hero = document.getElementById('hero');
+  var cards = [document.getElementById('c0'), document.getElementById('c1')];
+  var imgs = [document.getElementById('a0'), document.getElementById('a1')];
+  var slots = document.querySelectorAll('.slot');
+  var scoreEl = document.getElementById('score');
+  var score = parseInt(scoreEl.textContent, 10), n = 0, busy = false;
+  function at(m, side) { return HERO[((m % 5) * 2 + side) % HERO.length]; }
+  function paint() {
+    for (var s = 0; s < 2; s++) {
+      imgs[s].src = artUrl(at(n, s));
+      slots[s].querySelector('.g1').style.backgroundImage = 'url(' + artUrl(at(n + 1, s)) + ')';
+      slots[s].querySelector('.g2').style.backgroundImage = 'url(' + artUrl(at(n + 2, s)) + ')';
+    }
+  }
+  paint();
+  function vote(i) {
+    if (busy) return; busy = true;
+    score += 1; scoreEl.textContent = score;
+    scoreEl.classList.add('bump'); setTimeout(function () { scoreEl.classList.remove('bump'); }, 200);
+    cards[i].classList.add('win', 'picked'); cards[1 - i].classList.add('lose');
+    n += 1;
+    if (n >= MAX) {
+      setTimeout(function () { document.getElementById('finalScore').textContent = score; hero.classList.add('done'); }, 650);
+      return;
+    }
+    setTimeout(function () {
+      pair.classList.add('swap');
+      setTimeout(function () {
+        cards.forEach(function (c) { c.classList.remove('win', 'lose', 'picked'); });
+        paint(); pair.classList.remove('swap'); busy = false;
+      }, 260);
+    }, 520);
+  }
+  cards.forEach(function (c, i) { c.addEventListener('click', function () { vote(i); }); });
+})();
+
+/* Players: gift-card carousel. Mechanics as /player/join: auto-advance, arrows, dots jump to a card.
+   Cards follow the reward template. Points and names come from the REWARDS catalogue in app.py (display only). */
+(function () {
+  var GIFTS = [
+    ['9,500', '$10', 'Steam gift card'], ['10,000', '$10', 'Amazon gift card'], ['11,000', '$10', 'PayPal cash'],
+    ['24,000', '$25', 'Visa prepaid'], ['8,000', '1 month', 'Discord Nitro'], ['9,000', '1 month', 'Xbox Game Pass'],
+    ['18,000', '$20', 'Steam gift card'], ['10,500', '$10', 'Humble Bundle credit']
+  ];
+  var track = document.getElementById('cardTrack'), dots = document.getElementById('dots'), car = document.getElementById('car');
+  track.innerHTML = GIFTS.map(function (g) {
+    return '<div class="slide"><div class="gift"><span class="eyebrow">' + g[0] + ' pts</span><div><div class="val">' + g[1] + '</div><div class="name">' + g[2] + '</div></div></div></div>';
+  }).join('');
+  var i = 0, timer, hold = false, calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  GIFTS.forEach(function (_, n) {
+    var d = document.createElement('button'); d.type = 'button'; d.className = 'dot'; d.setAttribute('aria-label', 'Gift card ' + (n + 1));
+    d.addEventListener('click', function () { go(n); }); dots.appendChild(d);
+  });
+  function go(n) {
+    i = (n + GIFTS.length) % GIFTS.length;
+    track.style.transform = 'translateX(' + (-i * 100) + '%)';
+    Array.prototype.forEach.call(dots.children, function (d, k) { d.classList.toggle('on', k === i); });
+    clearInterval(timer);
+    if (!calm) timer = setInterval(function () { if (!hold) go(i + 1); }, 3500);
+  }
+  document.getElementById('prev').addEventListener('click', function () { go(i - 1); });
+  document.getElementById('next').addEventListener('click', function () { go(i + 1); });
+  car.addEventListener('mouseenter', function () { hold = true; }); car.addEventListener('mouseleave', function () { hold = false; });
+  go(0);
+})();
+
+/* Developers: DEV[0] is the capsule with the best result and stands out. The rest are dimmed behind it.
+   Floating cards show what the dashboard measures (templates/game_detail.html): matchups, wins, losses, win rate,
+   percentile, average win rate. The client's two priorities are added: CTR and a segment heatmap.
+   In this app a click on a capsule is the vote, so CTR = picked when shown = win rate.
+   The heatmap (win rate by player genre segment) is on the roadmap, not in the build yet. All numbers are sample data. */
+(function () {
+  function card(f, cls) { return '<div class="dcard ' + cls + '"><img class="art" alt="" src="' + artUrl(f) + '"></div>'; }
+  var HEAT = [.2, .35, .3, .55, .25, .4,  .3, .5, .45, .9, .35, .3,  .25, .3, .6, .7, .3, .2];   // rows = capsules, columns = player segments
+  var cells = HEAT.map(function (v) { return '<i' + (v > .85 ? ' class="hot"' : '') + ' style="opacity:' + (0.25 + v * 0.75).toFixed(2) + '"></i>'; }).join('');
+  document.getElementById('devStage').innerHTML =
+    card(DEV[1], 'tl') + card(DEV[2], 'tr') + card(DEV[3], 'bl') + card(DEV[4], 'br') + card(DEV[0], 'best') +
+    '<div class="stat stat-ctr"><div class="k">CTR</div><div class="big">65%</div><div class="sub">picked when shown &middot; avg 52%</div></div>' +
+    '<div class="stat stat-heat"><div class="k">Win rate by segment</div><div class="heat">' + cells + '</div></div>' +
+    '<div class="stat stat-nums"><div><b>240</b><span>Matchups</span></div><div><b>92nd</b><span>Percentile</span></div>' +
+    '<div><b>156</b><span>Wins</span></div><div><b>84</b><span>Losses</span></div></div>';
+})();
+
+/* Wall: real capsules, every column drifting upward at its own speed, staggered so tiles never line up.
+   Each column is duplicated once for a seamless loop. */
+(function () {
+  var cols = '';
+  for (var c = 0; c < 6; c++) {
+    var tiles = '';
+    for (var k = 0; k < 8; k++) tiles += '<img class="art" alt="" loading="lazy" src="' + artUrl(WALL[(c * 7 + k * 5) % WALL.length]) + '">';
+    cols += '<div class="wall-col" style="--dur:' + (56 + c * 8) + 's;--delay:-' + (c * 11) + 's">' + tiles + tiles + '</div>';
+  }
+  document.getElementById('wallCols').innerHTML = cols;
+})();
+</script>
+</body>
+</html>
