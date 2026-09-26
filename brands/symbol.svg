@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- CapsuleHotOrNot symbol, redrawn with the Exclude technique.
+
+     It is one path with fill-rule="evenodd" and three outlines: the outside of the outline card,
+     the inside of the outline card, and the solid card. A point covered an even number of times
+     is left empty, so the outline disappears wherever it crosses the solid card.
+
+     Both cards are 264.4 x 177.2 with 20.6 corners. The outline grows outward by 5.73.
+     The outline card tilts -19.4 degrees and the solid card tilts 20.45 degrees.
+     White, for dark backgrounds. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 401.47 300.17" role="img" aria-label="CapsuleHotOrNot symbol">
+  <path fill="#fff" fill-rule="evenodd" d="M17.56 75.57 L228.09 1.44 A26.33 26.33 0 0 1 261.67 17.53 L306.85 145.80 A26.33 26.33 0 0 1 290.76 179.39 L80.23 253.52 A26.33 26.33 0 0 1 46.65 237.43 L1.47 109.16 A26.33 26.33 0 0 1 17.56 75.57Z M19.47 80.98 L229.99 6.84 A20.6 20.6 0 0 1 256.27 19.43 L301.44 147.71 A20.6 20.6 0 0 1 288.85 173.98 L78.33 248.12 A20.6 20.6 0 0 1 52.05 235.53 L6.88 107.25 A20.6 20.6 0 0 1 19.47 80.98Z M178.94 54.88 L388.07 132.87 A20.6 20.6 0 0 1 400.18 159.36 L352.66 286.79 A20.6 20.6 0 0 1 326.16 298.90 L117.03 220.91 A20.6 20.6 0 0 1 104.92 194.42 L152.44 66.99 A20.6 20.6 0 0 1 178.94 54.88Z"/>
+</svg>
