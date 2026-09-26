@@ -10,7 +10,7 @@
 <style>
 /* Landing v1. Tokens from docs/brand-design-system.html (v1, approved 2026-09-25).
    Hero is 100vh, every other section 70vh. Artwork is real Steam main capsules (616x353, pulled by collect_capsules.py).
-   Only artwork gets a card, and capsules have no frame or border. Text sits straight on the panel. No label of ours is ever placed on artwork. */
+   Artwork never has a frame, border or stroke. Text sits straight on the panel. No label of ours is ever placed on artwork. */
 :root {
   color-scheme: dark;
   --bg-base: #07090f; --bg-elevated: #0f172a; --bg-highlight: #1e2937; --bg-press: #334155; --bg-tinted: #475569;
@@ -23,7 +23,11 @@
   --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px; --space-6: 24px; --space-8: 32px;
   --radius-sm: 4px; --radius-md: 8px; --radius-lg: 16px; --radius-pill: 9999px; --radius-circle: 50%;
   --control-lg: 48px;
+  /* texture contrast by state (design system v1.1) */
+  --c-rest: 0.2; --c-view: 0.55; --c-active: 1;
 }
+@property --c { syntax: "<number>"; inherits: true; initial-value: 0.2; }
+
 * { box-sizing: border-box; }
 html { background: var(--bg-base); }
 body { margin: 0; background: var(--bg-base); color: var(--text-base); font: 400 16px/1.5 var(--font-sans); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
@@ -35,6 +39,48 @@ h1, h2, h3, p { margin: 0; }
 
 /* Artwork: Steam main capsule 616x353, cover-fit at radius-sm */
 .art { display: block; width: 100%; aspect-ratio: 616 / 353; object-fit: cover; border-radius: var(--radius-sm); background: var(--bg-highlight); }
+
+/* Texture: one hue per surface. A tonal base, one soft blurred patch in a nearby shade, and coarse grain. */
+.tx {
+  --c: var(--c-rest);          /* GSAP changes this as the state changes */
+  position: relative; isolation: isolate; overflow: hidden;
+  --grain-blend: overlay;
+  --mx: 1;                     /* how strong the patch gets on this surface */
+}
+.tx::before, .tx::after { content: ""; position: absolute; z-index: -1; pointer-events: none; }
+.tx::before {
+  width: 85%; height: 150%; left: var(--bx, 40%); top: var(--by, -25%);
+  border-radius: 50%;
+  background: var(--blob);
+  filter: blur(var(--blur, 14px));
+  opacity: calc(var(--c) * var(--mx));
+  transform: scale(calc(.85 + var(--c) * .3));
+}
+.tx::after {
+  inset: 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.55' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  mix-blend-mode: var(--grain-blend);
+  opacity: calc(.07 + var(--c) * .4);
+}
+.tx-accent {
+  background: linear-gradient(160deg, var(--accent), color-mix(in srgb, var(--accent) 80%, white));
+  color: var(--on-accent);
+  --blob: var(--promo-cyan); --mx: .7; --bx: 25%; --by: -35%;
+}
+.tx-light {
+  background: linear-gradient(160deg, #fff, color-mix(in srgb, var(--accent) 14%, white));
+  color: var(--on-inverted);
+  --blob: color-mix(in srgb, var(--accent) 45%, white);
+  --grain-blend: multiply; --mx: .85; --bx: 35%; --by: -30%;
+}
+.tx-dark {
+  background: linear-gradient(160deg, var(--bg-highlight), color-mix(in srgb, var(--bg-press) 55%, var(--bg-highlight)));
+  color: var(--text-base);
+  --blob: var(--bg-tinted); --mx: .6; --blur: 18px; --bx: 30%; --by: -40%;
+}
+/* Without GSAP the hover and focus states still work, they just switch instead of easing. */
+html.no-gsap .tx { transition: --c 300ms ease, transform 33ms; }
+html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-within, html.no-gsap .tx[aria-pressed="true"] { --c: var(--c-active); }
 
 /* Buttons */
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); border: 0; border-radius: var(--radius-pill); font: 700 16px/1 var(--font-sans); cursor: pointer; white-space: nowrap; transition: transform 33ms, color 33ms; }
@@ -49,13 +95,25 @@ h1, h2, h3, p { margin: 0; }
 .icon-btn svg { width: 24px; height: 24px; fill: currentColor; }
 
 /* First screen: nav + hero = 100vh */
-.fold { min-height: calc(100vh - 16px); min-height: calc(100svh - 16px); display: flex; flex-direction: column; gap: var(--space-2); }
+.fold { position: relative; isolation: isolate; min-height: calc(100vh - 16px); min-height: calc(100svh - 16px); display: flex; flex-direction: column; gap: var(--space-2); }
+/* Top light: one hue, no grain. */
+.fold-bg { position: absolute; z-index: -1; top: calc(-1 * var(--space-2)); bottom: 0; left: calc(50% - 50vw); width: 100vw; pointer-events: none; overflow: hidden;
+  background: linear-gradient(180deg, #0e7490 0%, #083d4f 34%, var(--bg-base) 80%); }
 .topbar { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-1) var(--space-2); }
-.wordmark { font-weight: 700; font-size: 18px; letter-spacing: -.01em; padding: 0 var(--space-3) 0 var(--space-2); }
+/* Logo: the symbol alone at rest. The name opens out to the right on hover or focus. */
+.logo { --h: 40px; position: relative; display: inline-block; flex: none; height: var(--h); width: calc(var(--h) * 1.3375); color: var(--inverted); text-decoration: none; }
+.logo svg { position: absolute; left: 0; top: 0; height: 100%; width: calc(var(--h) * 4.2115); overflow: visible; fill: currentColor; pointer-events: none; }
+.logo:focus-visible { outline: 3px solid var(--text-base); outline-offset: 4px; border-radius: var(--radius-sm); }
+/* Touch screens show the full logo all the time, so keep the room it needs. Leave space to its right on wide screens: the name opens over it. */
+@media (hover: none) { .logo { width: calc(var(--h) * 4.2115); } }
+.topbar .logo { margin-left: var(--space-2); }
+.topbar .btn-text { color: rgba(226, 232, 240, .82); } .topbar .btn-text:hover { color: var(--text-base); }
 .topbar .grow { flex: 1; }
 .hero { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: var(--space-8) var(--space-4); }
-.hero h1 { font-size: clamp(40px, 6vw, 64px); line-height: 1; letter-spacing: -.02em; font-weight: 700; text-wrap: balance; }
-.hero .pitch { color: var(--text-subdued); max-width: 52ch; margin-top: var(--space-4); }
+.hero h1 { font-size: clamp(44px, 9vw, 96px); line-height: .92; letter-spacing: -.035em; font-weight: 700; }
+.hero h1 .line { display: block; overflow: hidden; padding-bottom: .1em; margin-bottom: -.1em; }
+.hero h1 .inner { display: block; }
+.hero .pitch { color: var(--text-base); opacity: .88; max-width: 52ch; margin-top: var(--space-6); }
 
 .pair { display: grid; grid-template-columns: minmax(0, 380px) auto minmax(0, 380px); gap: var(--space-4); align-items: center; width: 100%; justify-content: center; margin-top: var(--space-8); transition: opacity .25s, transform .25s; }
 .pair.swap { opacity: 0; transform: translateY(8px); }
@@ -64,17 +122,37 @@ h1, h2, h3, p { margin: 0; }
 .ghost { position: absolute; left: 0; right: 0; top: 0; bottom: 28px; border-radius: var(--radius-sm); background: var(--bg-highlight) center / cover no-repeat; }
 .ghost.g1 { transform: translateY(15px) scale(.94); opacity: .55; }
 .ghost.g2 { transform: translateY(28px) scale(.88); opacity: .3; }
-.g-card { position: relative; z-index: 2; display: block; width: 100%; appearance: none; border: 0; padding: 0; background: none; border-radius: var(--radius-sm); cursor: pointer; color: inherit; font: inherit; transition: opacity .25s, transform 120ms; }
+.g-card { position: relative; z-index: 2; display: block; width: 100%; appearance: none; border: 0; padding: 0; background: none; border-radius: var(--radius-sm); cursor: pointer; color: inherit; font: inherit; transition: background-color 100ms, opacity .25s; }
 .g-card:hover { transform: scale(1.02); }
-.g-card .art { transition: box-shadow .2s; }
 .g-card.picked { animation: bump .32s ease-out; }
+@keyframes deal { from { transform: translateY(16px) scale(.94); opacity: .6; } to { transform: none; opacity: 1; } }   /* the card behind steps forward */
+@keyframes lineUp { from { transform: translateY(105%); } to { transform: none; } }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes ghostIn { from { opacity: 0; } }
+.g-card.enter { animation: deal .42s cubic-bezier(.16, 1, .3, 1); }
+@media (prefers-reduced-motion: no-preference) {
+  /* Arrival, authored once: headline lines rise out of a mask, then the capsules are dealt in, then the score. Default state stays visible. */
+  .hero h1 .inner { animation: lineUp .9s cubic-bezier(.16, 1, .3, 1) both; }
+  .hero h1 .line:nth-child(2) .inner { animation-delay: .09s; }
+  .hero .pitch { animation: fadeUp .7s cubic-bezier(.16, 1, .3, 1) .35s both; }
+  .pair .slot:nth-child(1) { animation: deal .8s cubic-bezier(.16, 1, .3, 1) .55s both; }
+  .pair .slot:nth-child(3) { animation: deal .8s cubic-bezier(.16, 1, .3, 1) .68s both; }
+  .vs, .score { animation: fadeUp .6s cubic-bezier(.16, 1, .3, 1) .9s both; }
+  .ghost { animation: ghostIn .5s ease-out both; }
+  .g-end { animation: fadeUp .55s cubic-bezier(.16, 1, .3, 1) both; }
+}
 @keyframes bump { 0% { transform: scale(1); } 40% { transform: scale(1.06); } 100% { transform: scale(1); } }
-.g-card.win .art { box-shadow: 0 0 36px 6px rgba(34, 211, 238, .55); }    /* the glow on a pick */
 .g-card.lose { opacity: .45; }
 
-.score { margin-top: var(--space-2); display: flex; flex-direction: column; align-items: center; gap: var(--space-1); }
-.score .num { font-size: 48px; line-height: 1.05; font-weight: 700; letter-spacing: -.01em; font-variant-numeric: tabular-nums; transition: transform .2s; }
-.score .num.bump { transform: scale(1.12); }
+.score { position: relative; margin-top: var(--space-2); display: flex; flex-direction: column; align-items: center; gap: var(--space-1); }
+.score-row { position: relative; display: flex; align-items: center; justify-content: center; gap: var(--space-3); }
+.score .num { font-size: 48px; line-height: 1.05; font-weight: 700; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+/* Multiplier (app rule: a vote pays 10 x multiplier, and every 10 votes adds 0.1x) */
+.mult { display: inline-block; min-width: 3.6em; text-align: center; overflow: hidden; font-size: 16px; line-height: 1.5; font-weight: 700; font-variant-numeric: tabular-nums; padding: 2px var(--space-3); border-radius: var(--radius-pill); background: var(--bg-highlight); color: var(--text-base); }
+.gain { position: absolute; left: 100%; top: 50%; margin-left: var(--space-3); font-size: 20px; font-weight: 700; color: var(--text-base); opacity: 0; pointer-events: none; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.mult-pop { position: absolute; left: 50%; bottom: 100%; transform: translateX(-50%); text-align: center; white-space: nowrap; opacity: 0; pointer-events: none; z-index: 6; }
+.mult-pop b { display: block; font-size: 32px; line-height: 1.1; font-weight: 700; letter-spacing: -.02em; }
+.mult-pop i { display: block; font-style: normal; font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
 
 /* Match 5: waitlist prompt with the 3 steps. Text only, no card fills. */
 .g-end { display: none; flex-direction: column; align-items: center; gap: var(--space-4); margin-top: var(--space-6); width: 100%; max-width: 720px; }
@@ -107,27 +185,34 @@ h1, h2, h3, p { margin: 0; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--bg-tinted); border: 0; padding: 0; cursor: pointer; }
 .dot.on { background: var(--text-base); }
 
-/* Developers: the best capsule stands out (glow), the rest sit back (dim + dark overlay), the stat card floats */
+/* Developers: built from the Paper design "developers / devStage" (628 x 500). Oversized capsules are clipped by the frame,
+   the best one sits in the middle at full brightness, and three small stat cards float above. Everything scales with the
+   column width through --u, like Figma's scale tool: sizes, text, gaps and corners shrink together, nothing reflows. */
 .dev-col { min-width: 0; }
-.dev-stage { position: relative; height: min(58vh, 500px); overflow: hidden; border-radius: var(--radius-md); min-width: 0; }
-.dcard { position: absolute; width: 46%; border-radius: var(--radius-sm); overflow: hidden; z-index: 1; }
-.dcard img { opacity: .6; }
-.dcard::after { content: ""; position: absolute; inset: 0; background: rgba(7, 9, 15, .55); }
-.dcard.tl { top: -6%; left: 0; } .dcard.tr { top: -6%; right: 0; } .dcard.bl { bottom: -6%; left: 3%; } .dcard.br { bottom: -6%; right: 3%; }
-.dcard.best { width: 62%; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 5; overflow: visible; }
-.dcard.best::after { display: none; }
-.dcard.best img { opacity: 1; box-shadow: 0 0 44px 4px rgba(34, 211, 238, .5), 0 18px 34px rgba(0, 0, 0, .45); }
-.stat { position: absolute; z-index: 6; background: var(--bg-highlight); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); box-shadow: 0 10px 24px rgba(0, 0, 0, .4); }   /* floating dashboard cards */
-.stat .k { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text-subdued); }
-.stat .big { font-size: 32px; line-height: 1.1; font-weight: 700; letter-spacing: -.01em; margin-top: var(--space-1); }
-.stat .sub { font-size: 12px; color: var(--text-subdued); }
-.stat-ctr { top: 6%; right: 3%; min-width: 168px; }
-.stat-heat { left: 3%; bottom: 6%; }
-.stat-nums { right: 3%; bottom: 6%; display: grid; grid-template-columns: repeat(2, auto); gap: var(--space-2) var(--space-6); }
-.stat-nums b { display: block; font-size: 20px; line-height: 1.15; font-weight: 700; } .stat-nums span { font-size: 12px; color: var(--text-subdued); }
-.heat { display: grid; grid-template-columns: repeat(6, 16px); gap: 3px; margin-top: var(--space-2); }
-.heat i { height: 16px; border-radius: 2px; background: var(--accent-deep); }
+.dev-stage { position: relative; container-type: inline-size; min-width: 0; }
+.dev-art, .dev-cards { --u: calc(100cqi / 628); }
+.dev-art { position: relative; aspect-ratio: 628 / 500; overflow: hidden; border-radius: var(--radius-md); }
+.dt { position: absolute; left: calc(var(--u) * var(--x)); top: calc(var(--u) * var(--y)); width: calc(var(--u) * 288.88); height: calc(var(--u) * 165.54); border-radius: calc(var(--u) * 4); overflow: hidden; }
+.dt img { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: auto; object-fit: cover; opacity: .6; border-radius: 0; }
+.dt::after { content: ""; position: absolute; inset: 0; background: rgba(7, 9, 15, .55); }
+.dt.best { left: calc(var(--u) * 178); top: calc(var(--u) * 157); width: calc(var(--u) * 274); height: calc(var(--u) * 157.01); overflow: visible; z-index: 2; }
+.dt.best::after { display: none; }
+.dt.best img { opacity: 1; border-radius: calc(var(--u) * 2.8); z-index: 1; }   /* above the glow, always */
+.glow { position: absolute; z-index: 0; opacity: .85; inset: calc(var(--u) * -9); border-radius: calc(var(--u) * 14); pointer-events: none; filter: url(#grainGlow);
+  background: linear-gradient(160deg, var(--accent-deep), color-mix(in srgb, var(--accent) 55%, var(--bg-elevated))); }   /* one hue, stays within about 12px of the capsule */
+.dev-cards { position: absolute; inset: 0; pointer-events: none; }
+.stat { position: absolute; z-index: 5; display: flex; flex-direction: column; border-radius: calc(var(--u) * 8); padding: calc(var(--u) * 12) calc(var(--u) * 16); white-space: nowrap; }   /* scaled like a picture: nothing reflows */
+.stat-ctr { left: calc(var(--u) * 119); top: calc(var(--u) * 32); width: calc(var(--u) * 192.23); }
+.stat-nums { left: calc(var(--u) * 347); top: calc(var(--u) * 337); width: calc(var(--u) * 163.02); display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: calc(var(--u) * 47); gap: calc(var(--u) * 8) calc(var(--u) * 24); align-content: start; }
+.stat-heat { left: calc(var(--u) * 107); top: calc(var(--u) * 339); width: calc(var(--u) * 185.27); }
+.stat .k { font-size: calc(var(--u) * 12); line-height: 1.5; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text-subdued); }
+.stat .big { font-size: calc(var(--u) * 32); line-height: 1.1; font-weight: 700; letter-spacing: -.01em; margin-top: calc(var(--u) * 4); }
+.stat .sub { font-size: calc(var(--u) * 12); line-height: 1.5; color: var(--text-subdued); }
+.stat-nums b { display: block; font-size: calc(var(--u) * 20); line-height: 1.15; font-weight: 700; } .stat-nums span { display: block; font-size: calc(var(--u) * 12); line-height: 1.5; color: var(--text-subdued); }
+.heat { display: grid; grid-template-columns: repeat(6, calc(var(--u) * 16)); gap: calc(var(--u) * 3); margin-top: calc(var(--u) * 8); }
+.heat i { height: calc(var(--u) * 16); border-radius: calc(var(--u) * 2); background: var(--accent-deep); }
 .heat i.hot { background: var(--accent); }
+@media (min-width: 901px) { #developers { grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); } }   /* give the art side more room */
 
 /* Finale: 70vh. The wall is only a background. A dark overlay sits over it and the copy is the focus. */
 .finale { position: relative; min-height: 70vh; min-height: 70svh; overflow: hidden; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; text-align: center; padding: var(--space-8) var(--space-4); }
@@ -149,11 +234,14 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
   .vs { text-align: center; }
   .steps { grid-template-columns: 1fr; gap: var(--space-4); }
   .wall-col:nth-child(n+4) { display: none; }
-  .dcard { width: 52%; } .dcard.best { width: 70%; }
+  .dev-grid { gap: var(--space-2); }
   .topbar .links { display: none; }
+  .topbar .btn-text { display: none; }   /* phones: the logo and the waitlist button are what matter here */
+  .car-stage .icon-btn { display: none; }   /* phones: swipe or use the dots */
+  .viewport { touch-action: pan-y; }
 }
 @media (prefers-reduced-motion: reduce) {
-  * { transition: none !important; } .wall-col { animation: none; } .track { transition: none; } .g-card.picked { animation: none; }
+  * { transition: none !important; animation: none !important; } .wall-col { animation: none; } .track { transition: none; } .g-card.picked { animation: none; }
   .btn:hover, .icon-btn:hover { transform: none; }
 }
 </style>
@@ -162,6 +250,34 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <symbol id="i-check" viewBox="0 0 24 24"><path d="m9.5 16.6-4.1-4.1L4 13.9l5.5 5.5L20 8.9l-1.4-1.4-9.1 9.1Z"/></symbol>
   <symbol id="i-prev" viewBox="0 0 24 24"><path d="M14.7 5.3 8 12l6.7 6.7 1.4-1.4L10.8 12l5.3-5.3z"/></symbol>
+<defs>
+    <g id="lg-symbol"><path fill-rule="evenodd" d="M17.56 75.57 L228.09 1.44 A26.33 26.33 0 0 1 261.67 17.53 L306.85 145.80 A26.33 26.33 0 0 1 290.76 179.39 L80.23 253.52 A26.33 26.33 0 0 1 46.65 237.43 L1.47 109.16 A26.33 26.33 0 0 1 17.56 75.57Z M19.47 80.98 L229.99 6.84 A20.6 20.6 0 0 1 256.27 19.43 L301.44 147.71 A20.6 20.6 0 0 1 288.85 173.98 L78.33 248.12 A20.6 20.6 0 0 1 52.05 235.53 L6.88 107.25 A20.6 20.6 0 0 1 19.47 80.98Z M178.94 54.88 L388.07 132.87 A20.6 20.6 0 0 1 400.18 159.36 L352.66 286.79 A20.6 20.6 0 0 1 326.16 298.90 L117.03 220.91 A20.6 20.6 0 0 1 104.92 194.42 L152.44 66.99 A20.6 20.6 0 0 1 178.94 54.88Z"/></g>
+    <g id="lg-line1">
+      <path d="M445.71,79.4c-.47-22.14,16.83-41,39.08-41.46,13.35-.28,25.12,5.86,32.41,15.64l-11.91,9.04c-4.58-6.18-11.28-9.92-19.61-9.75-14.26.3-24.4,12.16-24.11,26.19s10.81,25.57,25.08,25.27c8.44-.18,14.98-4.2,19.3-10.57l12.28,8.53c-6.87,10.08-18.37,16.71-31.72,16.99-22.25.47-40.33-17.53-40.8-39.9Z"/>
+    <path d="M567.29,62.92l14.95-.31,1.12,53.29-14.95.31-.16-7.65c-3.42,5.55-10.19,9.23-17.38,9.38-14.72.31-25.91-10.87-26.26-27.42-.35-16.55,10.14-28.3,25.43-28.62,6.85-.14,13.76,2.68,17.41,8.08l-.15-7.07ZM567.39,89.63c-.17-8.1-6.8-14.01-14.22-13.86-7.76.16-13.44,6.68-13.28,14.44.16,7.42,6.11,13.91,13.99,13.75,7.53-.16,13.67-6.68,13.51-14.33Z"/>
+    <path d="M656.06,87.65c.36,17.23-11.85,28.33-25.54,28.62-6.05.13-13.4-2.23-17.28-7.63l.69,32.75-14.95.31-1.67-79.42,14.95-.31.14,6.5c3.65-5.44,10.9-8.11,16.95-8.23,13.69-.29,26.36,10.4,26.72,27.41ZM640.77,88.08c-.17-7.87-6.46-14.02-13.99-13.86-7.3.15-13.68,6.34-13.51,14.44.17,8.1,7.14,13.89,14.1,13.75,7.53-.16,13.56-6.45,13.4-14.32Z"/>
+    <path d="M664.83,97.4l14.04-.3c.06,3.08,2.76,6.33,8.01,6.22,4.34-.09,7.6-2.33,7.54-5.41-.05-2.28-1.9-3.38-5.91-4.33l-7.11-1.56c-13.77-3.36-15.76-10.97-15.87-16.56-.17-8.22,8.22-16.16,20.55-16.41,9.7-.2,21.21,4.23,21.36,16.9l-14.26.3c-.08-3.65-3.08-5.53-6.62-5.46-3.42.07-6.12,2.07-6.06,4.81.05,2.51,2.36,3.72,5.34,4.45l8.83,2.1c12.85,3.15,14.62,11.11,14.71,15.44.24,11.18-11.05,17.24-22.01,17.47-11.18.24-22.16-5.93-22.52-17.68Z"/>
+    <path d="M756.71,58.93l14.95-.31,1.12,53.29-14.95.31-.18-8.67c-2.14,7.01-10.52,10.27-15.76,10.38-13.92.29-21.42-8.91-21.64-24.89l-.62-29.33,14.95-.31.6,28.53c.18,8.33,5.28,12.1,10.41,12,5.36-.11,11.92-3.22,11.72-12.81l-.59-28.19Z"/>
+    <path d="M787.85,111.59l-1.73-82.27,14.95-.31,1.73,82.27-14.95.31Z"/>
+    <path d="M869.89,88.06l-40.05.84c1.73,6.24,6.83,9.79,13.9,9.64,5.48-.12,10.67-2.74,13.9-6.57l8.86,8.6c-4.88,6.84-14.04,11.03-23.4,11.22-16.43.35-28.66-10.93-29-27.36-.36-17.23,12.53-28.35,27.71-28.67,15.29-.32,27.96,10.26,28.3,26.57.03,1.48-.04,3.31-.22,5.71ZM854.96,78.67c-.59-6.27-5.81-10.15-12.54-10.01-6.16.13-11.35,3.32-12.79,10.54l25.33-.53Z"/>
+    </g>
+    <g id="lg-line2">
+      <path d="M531.64,130.47h26.08v129.28h-26.08v-52.54h-48.22v52.54h-26.08v-129.28h26.08v53.29h48.22v-53.29Z"/>
+    <path d="M577.99,216.03c0-27.77,22.14-46.16,47.1-46.16s47.1,18.39,47.1,46.16-22.14,45.97-47.1,45.97-47.1-18.39-47.1-45.97ZM647.23,216.03c0-13.7-9.94-23.27-22.14-23.27s-22.14,9.57-22.14,23.27,9.94,23.08,22.14,23.08,22.14-9.57,22.14-23.08Z"/>
+    <path d="M741.42,172.13v19.14h-18.58v68.49h-24.58v-68.49h-15.95v-19.14h15.95v-31.9h24.58v31.9h18.58Z"/>
+    <path d="M752.87,195.21c0-36.78,28.9-66.99,65.67-66.99s65.86,30.21,65.86,66.99-29.27,66.8-65.86,66.8-65.67-30.21-65.67-66.8ZM858.13,195.21c0-23.27-16.51-42.41-39.59-42.41s-39.59,19.14-39.59,42.41,16.32,42.22,39.59,42.22,39.59-18.95,39.59-42.22Z"/>
+    <path d="M967.53,172.69l-5.63,23.46c-5.25-2.81-9.57-3.19-12.57-3.19-12.57,0-21.2,11.82-21.2,36.78v30.02h-24.58v-87.63h24.39v18.76c4.88-14.64,14.82-21.02,25.71-21.02,4.69,0,9.94.75,13.88,2.81Z"/>
+    <path d="M1054.4,130.47h26.08v129.28h-23.45l-46.91-81.06v81.06h-26.08v-129.28h24.21l46.16,80.12v-80.12Z"/>
+    <path d="M1100.75,216.03c0-27.77,22.14-46.16,47.1-46.16s47.1,18.39,47.1,46.16-22.14,45.97-47.1,45.97-47.1-18.39-47.1-45.97ZM1169.99,216.03c0-13.7-9.94-23.27-22.14-23.27s-22.14,9.57-22.14,23.27,9.94,23.08,22.14,23.08,22.14-9.57,22.14-23.08Z"/>
+    <path d="M1264.19,172.13v19.14h-18.58v68.49h-24.58v-68.49h-15.95v-19.14h15.95v-31.9h24.58v31.9h18.58Z"/>
+    </g>
+  </defs>
+  <filter id="grainGlow" x="-15%" y="-25%" width="130%" height="150%" color-interpolation-filters="sRGB">
+    <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="soft"/>
+    <feTurbulence type="fractalNoise" baseFrequency="1.3" numOctaves="1" seed="7" result="n"/>
+    <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 2.2 0" result="grain"/>
+    <feComposite in="soft" in2="grain" operator="in"/>
+  </filter>
   <symbol id="i-next" viewBox="0 0 24 24"><path d="M9.3 5.3 8 6.7l5.3 5.3L8 17.3l1.3 1.4L16 12z"/></symbol>
 </svg>
 
@@ -169,39 +285,44 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
 
   <!-- FIRST SCREEN: nav + hero, 100vh -->
   <section class="fold">
+    <div class="fold-bg" aria-hidden="true"></div>
     <header class="topbar">
-      <a class="wordmark" href="#">CapsuleHotOrNot</a>
-      <span class="links"><a class="btn btn-text" href="#players">Players</a><a class="btn btn-text" href="#developers">Developers</a></span>
+      <a class="logo" href="#" aria-label="CapsuleHotOrNot" style="--h: 32px"><svg viewBox="0 0 1264.19 300.17" aria-hidden="true" focusable="false"><path class="lg-sym" fill-rule="evenodd" d="M17.56 75.57 L228.09 1.44 A26.33 26.33 0 0 1 261.67 17.53 L306.85 145.80 A26.33 26.33 0 0 1 290.76 179.39 L80.23 253.52 A26.33 26.33 0 0 1 46.65 237.43 L1.47 109.16 A26.33 26.33 0 0 1 17.56 75.57Z M19.47 80.98 L229.99 6.84 A20.6 20.6 0 0 1 256.27 19.43 L301.44 147.71 A20.6 20.6 0 0 1 288.85 173.98 L78.33 248.12 A20.6 20.6 0 0 1 52.05 235.53 L6.88 107.25 A20.6 20.6 0 0 1 19.47 80.98Z M178.94 54.88 L388.07 132.87 A20.6 20.6 0 0 1 400.18 159.36 L352.66 286.79 A20.6 20.6 0 0 1 326.16 298.90 L117.03 220.91 A20.6 20.6 0 0 1 104.92 194.42 L152.44 66.99 A20.6 20.6 0 0 1 178.94 54.88Z"/><clipPath id="lg-clip-live"><rect class="lg-clip" x="410" y="0" width="860" height="300.17"/></clipPath><g clip-path="url(#lg-clip-live)"><rect x="410" y="0" width="860" height="300.17" fill="none" pointer-events="all"/><use class="lg-l1" href="#lg-line1"/><use class="lg-l2" href="#lg-line2"/></g></svg></a>
       <span class="grow"></span>
+      <span class="links"><a class="btn btn-text" href="#players">Players</a><a class="btn btn-text" href="#developers">Developers</a></span>
       <a class="btn btn-text" href="#">Log in</a>
-      <a class="btn btn-lg btn-primary" href="#">Join the waitlist</a>
+      <a class="btn btn-lg btn-primary tx tx-light" href="#">Join the waitlist</a>
     </header>
 
-    <div class="hero panel" id="hero">
-      <h1>Two capsules. One click.</h1>
+    <div class="hero" id="hero">
+      <h1><span class="line"><span class="inner">Two capsules.</span></span> <span class="line"><span class="inner">One click.</span></span></h1>
       <p class="pitch">Tap the capsule you'd click on Steam. Every matchup is a real vote from a real Steam library, yours included once you're in.</p>
 
       <div class="pair" id="pair">
         <div class="slot"><i class="ghost g2"></i><i class="ghost g1"></i>
-          <button type="button" class="g-card" id="c0" aria-label="Pick the left capsule"><img class="art" id="a0" alt=""></button></div>
+          <button type="button" class="g-card" id="c0" aria-label="Pick the left capsule"><img class="art" id="a0" alt="" src="art/main_2771630.jpg"></button></div>
         <span class="vs">vs</span>
         <div class="slot"><i class="ghost g2"></i><i class="ghost g1"></i>
-          <button type="button" class="g-card" id="c1" aria-label="Pick the right capsule"><img class="art" id="a1" alt=""></button></div>
+          <button type="button" class="g-card" id="c1" aria-label="Pick the right capsule"><img class="art" id="a1" alt="" src="art/main_3593620.jpg"></button></div>
       </div>
 
-      <div class="score"><span class="num" id="score">105</span><span class="eyebrow">Points</span></div>
+      <div class="score">
+        <span class="mult-pop" id="multPop" aria-hidden="true"><b></b><i>Multiplier up</i></span>
+        <div class="score-row"><span class="num" id="score">105</span><span class="mult" id="mult" title="Multiplier">x1.0</span></div>
+        <span class="eyebrow">Points</span>
+      </div>
 
       <!-- Match 5: prompt to join the waitlist. Steps and bonus come from the wireframe (200 pts);
            the Sep 24 meeting notes said 250, so confirm the number. -->
       <div class="g-end" id="gend">
-        <h2>Keep your points. Get 200 more.</h2>
-        <p>You're on <strong id="finalScore">0</strong> points. Finish three steps to add the bonus.</p>
+        <h2>Keep your points and get 200 more</h2>
+        <p>You're on <strong id="finalScore">0</strong> points at <strong id="finalMult">x1.0</strong>. Finish three steps to add the bonus.</p>
         <div class="steps">
           <div class="step"><b>1</b><span>Join the waitlist</span></div>
           <div class="step"><b>2</b><span>Log in</span></div>
           <div class="step"><b>3</b><span>Get 200 more points</span></div>
         </div>
-        <a class="btn btn-lg btn-primary" href="#">Join the waitlist</a>
+        <a class="btn btn-lg btn-primary tx tx-light" href="#">Join the waitlist</a>
       </div>
     </div>
   </section>
@@ -229,7 +350,7 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
     <div class="copy">
       <p class="eyebrow">For developers and studios</p>
       <h2>Know which capsule wins before you spend on marketing.</h2>
-      <p>Upload your variants and get a head-to-head win rate from players whose Steam library matches your genre. Real signal before launch, not after.</p>
+      <p>Upload your capsule variants and see how each one does head to head against players whose Steam library matches your genre. You get the results before launch, while there is still time to change the art.</p>
       <a class="btn btn-text" href="#">Join as a developer &rarr;</a>
     </div>
     <div class="dev-col"><div class="dev-stage" id="devStage" aria-hidden="true"></div></div>
@@ -241,7 +362,7 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
     <div class="copy-c">
       <h2>Get in before the first vote.</h2>
       <p>Free for players. No cost to join the developer waitlist either.</p>
-      <a class="btn btn-lg btn-primary" href="#">Join the waitlist</a>
+      <a class="btn btn-lg btn-primary tx tx-light" href="#">Join the waitlist</a>
     </div>
   </section>
 
@@ -251,12 +372,26 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
   </footer>
 </div>
 
+<script src="vendor/gsap.min.js"></script>
+<script src="vendor/ScrollTrigger.min.js"></script>
 <script>
 /* Real capsules (developer art pulled from Steam by collect_capsules.py): static/uploads/main_<appid>.jpg, copied to ./art. All src values go through artUrl(). */
 function artUrl(n) { return 'art/' + n; }
 var HERO = ["main_2771630.jpg", "main_3593620.jpg", "main_1001520.jpg", "main_4062790.jpg", "main_3338240.jpg", "main_581150.jpg", "main_2398100.jpg", "main_4600800.jpg", "main_3298140.jpg", "main_4692380.jpg"];   // 2 per match, 5 matches
 var DEV  = ["main_3174440.jpg", "main_1730600.jpg", "main_2217040.jpg", "main_4598970.jpg", "main_4690740.jpg"];   // [0] = best result, the rest sit behind it
 var WALL = ["main_1001520.jpg", "main_1730600.jpg", "main_2195450.jpg", "main_2217040.jpg", "main_2326200.jpg", "main_2398100.jpg", "main_2771630.jpg", "main_3120770.jpg", "main_3174440.jpg", "main_3298140.jpg", "main_3338240.jpg", "main_3474620.jpg", "main_3593620.jpg", "main_4062790.jpg", "main_4240600.jpg", "main_4598970.jpg", "main_4600800.jpg", "main_4647110.jpg", "main_4690740.jpg", "main_4692380.jpg", "main_4697010.jpg", "main_4698730.jpg", "main_4825820.jpg", "main_4958620.jpg", "main_5070330.jpg", "main_5079330.jpg", "main_5086800.jpg", "main_5222780.jpg", "main_581150.jpg", "main_746530.jpg", "main_876240.jpg", "main_3664750.jpg", "main_1111150.jpg", "main_2826260.jpg"];
+
+/* Wall of art used as decoration behind the developer stats and the closing call to action.
+   Every column drifts upward with CSS, each set duplicated once for a seamless loop. */
+function buildCols(host, cols, per, seed, base) {
+  var html = '';
+  for (var c = 0; c < cols; c++) {
+    var tiles = '';
+    for (var k = 0; k < per; k++) tiles += '<img class="art" alt="" loading="lazy" src="' + artUrl(WALL[(c * 7 + k * 5 + seed) % WALL.length]) + '">';
+    html += '<div class="wall-col" style="--dur:' + (base + c * 8) + 's;--delay:-' + (c * 11) + 's">' + tiles + tiles + '</div>';
+  }
+  host.innerHTML = html;
+}
 
 /* Hero mini-game. Pick a capsule, score bumps, the next matches step up from behind, match 5 asks for the waitlist.
    The player never sees how many matches there are: no dots, no counter. */
@@ -268,10 +403,45 @@ var WALL = ["main_1001520.jpg", "main_1730600.jpg", "main_2195450.jpg", "main_22
   var slots = document.querySelectorAll('.slot');
   var scoreEl = document.getElementById('score');
   var score = parseInt(scoreEl.textContent, 10), n = 0, busy = false;
+  // Multiplier, same rule as db.py: a vote pays round(10 x multiplier), and every 10 votes adds 0.1x.
+  // The demo starts a few votes in (sample state) so a visitor sees a tier-up inside their five free votes.
+  var BASE = 10, votes = 8;
+  function multFor(v) { return Math.round((1 + Math.floor(v / 10) * 0.1) * 10) / 10; }
+  var multEl = document.getElementById('mult'), popEl = document.getElementById('multPop'), row = document.querySelector('.score-row');
+  var G = typeof gsap !== 'undefined', still = matchMedia('(prefers-reduced-motion: reduce)').matches, MOVE = G && !still;
+  var counter = { v: score };
+  multEl.textContent = 'x' + multFor(votes).toFixed(1);
+
+  function showScore(to) {
+    if (!MOVE) { scoreEl.textContent = to; return; }
+    gsap.to(counter, { v: to, duration: 0.6, ease: 'power3.out', overwrite: true, onUpdate: function () { scoreEl.textContent = Math.round(counter.v); } });
+    gsap.fromTo(scoreEl, { scale: 1.1 }, { scale: 1, duration: 0.4, ease: 'power3.out', overwrite: 'auto' });
+  }
+  function showGain(points) {
+    if (!MOVE) return;
+    var el = document.createElement('span'); el.className = 'gain'; el.textContent = '+' + points; row.appendChild(el);
+    gsap.timeline({ onComplete: function () { el.remove(); } })
+      .fromTo(el, { opacity: 0, y: '-30%' }, { opacity: 1, y: '-60%', duration: 0.25, ease: 'power3.out' })
+      .to(el, { opacity: 0, y: '-140%', duration: 0.7, ease: 'power2.in' }, 0.35);
+  }
+  function tierUp(m) {
+    var label = 'x' + m.toFixed(1);
+    if (!MOVE) { multEl.textContent = label; return; }
+    // the number rolls, the badge flashes to the accent and settles back, and a label rises and fades above the score
+    gsap.timeline()
+      .to(multEl, { yPercent: -110, opacity: 0, duration: 0.16, ease: 'power2.in', onComplete: function () { multEl.textContent = label; } })
+      .fromTo(multEl, { yPercent: 110, opacity: 0 }, { yPercent: 0, opacity: 1, duration: 0.34, ease: 'power3.out' })
+      .fromTo(multEl, { backgroundColor: '#22d3ee', color: '#07090f' }, { backgroundColor: '#1e2937', color: '#e2e8f0', duration: 0.9, ease: 'power2.out' }, '<');
+    popEl.querySelector('b').textContent = label;
+    gsap.timeline()
+      .fromTo(popEl, { opacity: 0, y: 8, scale: 0.92 }, { opacity: 1, y: -6, scale: 1, duration: 0.45, ease: 'power3.out' })
+      .to(popEl, { opacity: 0, y: -40, duration: 1.1, ease: 'power2.in' }, 1.2);
+  }
   function at(m, side) { return HERO[((m % 5) * 2 + side) % HERO.length]; }
   function paint() {
     for (var s = 0; s < 2; s++) {
       imgs[s].src = artUrl(at(n, s));
+      if (n > 0) { cards[s].classList.add('enter'); cards[s].addEventListener('animationend', function () { this.classList.remove('enter'); }, { once: true }); }
       slots[s].querySelector('.g1').style.backgroundImage = 'url(' + artUrl(at(n + 1, s)) + ')';
       slots[s].querySelector('.g2').style.backgroundImage = 'url(' + artUrl(at(n + 2, s)) + ')';
     }
@@ -279,18 +449,20 @@ var WALL = ["main_1001520.jpg", "main_1730600.jpg", "main_2195450.jpg", "main_22
   paint();
   function vote(i) {
     if (busy) return; busy = true;
-    score += 1; scoreEl.textContent = score;
-    scoreEl.classList.add('bump'); setTimeout(function () { scoreEl.classList.remove('bump'); }, 200);
-    cards[i].classList.add('win', 'picked'); cards[1 - i].classList.add('lose');
+    var before = multFor(votes), gain = Math.round(BASE * before);
+    votes += 1; score += gain;
+    showScore(score); showGain(gain);
+    var after = multFor(votes); if (after > before) tierUp(after);
+    cards[i].classList.add('win', 'picked'); cards[i].setAttribute('aria-pressed', 'true'); cards[1 - i].classList.add('lose');
     n += 1;
     if (n >= MAX) {
-      setTimeout(function () { document.getElementById('finalScore').textContent = score; hero.classList.add('done'); }, 650);
+      setTimeout(function () { document.getElementById('finalScore').textContent = score; document.getElementById('finalMult').textContent = 'x' + multFor(votes).toFixed(1); hero.classList.add('done'); }, 650);
       return;
     }
     setTimeout(function () {
       pair.classList.add('swap');
       setTimeout(function () {
-        cards.forEach(function (c) { c.classList.remove('win', 'lose', 'picked'); });
+        cards.forEach(function (c) { c.classList.remove('win', 'lose', 'picked'); c.removeAttribute('aria-pressed'); });
         paint(); pair.classList.remove('swap'); busy = false;
       }, 260);
     }, 520);
@@ -322,39 +494,142 @@ var WALL = ["main_1001520.jpg", "main_1730600.jpg", "main_2195450.jpg", "main_22
     clearInterval(timer);
     if (!calm) timer = setInterval(function () { if (!hold) go(i + 1); }, 3500);
   }
+  var vp = document.querySelector('.viewport'), x0 = null;
+  vp.addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; hold = true; }, { passive: true });
+  vp.addEventListener('touchend', function (e) {
+    if (x0 !== null) { var dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) > 40) go(i + (dx < 0 ? 1 : -1)); }
+    x0 = null; hold = false;
+  });
   document.getElementById('prev').addEventListener('click', function () { go(i - 1); });
   document.getElementById('next').addEventListener('click', function () { go(i + 1); });
   car.addEventListener('mouseenter', function () { hold = true; }); car.addEventListener('mouseleave', function () { hold = false; });
   go(0);
 })();
 
-/* Developers: DEV[0] is the capsule with the best result and stands out. The rest are dimmed behind it.
+/* Developers: DEV[0] is the capsule with the best result, in the middle of an equal 3x3 grid that does not move.
    Floating cards show what the dashboard measures (templates/game_detail.html): matchups, wins, losses, win rate,
    percentile, average win rate. The client's two priorities are added: CTR and a segment heatmap.
    In this app a click on a capsule is the vote, so CTR = picked when shown = win rate.
    The heatmap (win rate by player genre segment) is on the roadmap, not in the build yet. All numbers are sample data. */
 (function () {
-  function card(f, cls) { return '<div class="dcard ' + cls + '"><img class="art" alt="" src="' + artUrl(f) + '"></div>'; }
-  var HEAT = [.2, .35, .3, .55, .25, .4,  .3, .5, .45, .9, .35, .3,  .25, .3, .6, .7, .3, .2];   // rows = capsules, columns = player segments
-  var cells = HEAT.map(function (v) { return '<i' + (v > .85 ? ' class="hot"' : '') + ' style="opacity:' + (0.25 + v * 0.75).toFixed(2) + '"></i>'; }).join('');
+  // x, y in the Paper frame's own units (628 x 500). Tiles hang over the edges on purpose, the frame clips them.
+  var TILES = [[-141, -41, "main_1730600.jpg"], [178, -41, "main_2217040.jpg"], [481, -41, "main_876240.jpg"], [-141, 152, "main_4062790.jpg"], [481, 157, "main_4958620.jpg"], [-141, 328, "main_4598970.jpg"], [178, 329, "main_4690740.jpg"], [481, 329, "main_4240600.jpg"]];
+  var tiles = TILES.map(function (t) {
+    return '<div class="dt" style="--x:' + t[0] + ';--y:' + t[1] + '"><img class="art" alt="" src="' + artUrl(t[2]) + '"></div>';
+  }).join('');
+  var HEAT = [.4, .51, .47, .66, .44, .55,  .47, .63, .59, .93, .51, .47,  .44, .47, .7, .77, .47, .4];   // rows = capsules, columns = player segments (values from the Paper design)
+  var cells = HEAT.map(function (v) { return '<i' + (v > .9 ? ' class="hot"' : '') + ' style="opacity:' + v + '"></i>'; }).join('');
   document.getElementById('devStage').innerHTML =
-    card(DEV[1], 'tl') + card(DEV[2], 'tr') + card(DEV[3], 'bl') + card(DEV[4], 'br') + card(DEV[0], 'best') +
-    '<div class="stat stat-ctr"><div class="k">CTR</div><div class="big">65%</div><div class="sub">picked when shown &middot; avg 52%</div></div>' +
-    '<div class="stat stat-heat"><div class="k">Win rate by segment</div><div class="heat">' + cells + '</div></div>' +
-    '<div class="stat stat-nums"><div><b>240</b><span>Matchups</span></div><div><b>92nd</b><span>Percentile</span></div>' +
-    '<div><b>156</b><span>Wins</span></div><div><b>84</b><span>Losses</span></div></div>';
+    '<div class="dev-art" aria-hidden="true">' + tiles +
+    '<div class="dt best"><div class="glow"></div><img class="art" alt="" src="' + artUrl(DEV[0]) + '"></div></div>' +
+    '<div class="dev-cards">' +
+    '<div class="stat stat-ctr tx tx-dark"><div class="k">CTR</div><div class="big">65%</div><div class="sub">picked when shown &middot; avg 52%</div></div>' +
+    '<div class="stat stat-nums tx tx-dark"><div><b>240</b><span>Matchups</span></div><div><b>92nd</b><span>Percentile</span></div>' +
+    '<div><b>156</b><span>Wins</span></div><div><b>84</b><span>Losses</span></div></div>' +
+    '<div class="stat stat-heat tx tx-dark"><div class="k">Win rate by segment</div><div class="heat">' + cells + '</div></div>' +
+    '</div>';
 })();
 
-/* Wall: real capsules, every column drifting upward at its own speed, staggered so tiles never line up.
-   Each column is duplicated once for a seamless loop. */
+/* Closing section: the wall as decoration under a dark overlay, the copy is the focus. */
+buildCols(document.getElementById('wallCols'), 6, 8, 0, 56);
+
+
+/* Texture contrast (design system v1.1): GSAP eases --c between rest, in view and active. No GSAP: plain CSS switches instead. */
 (function () {
-  var cols = '';
-  for (var c = 0; c < 6; c++) {
-    var tiles = '';
-    for (var k = 0; k < 8; k++) tiles += '<img class="art" alt="" loading="lazy" src="' + artUrl(WALL[(c * 7 + k * 5) % WALL.length]) + '">';
-    cols += '<div class="wall-col" style="--dur:' + (56 + c * 8) + 's;--delay:-' + (c * 11) + 's">' + tiles + tiles + '</div>';
+  if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') { document.documentElement.classList.add('no-gsap'); return; }
+  gsap.registerPlugin(ScrollTrigger);
+  var duration = 0.34;   // reduced motion: switch instantly
+  gsap.matchMedia().add(
+    { reduce: '(prefers-reduced-motion: reduce)', ok: '(prefers-reduced-motion: no-preference)' },
+    function (ctx) { duration = ctx.conditions.reduce ? 0 : 0.34; }
+  );
+  var root = document.documentElement;
+  function level(name) { return parseFloat(getComputedStyle(root).getPropertyValue(name)) || 0; }
+  function targetFor(it) {
+    var active = it.hover || it.focus || it.el.getAttribute('aria-pressed') === 'true';
+    return active ? level('--c-active') : it.view ? level('--c-view') : level('--c-rest');
   }
-  document.getElementById('wallCols').innerHTML = cols;
+  function apply(it, instant) { gsap.to(it.el, { '--c': targetFor(it), duration: instant ? 0 : duration, ease: 'power3.out', overwrite: true }); }
+  document.querySelectorAll('.tx').forEach(function (el) {
+    var it = { el: el, hover: false, focus: false, view: false };
+    el.addEventListener('pointerenter', function () { it.hover = true; apply(it); });
+    el.addEventListener('pointerleave', function () { it.hover = false; apply(it); });
+    el.addEventListener('focusin', function () { it.focus = true; apply(it); });
+    el.addEventListener('focusout', function () { it.focus = false; apply(it); });
+    if (window.MutationObserver) new MutationObserver(function () { apply(it); }).observe(el, { attributes: true, attributeFilter: ['aria-pressed'] });
+    ScrollTrigger.create({ trigger: el, start: 'top 80%', end: 'bottom 20%', onToggle: function (self) { it.view = self.isActive; apply(it); } });
+    apply(it, true);
+  });
+})();
+
+/* Logo (design system v1.1): the cards slide together the first time it scrolls into view, the name opens on hover or focus.
+   Touch screens show the full logo. Reduced motion just switches. Without GSAP the full logo stays visible. */
+// The symbol as one evenodd path. p is 0 with the cards apart and 1 with them overlapping.
+var CARD = { w: 264.4, h: 177.2, r: 20.6 }, EDGE = 5.73;
+var BACK = { x: 154.16, y: 127.48, deg: -19.4, from: [-60, -40] };
+var FRONT = { x: 252.55, y: 176.89, deg: 20.45, from: [90, 60] };
+function rrect(cx, cy, w, h, r, deg) {
+  var t = deg * Math.PI / 180, c = Math.cos(t), s = Math.sin(t), hw = w / 2, hh = h / 2;
+  function pt(x, y) { return (cx + x * c - y * s).toFixed(2) + ' ' + (cy + x * s + y * c).toFixed(2); }
+  function arc(x, y) { return 'A' + r + ' ' + r + ' 0 0 1 ' + pt(x, y); }
+  return 'M' + pt(-hw + r, -hh) + 'L' + pt(hw - r, -hh) + arc(hw, -hh + r) + 'L' + pt(hw, hh - r) + arc(hw - r, hh) +
+         'L' + pt(-hw + r, hh) + arc(-hw, hh - r) + 'L' + pt(-hw, -hh + r) + arc(-hw + r, -hh) + 'Z';
+}
+function symbolParts(p) {
+  var e = 1 - p, ax = BACK.x + BACK.from[0] * e, ay = BACK.y + BACK.from[1] * e, bx = FRONT.x + FRONT.from[0] * e, by = FRONT.y + FRONT.from[1] * e;
+  return {
+    ringOuter: rrect(ax, ay, CARD.w + 2 * EDGE, CARD.h + 2 * EDGE, CARD.r + EDGE, BACK.deg),
+    ringInner: rrect(ax, ay, CARD.w, CARD.h, CARD.r, BACK.deg),
+    card: rrect(bx, by, CARD.w, CARD.h, CARD.r, FRONT.deg)
+  };
+}
+function symbolPath(p) { var s = symbolParts(p); return s.ringOuter + ' ' + s.ringInner + ' ' + s.card; }
+(function () {
+  // Without GSAP the full logo just stays visible.
+  if (typeof gsap === 'undefined') return;
+
+  var logos = document.querySelectorAll('.logo:not([data-static])');
+  gsap.matchMedia().add(
+    { any: 'all', reduce: '(prefers-reduced-motion: reduce)', touch: '(hover: none)' },   // 'all' so this always runs
+    function (ctx) {
+      var reduce = ctx.conditions.reduce, touch = ctx.conditions.touch, undo = [];
+      logos.forEach(function (el) {
+        var clip = el.querySelector('.lg-clip'), lines = el.querySelectorAll('.lg-l1, .lg-l2');
+
+        // The two cards slide together the first time the logo scrolls into view.
+        var sym = el.querySelector('.lg-sym');
+        if (sym && !reduce) {
+          var pose = { p: 0 };
+          sym.setAttribute('d', symbolPath(0));
+          ScrollTrigger.create({
+            trigger: el, start: 'top 85%', once: true,
+            onEnter: function () {
+              gsap.to(pose, { p: 1, duration: 1.1, ease: 'power3.inOut', onUpdate: function () { sym.setAttribute('d', symbolPath(pose.p)); } });
+            }
+          });
+        }
+        // The name slides out from behind the symbol while the mask opens to the right.
+        var tl = gsap.timeline({ paused: true, defaults: { ease: 'power3.out' } });
+        tl.fromTo(clip, { attr: { width: 0 } }, { attr: { width: 860 }, duration: 0.55 }, 0)
+          .fromTo(lines, { x: -140, opacity: 0 }, { x: 0, opacity: 1, duration: 0.5, stagger: 0.06 }, 0);
+        tl.progress(touch ? 1 : 0);   // touch screens have no hover, so show the full logo
+        if (touch) { undo.push(function () { tl.kill(); }); return; }
+
+        function open()  { if (reduce) { tl.progress(1); } else { tl.timeScale(1).play(); } }
+        function close() { if (reduce) { tl.progress(0); } else { tl.timeScale(1.5).reverse(); } }
+        el.addEventListener('pointerenter', open);
+        el.addEventListener('pointerleave', close);
+        el.addEventListener('focusin', open);
+        el.addEventListener('focusout', close);
+        undo.push(function () {
+          el.removeEventListener('pointerenter', open); el.removeEventListener('pointerleave', close);
+          el.removeEventListener('focusin', open); el.removeEventListener('focusout', close);
+          tl.kill();
+        });
+      });
+      return function () { undo.forEach(function (fn) { fn(); }); };
+    }
+  );
 })();
 </script>
 </body>
