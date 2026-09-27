@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CapsuleHotOrNot Texture Sample</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400..800&display=swap" rel="stylesheet">
+<style>
+/* Texture sample for design v1. Not part of the approved system yet.
+   Buttons and active or focused things get a soft grainy gradient. Everything else stays flat.
+   Each surface uses one hue only: a tonal base, one blurred blob in a nearby shade, and coarse grain on top.
+   Tokens are copied from brand-design-system.html.
+   Needs GSAP: run `npm install` in the app folder, then open this file. */
+
+/* --c is the "contrast" of the texture, 0 to 1. GSAP animates it (see the script at the bottom);
+   both the mesh layer and the grain layer read from it. It is registered so it interpolates as a number. */
+@property --c { syntax: "<number>"; inherits: true; initial-value: 0.2; }
+
+:root {
+  color-scheme: dark;
+  --bg-base: #07090f; --bg-elevated: #0f172a; --bg-highlight: #1e2937; --bg-press: #334155; --bg-tinted: #475569;
+  --text-base: #e2e8f0; --text-subdued: #94a3b8;
+  --accent: #22d3ee; --on-accent: #07090f;
+  --inverted: #ffffff; --on-inverted: #07090f;
+  --promo-cyan: #0891b2; --win: #16a34a;
+  --font-sans: "Figtree", system-ui, -apple-system, "Segoe UI", "Helvetica Neue", arial, sans-serif;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px; --space-6: 24px; --space-8: 32px;
+  --radius-sm: 4px; --radius-md: 8px; --radius-pill: 9999px; --radius-circle: 50%;
+  --control-lg: 48px; --control-sm: 32px;
+
+  /* texture contrast per state (the sliders change these) */
+  --c-rest: 0.2;
+  --c-view: 0.55;
+  --c-active: 1;
+}
+* { box-sizing: border-box; }
+html { background: var(--bg-base); }
+body { margin: 0; padding: var(--space-2); background: var(--bg-base); color: var(--text-base); font: 400 16px/1.5 var(--font-sans); -webkit-font-smoothing: antialiased; }
+main { max-width: 960px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-2); }
+.panel { background: var(--bg-elevated); border-radius: var(--radius-md); padding: var(--space-8); }
+.panel h1 { margin: 0 0 var(--space-2); font-size: clamp(32px, 6vw, 56px); line-height: 1; letter-spacing: -.02em; font-weight: 700; }
+.panel h2 { margin: 0 0 var(--space-2); font-size: 24px; line-height: 1.25; font-weight: 700; }
+.lede { margin: 0; color: var(--text-subdued); max-width: 62ch; }
+.eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--text-subdued); margin: 0 0 var(--space-2); }
+code { font: 13px ui-monospace, "SF Mono", Menlo, Consolas, monospace; color: var(--text-subdued); }
+
+/* Controls: sticky so you can tune while you scroll */
+.controls { position: sticky; top: var(--space-2); z-index: 10; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-6); align-items: end; background: var(--bg-highlight); }
+.controls label { display: grid; gap: var(--space-1); font-size: 14px; font-weight: 700; }
+.controls output { color: var(--text-subdued); font-weight: 400; font-size: 12px; }
+.controls input[type=range] { width: 100%; accent-color: var(--accent); }
+
+/* Demo stages: tall so each component scrolls into view on its own */
+.stage { min-height: 62vh; display: flex; flex-direction: column; justify-content: center; gap: var(--space-6); }
+.demo { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; }
+.note { margin: 0; font-size: 14px; color: var(--text-subdued); max-width: 62ch; }
+.states { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.tag { font-size: 12px; font-weight: 700; padding: var(--space-1) var(--space-3); border-radius: var(--radius-pill); background: var(--bg-highlight); color: var(--text-subdued); }
+
+/* ---------- the texture ---------- */
+.tx {
+  --c: var(--c-rest);          /* GSAP changes this as the state changes */
+  position: relative; isolation: isolate; overflow: hidden;
+  --grain-blend: overlay;
+  --mx: 1;                     /* how strong the blob gets on this surface */
+}
+.tx::before, .tx::after { content: ""; position: absolute; z-index: -1; pointer-events: none; }
+.tx::before {                  /* one soft blob, a nearby shade of the surface color */
+  width: 85%; height: 150%; left: var(--bx, 40%); top: var(--by, -25%);
+  border-radius: 50%;
+  background: var(--blob);
+  filter: blur(var(--blur, 14px));
+  opacity: calc(var(--c) * var(--mx));
+  transform: scale(calc(.85 + var(--c) * .3));
+}
+.tx::after {                   /* coarse grain */
+  inset: 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.55' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  mix-blend-mode: var(--grain-blend);
+  opacity: calc(.07 + var(--c) * .4);
+}
+
+/* Surface variants. Each one stays inside a single hue. */
+.tx-accent {                   /* Vote: cyan, with a deeper cyan blob */
+  background: linear-gradient(160deg, var(--accent), color-mix(in srgb, var(--accent) 80%, white));
+  color: var(--on-accent);
+  --blob: var(--promo-cyan); --mx: .7; --bx: 25%; --by: -35%;
+}
+.tx-light {                    /* white pill: a pale cyan tint, and the grain darkens since light grain can't show on white */
+  background: linear-gradient(160deg, #fff, color-mix(in srgb, var(--accent) 14%, white));
+  color: var(--on-inverted);
+  --blob: color-mix(in srgb, var(--accent) 45%, white);
+  --grain-blend: multiply; --mx: .85; --bx: 35%; --by: -30%;
+}
+.tx-dark {                     /* cards and the field: slate on slate, kept low so light text stays readable */
+  background: linear-gradient(160deg, var(--bg-highlight), color-mix(in srgb, var(--bg-press) 55%, var(--bg-highlight)));
+  --blob: var(--bg-tinted); --mx: .6; --blur: 18px; --bx: 30%; --by: -40%;
+}
+
+/* ---------- components ---------- */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); border: 0; border-radius: var(--radius-pill); font: 700 16px/1 var(--font-sans); cursor: pointer; white-space: nowrap; transition: transform 33ms; }
+.btn:hover { transform: scale(1.04); }
+.btn:active { transform: scale(1); opacity: .7; }
+.btn:focus-visible, .cap:focus-visible { outline: 3px solid var(--text-base); outline-offset: 2px; }
+.btn-lg { min-height: var(--control-lg); padding: var(--space-2) var(--space-8); }
+.btn-sm { min-height: var(--control-sm); padding: var(--space-1) var(--space-4); font-size: 14px; }
+.btn svg { width: 20px; height: 20px; fill: currentColor; }
+
+.matchup { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: var(--space-3); align-items: center; width: 100%; max-width: 640px; }
+.cap { appearance: none; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; border-radius: var(--radius-md); padding: var(--space-3); display: flex; flex-direction: column; gap: var(--space-3); }
+.cap .art { aspect-ratio: 616 / 353; border-radius: var(--radius-sm); }
+.cap .row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); font-size: 14px; font-weight: 700; }
+.cap .pick { font-size: 12px; font-weight: 700; padding: 2px var(--space-2); border-radius: var(--radius-pill); background: var(--bg-press); color: var(--text-base); }
+.cap[aria-pressed="true"] .pick { background: var(--accent); color: var(--on-accent); }
+.vs { color: var(--text-subdued); font-weight: 700; font-size: 14px; }
+
+.field { display: flex; align-items: center; width: 100%; max-width: 474px; height: var(--control-lg); border-radius: 500px; padding: 0 var(--space-4) 0 var(--space-3); gap: var(--space-2); }
+.field svg { width: 24px; height: 24px; fill: var(--text-subdued); flex: none; }
+.field input { flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: transparent; color: var(--text-base); font: 400 16px/24px var(--font-sans); }
+.field input::placeholder { color: var(--text-subdued); }
+
+@media (max-width: 700px) {
+  .controls { position: static; grid-template-columns: 1fr; gap: var(--space-3); }
+  .matchup { grid-template-columns: 1fr; }
+  .panel { padding: var(--space-6) var(--space-4); }
+}
+/* Reduced motion: the contrast still changes, GSAP just sets it instantly (see script) */
+@media (prefers-reduced-motion: reduce) { .btn { transition: none !important; } .btn:hover { transform: none; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m9.5 16.6-4.1-4.1L4 13.9l5.5 5.5L20 8.9l-1.4-1.4-9.1 9.1Z"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><path d="M10.5 3a7.5 7.5 0 0 1 5.9 12.1l4.8 4.8-1.4 1.4-4.8-4.8A7.5 7.5 0 1 1 10.5 3Zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11Z"/></symbol>
+</svg>
+
+<main>
+  <header class="panel">
+    <p class="eyebrow">Texture sample</p>
+    <h1>Grain on buttons and focus</h1>
+    <p class="lede">Not in design v1 yet. Most of the page stays flat. Buttons, the card you pick and the field you're typing in get a soft, grainy gradient. You hardly see it until you scroll to it, hover over it or tab onto it, and then it comes up.</p>
+  </header>
+
+  <section class="panel controls" aria-label="Texture contrast controls">
+    <label>At rest <output id="o-rest">0.20</output><input id="s-rest" type="range" min="0" max="1" step="0.05" value="0.2"></label>
+    <label>In view <output id="o-view">0.55</output><input id="s-view" type="range" min="0" max="1" step="0.05" value="0.55"></label>
+    <label>Hover / focus / selected <output id="o-active">1.00</output><input id="s-active" type="range" min="0" max="1" step="0.05" value="1"></label>
+  </section>
+
+  <section class="panel stage" aria-labelledby="h-actions">
+    <div>
+      <h2 id="h-actions">Actions</h2>
+      <p class="note">Vote is the one bright button. The white ones are the main actions, and their grain goes dark instead of light, because light grain doesn't show on white. Hover over them, or press Tab.</p>
+    </div>
+    <div class="demo">
+      <button class="btn btn-lg tx tx-accent" type="button"><svg><use href="#i-check"/></svg>Vote</button>
+      <button class="btn btn-lg tx tx-light" type="button">Join the waitlist</button>
+      <button class="btn btn-sm tx tx-light" type="button">Add a game</button>
+    </div>
+    <div class="states"><span class="tag">At rest: barely there</span><span class="tag">In view: a bit more</span><span class="tag">Hover or focus: full</span></div>
+  </section>
+
+  <section class="panel stage" aria-labelledby="h-selected">
+    <div>
+      <h2 id="h-selected">Selected state</h2>
+      <p class="note">Pick a capsule. The one you choose gets the texture and the other stays flat. The artwork is just a placeholder.</p>
+    </div>
+    <div class="matchup" role="group" aria-label="Pick a capsule">
+      <button class="cap tx tx-dark" type="button" aria-pressed="false"><span class="art" style="background:linear-gradient(135deg,#0b3a4a,#0f172a)"></span><span class="row"><span>Capsule A</span><span class="pick">Pick</span></span></button>
+      <span class="vs">vs</span>
+      <button class="cap tx tx-dark" type="button" aria-pressed="false"><span class="art" style="background:linear-gradient(135deg,#475569,#1e2937)"></span><span class="row"><span>Capsule B</span><span class="pick">Pick</span></span></button>
+    </div>
+  </section>
+
+  <section class="panel stage" aria-labelledby="h-focus">
+    <div>
+      <h2 id="h-focus">Focus</h2>
+      <p class="note">The field is flat until you click or tab into it. It stays textured while you type.</p>
+    </div>
+    <label class="field tx tx-dark"><svg><use href="#i-search"/></svg><input type="search" placeholder="Search games" aria-label="Search games"></label>
+  </section>
+</main>
+
+<script src="../node_modules/gsap/dist/gsap.min.js"></script>
+<script src="../node_modules/gsap/dist/ScrollTrigger.min.js"></script>
+<script>
+(function () {
+  var root = document.documentElement;
+  gsap.registerPlugin(ScrollTrigger);
+
+  // Reduced motion: contrast still changes, but instantly.
+  var duration = 0.34;
+  gsap.matchMedia().add(
+    { reduce: '(prefers-reduced-motion: reduce)', ok: '(prefers-reduced-motion: no-preference)' },
+    function (ctx) { duration = ctx.conditions.reduce ? 0 : 0.34; }
+  );
+
+  function level(name) { return parseFloat(getComputedStyle(root).getPropertyValue(name)) || 0; }
+
+  // One state record per textured element. The target contrast is the strongest state that applies.
+  var items = [];
+  function targetFor(it) {
+    var el = it.el;
+    var active = it.hover || it.focus || el.getAttribute('aria-pressed') === 'true';
+    return active ? level('--c-active') : it.view ? level('--c-view') : level('--c-rest');
+  }
+  function apply(it) {
+    gsap.to(it.el, { '--c': targetFor(it), duration: duration, ease: 'power3.out', overwrite: true });
+  }
+
+  document.querySelectorAll('.tx').forEach(function (el) {
+    var it = { el: el, hover: false, focus: false, view: false };
+    items.push(it);
+
+    el.addEventListener('pointerenter', function () { it.hover = true; apply(it); });
+    el.addEventListener('pointerleave', function () { it.hover = false; apply(it); });
+    el.addEventListener('focusin', function () { it.focus = true; apply(it); });
+    el.addEventListener('focusout', function () { it.focus = false; apply(it); });
+
+    // Scrolled into view: active while the element sits between 80% and 20% of the viewport height.
+    ScrollTrigger.create({
+      trigger: el, start: 'top 80%', end: 'bottom 20%',
+      onToggle: function (self) { it.view = self.isActive; apply(it); }
+    });
+  });
+
+  // Selected state: one capsule at a time.
+  var caps = document.querySelectorAll('.cap');
+  caps.forEach(function (cap) {
+    cap.addEventListener('click', function () {
+      var wasOn = cap.getAttribute('aria-pressed') === 'true';
+      caps.forEach(function (c) { c.setAttribute('aria-pressed', 'false'); c.querySelector('.pick').textContent = 'Pick'; });
+      if (!wasOn) { cap.setAttribute('aria-pressed', 'true'); cap.querySelector('.pick').textContent = 'Picked'; }
+      items.forEach(apply);
+    });
+  });
+
+  // Tuning sliders: change the level, then re-aim every element.
+  [['rest', '--c-rest'], ['view', '--c-view'], ['active', '--c-active']].forEach(function (p) {
+    var input = document.getElementById('s-' + p[0]), out = document.getElementById('o-' + p[0]);
+    input.addEventListener('input', function () {
+      root.style.setProperty(p[1], input.value);
+      out.textContent = Number(input.value).toFixed(2);
+      items.forEach(apply);
+    });
+  });
+})();
+</script>
+</body>
+</html>
