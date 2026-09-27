@@ -210,7 +210,10 @@ ul.apply b { color: var(--text-base); }
    no padding-revealed plate. Only the art and its own inset glow carry any fill. Caption sits directly on
    the page underneath, the way the very first version did it. */
 .cap { border-radius: var(--radius-md); padding: var(--space-3); display: flex; flex-direction: column; gap: var(--space-3);
-  transition: transform .2s ease-out; }
+  transition: transform .4s cubic-bezier(.16,1,.3,1), opacity .3s ease-out; }
+/* TRYING: the winner shoves the loser back on vote — a spring overshoot on both, not just a fade */
+.cap.win[aria-pressed="true"] { transform: scale(1.05) translateX(6px); }
+.matchup:has(.cap.win[aria-pressed="true"]) .cap.lose { transform: translateX(-16px) rotate(-3deg) scale(.92); opacity: .3; }
 .cap .art { aspect-ratio: 616 / 353; border-radius: var(--radius-sm); position: relative; }
 .cap .row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); font-size: 14px; font-weight: 700;
   opacity: 0; transition: opacity .15s ease-out; }
@@ -218,11 +221,53 @@ ul.apply b { color: var(--text-base); }
 .cap .cap-vote { position: absolute; top: 50%; left: 50%; transform: translate(-50%, calc(-50% + 8px)); opacity: 0; transition: opacity .2s ease-out, transform .2s ease-out; }
 .cap:hover .cap-vote, .cap:focus-within .cap-vote, .cap[aria-pressed="true"] .cap-vote { opacity: 1; transform: translate(-50%, -50%); }
 .cap[aria-pressed="true"] { background: transparent; transform: scale(1.03); }
-/* The glow comes from the card's own edge, inward — not an outer halo floating past it */
-.cap[aria-pressed="true"] .art { box-shadow: inset 0 0 0 1.5px rgba(34,211,238,.85), inset 0 0 22px rgba(34,211,238,.4); }
+/* TRYING v5: the electric border is always present now, not just on vote. One variable, --electric,
+   sets its contrast: subtle (.22) at rest, full (1) on hover, keyboard focus, or once voted. Every layer's
+   own opacity is that variable times its own maximum, so the whole thing dims and brightens as one unit.
+   Full port of Bálint Ferenczy's Electric Border (codepen.io/BalintFerenczy/pen/KwdoyEN), the file the
+   user downloaded — border filter, two glow layers, two overlay sheens, one background wash. The flow
+   comes from animating the OFFSET of a fixed turbulence field (feOffset dx/dy), not the seed — that's
+   what makes it glide instead of jitter; the four loops run at slightly different speeds (6.1/5.7/6.5/5.9s)
+   so they don't all straighten out into a flat edge at once. Skipped only their static "border-outer"
+   double-border, which needs an extra wrapping element our layout doesn't have room for. */
+.cap { --electric: .22; }
+.cap:hover, .cap:focus-within, .cap[aria-pressed="true"] { --electric: 1; }
+.cap .art { isolation: isolate; }
+.cap .art::before, .cap .cap-glow, .cap .cap-sheen, .cap .cap-bg-glow { transition: opacity .25s ease-out; }
+.cap .cap-glow { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  border: 2px solid var(--accent); }
+.cap .cap-glow-1 { opacity: calc(var(--electric) * .6); filter: blur(1px); }
+.cap .cap-glow-2 { opacity: var(--electric); filter: blur(4px); }
+.cap .art::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  border: 2px solid var(--accent); opacity: var(--electric);
+  filter: url(#electric-turbulent-displace);
+}
+/* The two sheens: a diagonal white sweep blended with overlay, so it lightens/darkens the artwork under
+   it rather than just sitting on top — this is the part that reads as "realistic" light, not a flat glow. */
+.cap .cap-sheen { position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  mix-blend-mode: overlay; transform: scale(1.1); filter: blur(16px);
+  background: linear-gradient(-30deg, #fff, transparent 30%, transparent 70%, #fff); }
+.cap .cap-sheen-1 { opacity: var(--electric); }
+.cap .cap-sheen-2 { opacity: calc(var(--electric) * .5); }
+/* The ambient wash bleeding out behind the whole card — z-index -1 inside the isolated stacking context above */
+.cap .cap-bg-glow { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: -1;
+  transform: scale(1.1); filter: blur(32px);
+  background: linear-gradient(-30deg, var(--accent), transparent, var(--accent));
+  opacity: calc(var(--electric) * .3); }
 .cap.lose { opacity: .5; }
 .badge { font-size: 12px; font-weight: 700; padding: 2px var(--space-2); border-radius: var(--radius-pill); background: var(--win); color: #fff; }
 .vs { color: var(--text-subdued); font-weight: 700; font-size: 14px; }
+/* TRYING: lightning clash in place of the plain "vs" — two jagged bolts meeting in the middle, each a
+   blurred glow copy behind a crisp copy run through the same electric filter as the cards, so the crackle
+   reads as one continuous system rather than two unrelated effects. */
+.vs-clash { align-self: stretch; width: 44px; position: relative; display: flex; align-items: center; justify-content: center; }
+.vs-clash svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.vs-bolt { fill: var(--accent); }
+.vs-bolt.glow { filter: blur(5px); opacity: .8; }
+.vs-bolt.crisp { filter: url(#electric-turbulent-displace); }
+.vs-label { position: relative; z-index: 1; color: var(--text-base); font-weight: 700; font-size: 12px; letter-spacing: .05em;
+  background: var(--bg-base); padding: 3px 7px; border-radius: var(--radius-pill); }
 
 /* Artwork list — for developers browsing their capsules, like rows in a Spotify playlist. No glow, no vote
    icon: this is a collection, not a game. Bare at rest; hover reveals the frame and the caption together. */
@@ -373,6 +418,31 @@ footer { padding: var(--space-6) var(--space-8); font-size: 12px; color: var(--t
   <symbol id="i-home" viewBox="0 0 24 24"><path d="M12 3 3 10.2V21h6.5v-6h5v6H21V10.2L12 3Zm0 2.6 7 5.6V19h-2.5v-6h-9v6H5v-7.8l7-5.6Z"/></symbol>
   <symbol id="i-search" viewBox="0 0 24 24"><path d="M10.5 3a7.5 7.5 0 0 1 5.9 12.1l4.8 4.8-1.4 1.4-4.8-4.8A7.5 7.5 0 1 1 10.5 3Zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11Z"/></symbol>
   <symbol id="i-check" viewBox="0 0 24 24"><path d="m9.5 16.6-4.1-4.1L4 13.9l5.5 5.5L20 8.9l-1.4-1.4-9.1 9.1Z"/></symbol>
+  <!-- TRYING v3: Electric Border filter, ported from the downloaded codetap.org file (Bálint Ferenczy,
+       codepen.io/BalintFerenczy/pen/KwdoyEN). color-interpolation-filters written correctly (kebab-case);
+       the source file had it camelCase, which a plain HTML parser ignores. -->
+  <filter id="electric-turbulent-displace" color-interpolation-filters="sRGB" x="-20%" y="-20%" width="140%" height="140%">
+    <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="10" result="noise1" seed="1" />
+    <feOffset in="noise1" dx="0" dy="0" result="offsetNoise1">
+      <animate attributeName="dy" values="700; 0" dur="6.1s" repeatCount="indefinite" calcMode="linear" />
+    </feOffset>
+    <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="10" result="noise2" seed="1" />
+    <feOffset in="noise2" dx="0" dy="0" result="offsetNoise2">
+      <animate attributeName="dy" values="0; -700" dur="5.7s" repeatCount="indefinite" calcMode="linear" />
+    </feOffset>
+    <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="10" result="noise3" seed="2" />
+    <feOffset in="noise3" dx="0" dy="0" result="offsetNoise3">
+      <animate attributeName="dx" values="490; 0" dur="6.5s" repeatCount="indefinite" calcMode="linear" />
+    </feOffset>
+    <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="10" result="noise4" seed="2" />
+    <feOffset in="noise4" dx="0" dy="0" result="offsetNoise4">
+      <animate attributeName="dx" values="0; -490" dur="5.9s" repeatCount="indefinite" calcMode="linear" />
+    </feOffset>
+    <feComposite in="offsetNoise1" in2="offsetNoise2" result="part1" />
+    <feComposite in="offsetNoise3" in2="offsetNoise4" result="part2" />
+    <feBlend in="part1" in2="part2" mode="color-dodge" result="combinedNoise" />
+    <feDisplacementMap in="SourceGraphic" in2="combinedNoise" scale="30" xChannelSelector="R" yChannelSelector="B" />
+  </filter>
 </svg>
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -712,9 +782,17 @@ footer { padding: var(--space-6) var(--space-8); font-size: 12px; color: var(--t
         <div class="comp-head"><h3>Capsule matchup</h3><span>the player screen &middot; hover previews, voting brings back the glow</span></div>
         <div class="demo on-base">
           <div class="matchup">
-            <div class="cap win" aria-pressed="true"><div class="art" style="background:linear-gradient(135deg,#0b3a4a,#0f172a)"><button class="cap-vote icon-btn vote tx tx-accent" type="button" aria-label="Vote for Capsule A"><svg><use href="#i-check"/></svg></button></div><div class="row"><span>Capsule A</span><span class="badge">Winner</span></div></div>
-            <span class="vs">vs</span>
-            <div class="cap lose"><div class="art" style="background:linear-gradient(135deg,#475569,#1e2937)"><button class="cap-vote icon-btn vote tx tx-accent" type="button" aria-label="Vote for Capsule B"><svg><use href="#i-check"/></svg></button></div><div class="row"><span>Capsule B</span><span>38%</span></div></div>
+            <div class="cap win" aria-pressed="true"><div class="art" style="background:linear-gradient(135deg,#0b3a4a,#0f172a)"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i><i class="cap-sheen cap-sheen-1"></i><i class="cap-sheen cap-sheen-2"></i><button class="cap-vote icon-btn vote tx tx-accent" type="button" aria-label="Vote for Capsule A"><svg><use href="#i-check"/></svg></button></div><div class="row"><span>Capsule A</span><span class="badge">Winner</span></div></div>
+            <div class="vs-clash">
+              <svg viewBox="0 0 44 200" preserveAspectRatio="none" aria-hidden="true">
+                <path class="vs-bolt glow" d="M24 0 L6 82 L22 88 L2 168 L38 108 L20 100 L40 40 L20 46 Z"/>
+                <path class="vs-bolt crisp" d="M24 0 L6 82 L22 88 L2 168 L38 108 L20 100 L40 40 L20 46 Z"/>
+                <path class="vs-bolt glow" d="M20 200 L38 118 L22 112 L42 32 L6 92 L24 100 L4 160 L24 154 Z"/>
+                <path class="vs-bolt crisp" d="M20 200 L38 118 L22 112 L42 32 L6 92 L24 100 L4 160 L24 154 Z"/>
+              </svg>
+              <span class="vs-label">VS</span>
+            </div>
+            <div class="cap lose"><div class="art" style="background:linear-gradient(135deg,#475569,#1e2937)"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i><i class="cap-sheen cap-sheen-1"></i><i class="cap-sheen cap-sheen-2"></i><button class="cap-vote icon-btn vote tx tx-accent" type="button" aria-label="Vote for Capsule B"><svg><use href="#i-check"/></svg></button></div><div class="row"><span>Capsule B</span><span>38%</span></div></div>
           </div>
         </div>
         <p class="note">Artwork is 616&times;353, cover-fit at <code>radius-sm</code>. The gradients here are placeholder art only, kept to one color each. Live matchups show developer-uploaded capsules. At rest a capsule is bare; hover previews a plain frame; casting a vote drops the frame and glows instead, the way the first version of this app did before this redesign, just in the current accent.</p>
