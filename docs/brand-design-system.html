@@ -206,22 +206,37 @@ ul.apply b { color: var(--text-base); }
 .search:has(input:focus-visible) { outline: 3px solid var(--text-base); outline-offset: 2px; }
 
 .matchup { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: var(--space-3); align-items: center; width: 100%; max-width: 640px; }
+/* Play — the vote screen. Bare at rest, no outer frame ever — the card itself has no background, no mat,
+   no padding-revealed plate. Only the art and its own inset glow carry any fill. Caption sits directly on
+   the page underneath, the way the very first version did it. */
 .cap { border-radius: var(--radius-md); padding: var(--space-3); display: flex; flex-direction: column; gap: var(--space-3);
-  transition: background-color .15s ease-out; } /* TRYING: following Spotify's own track-row reveal (background transparent → tint on :hover/:focus-within), applied to the whole card */
-.cap.tx-dark { background: transparent; --c-rest: 0; } /* frame is invisible at rest — was always on before */
-.cap:hover, .cap:focus-within, .cap[aria-pressed="true"] {
-  background: linear-gradient(160deg, var(--bg-highlight), color-mix(in srgb, var(--bg-press) 55%, var(--bg-highlight)));
-}
+  transition: transform .2s ease-out; }
 .cap .art { aspect-ratio: 616 / 353; border-radius: var(--radius-sm); position: relative; }
-/* TRYING: caption row and vote button reveal together with the frame, exactly like Spotify's row controls fading in together */
 .cap .row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); font-size: 14px; font-weight: 700;
   opacity: 0; transition: opacity .15s ease-out; }
-.cap:hover .row, .cap:focus-within .row, .cap[aria-pressed="true"] .row { opacity: 1; }
+.cap[aria-pressed="true"] .row { opacity: 1; }
 .cap .cap-vote { position: absolute; top: 50%; left: 50%; transform: translate(-50%, calc(-50% + 8px)); opacity: 0; transition: opacity .2s ease-out, transform .2s ease-out; }
 .cap:hover .cap-vote, .cap:focus-within .cap-vote, .cap[aria-pressed="true"] .cap-vote { opacity: 1; transform: translate(-50%, -50%); }
+.cap[aria-pressed="true"] { background: transparent; transform: scale(1.03); }
+/* The glow comes from the card's own edge, inward — not an outer halo floating past it */
+.cap[aria-pressed="true"] .art { box-shadow: inset 0 0 0 1.5px rgba(34,211,238,.85), inset 0 0 22px rgba(34,211,238,.4); }
 .cap.lose { opacity: .5; }
 .badge { font-size: 12px; font-weight: 700; padding: 2px var(--space-2); border-radius: var(--radius-pill); background: var(--win); color: #fff; }
 .vs { color: var(--text-subdued); font-weight: 700; font-size: 14px; }
+
+/* Artwork list — for developers browsing their capsules, like rows in a Spotify playlist. No glow, no vote
+   icon: this is a collection, not a game. Bare at rest; hover reveals the frame and the caption together. */
+.tile-list { display: flex; flex-direction: column; gap: var(--space-1); width: 100%; }
+.tile { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2); border-radius: var(--radius-sm);
+  background: transparent; transition: background-color .15s ease-out; }
+.tile:hover, .tile:focus-within { background: var(--bg-highlight); }
+.tile .art { width: 96px; aspect-ratio: 616 / 353; border-radius: var(--radius-sm); flex: none; }
+.tile .meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.tile .meta b { font-size: 14px; font-weight: 700; }
+.tile .meta span { font-size: 12px; color: var(--text-subdued); }
+.tile .tag { font-size: 12px; font-weight: 700; padding: 2px var(--space-2); border-radius: var(--radius-pill); background: var(--bg-press); color: var(--text-subdued);
+  opacity: 0; transition: opacity .15s ease-out; }
+.tile:hover .tag, .tile:focus-within .tag { opacity: 1; }
 
 .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 160px)); gap: var(--space-2); width: 100%; }
 .stat { background: var(--bg-highlight); border-radius: var(--radius-md); padding: var(--space-4) var(--space-5); }
@@ -694,15 +709,27 @@ footer { padding: var(--space-6) var(--space-8); font-size: 12px; color: var(--t
       </div>
 
       <div class="comp">
-        <div class="comp-head"><h3>Capsule matchup</h3><span>the core screen &middot; the winner gets the texture, the loser drops to half strength</span></div>
+        <div class="comp-head"><h3>Capsule matchup</h3><span>the player screen &middot; hover previews, voting brings back the glow</span></div>
         <div class="demo on-base">
           <div class="matchup">
-            <div class="cap win tx tx-dark" aria-pressed="true"><div class="art" style="background:linear-gradient(135deg,#0b3a4a,#0f172a)"><button class="cap-vote icon-btn vote tx tx-accent" type="button" aria-label="Vote for Capsule A"><svg><use href="#i-check"/></svg></button></div><div class="row"><span>Capsule A</span><span class="badge">Winner</span></div></div>
+            <div class="cap win" aria-pressed="true"><div class="art" style="background:linear-gradient(135deg,#0b3a4a,#0f172a)"><button class="cap-vote icon-btn vote tx tx-accent" type="button" aria-label="Vote for Capsule A"><svg><use href="#i-check"/></svg></button></div><div class="row"><span>Capsule A</span><span class="badge">Winner</span></div></div>
             <span class="vs">vs</span>
-            <div class="cap lose tx tx-dark"><div class="art" style="background:linear-gradient(135deg,#475569,#1e2937)"><button class="cap-vote icon-btn vote tx tx-accent" type="button" aria-label="Vote for Capsule B"><svg><use href="#i-check"/></svg></button></div><div class="row"><span>Capsule B</span><span>38%</span></div></div>
+            <div class="cap lose"><div class="art" style="background:linear-gradient(135deg,#475569,#1e2937)"><button class="cap-vote icon-btn vote tx tx-accent" type="button" aria-label="Vote for Capsule B"><svg><use href="#i-check"/></svg></button></div><div class="row"><span>Capsule B</span><span>38%</span></div></div>
           </div>
         </div>
-        <p class="note">Artwork is 616&times;353, cover-fit at <code>radius-sm</code>. The gradients here are placeholder art only, kept to one color each. Live matchups show developer-uploaded capsules.</p>
+        <p class="note">Artwork is 616&times;353, cover-fit at <code>radius-sm</code>. The gradients here are placeholder art only, kept to one color each. Live matchups show developer-uploaded capsules. At rest a capsule is bare; hover previews a plain frame; casting a vote drops the frame and glows instead, the way the first version of this app did before this redesign, just in the current accent.</p>
+      </div>
+
+      <div class="comp">
+        <div class="comp-head"><h3>Artwork list</h3><span>developer collections &middot; rows in a Spotify playlist, not a game</span></div>
+        <div class="demo on-base">
+          <div class="tile-list" style="max-width:440px">
+            <div class="tile"><div class="art" style="background:linear-gradient(135deg,#0b3a4a,#0f172a)"></div><div class="meta"><b>Capsule A</b><span>PEAK &middot; updated 2 days ago</span></div><span class="tag">Active</span></div>
+            <div class="tile"><div class="art" style="background:linear-gradient(135deg,#475569,#1e2937)"></div><div class="meta"><b>Capsule B</b><span>Dave the Diver &middot; updated 1 week ago</span></div><span class="tag">Draft</span></div>
+            <div class="tile"><div class="art" style="background:linear-gradient(135deg,#134e4a,#1e3a8a)"></div><div class="meta"><b>Capsule C</b><span>Hot or Not &middot; updated 3 weeks ago</span></div><span class="tag">Archived</span></div>
+          </div>
+        </div>
+        <p class="note">For developers browsing their own capsules, and any other list of artwork that isn't a vote. No glow, no vote icon, no permanent frame &mdash; hover reveals the row's frame and its caption together, the same reveal used in the Texture section, just without the vote.</p>
       </div>
 
       <div class="comp">
