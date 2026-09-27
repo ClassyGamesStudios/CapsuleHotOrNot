@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400..800&display=swap" rel="stylesheet">
 <style>
 /* CapsuleHotOrNot brand system v1.1 (v1 approved 2026-09-25, texture added 2026-09-26).
-   Structure and interaction logic: Spotify web player.
+   Structure and interaction logic: a music-streaming web player.
    Colors: the app's existing slate + cyan palette (templates/base.html).
    Typeface: Figtree, by Erik D. Kennedy (SIL OFL 1.1). */
 /* --c is the texture contrast, 0 to 1. GSAP moves it as the state changes. */
@@ -119,7 +119,7 @@ p { max-width: 68ch; }
 .sw code { color: var(--text-subdued); font-size: 12px; }
 .sw p { margin: var(--space-2) 0 0; font-size: 12px; line-height: 1.45; color: var(--text-subdued); }
 
-.table-wrap { overflow-x: auto; border-radius: var(--radius-md); background: var(--bg-highlight); }
+.table-wrap { overflow-x: auto; border-radius: var(--radius-md); background: var(--bg-highlight); padding: var(--space-2); }
 table { width: 100%; border-collapse: collapse; font-size: 14px; }
 th, td { text-align: left; padding: var(--space-3) var(--space-4); vertical-align: top; }
 th { color: var(--text-subdued); font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
@@ -152,7 +152,7 @@ ul.apply b { color: var(--text-base); }
 .type-row .spec b { display: block; font-size: 14px; }
 .type-row .spec span { font-size: 12px; color: var(--text-subdued); }
 .type-list { display: flex; flex-direction: column; gap: var(--space-2); }
-.type-list > div { background: var(--bg-highlight); border-radius: var(--radius-md); padding: 0 var(--space-5); }
+.type-list > div { background: var(--bg-highlight); border-radius: var(--radius-md); padding: var(--space-2) var(--space-5); }
 .specimen { background: var(--bg-highlight); border-radius: var(--radius-md); padding: var(--space-8); display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: var(--space-8); align-items: end; margin-bottom: var(--space-2); }
 .specimen .big { font-size: clamp(64px, 11vw, 132px); line-height: .9; font-weight: 700; letter-spacing: -.03em; }
 .specimen .glyphs { color: var(--text-subdued); font-size: 18px; line-height: 1.5; word-break: break-all; }
@@ -218,8 +218,6 @@ ul.apply b { color: var(--text-base); }
 .cap .row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); font-size: 14px; font-weight: 700;
   opacity: 0; transition: opacity .15s ease-out; }
 .cap[aria-pressed="true"] .row { opacity: 1; }
-.cap .cap-vote { position: absolute; top: 50%; left: 50%; transform: translate(-50%, calc(-50% + 8px)); opacity: 0; transition: opacity .2s ease-out, transform .2s ease-out; }
-.cap:hover .cap-vote, .cap:focus-within .cap-vote, .cap[aria-pressed="true"] .cap-vote { opacity: 1; transform: translate(-50%, -50%); }
 .cap[aria-pressed="true"] { background: transparent; transform: scale(1.03); }
 /* TRYING v5: the electric border is always present now, not just on vote. One variable, --electric,
    sets its contrast: subtle (.22) at rest, full (1) on hover, keyboard focus, or once voted. Every layer's
@@ -256,7 +254,7 @@ ul.apply b { color: var(--text-base); }
   background: linear-gradient(-30deg, var(--accent), transparent, var(--accent));
   opacity: calc(var(--electric) * .3); }
 .cap.lose { opacity: .5; }
-.badge { font-size: 12px; font-weight: 700; padding: 2px var(--space-2); border-radius: var(--radius-pill); background: var(--win); color: #fff; }
+.badge { font-size: 12px; font-weight: 700; padding: 2px var(--space-2); border-radius: var(--radius-pill); background: #15803d; color: #fff; }
 .vs { color: var(--text-subdued); font-weight: 700; font-size: 14px; }
 /* TRYING: lightning clash in place of the plain "vs" — two jagged bolts meeting in the middle, each a
    blurred glow copy behind a crisp copy run through the same electric filter as the cards, so the crackle
@@ -269,7 +267,7 @@ ul.apply b { color: var(--text-base); }
 .vs-label { position: relative; z-index: 1; color: var(--text-base); font-weight: 700; font-size: 12px; letter-spacing: .05em;
   background: var(--bg-base); padding: 3px 7px; border-radius: var(--radius-pill); }
 
-/* Artwork list — for developers browsing their capsules, like rows in a Spotify playlist. No glow, no vote
+/* Artwork list — for developers browsing their capsules, like rows in a streaming playlist. No glow, no vote
    icon: this is a collection, not a game. Bare at rest; hover reveals the frame and the caption together. */
 .tile-list { display: flex; flex-direction: column; gap: var(--space-1); width: 100%; }
 .tile { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2); border-radius: var(--radius-sm);
@@ -294,7 +292,7 @@ ul.apply b { color: var(--text-base); }
 .reward .name { font-size: 14px; color: var(--text-subdued); }
 
 .notice { display: flex; align-items: center; gap: var(--space-3); background: var(--bg-highlight); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); font-size: 14px; width: 100%; max-width: 480px;
-  box-shadow: 0 16px 24px rgba(0,0,0,.3), 0 6px 8px rgba(0,0,0,.2); /* TRYING: two-layer elevation shadow, like Spotify's floating menus */ }
+  box-shadow: 0 16px 24px rgba(0,0,0,.3), 0 6px 8px rgba(0,0,0,.2); /* TRYING: two-layer elevation shadow, like a floating context menu */ }
 .notice i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
 .notice.ok i { background: var(--positive); } .notice.warn i { background: var(--warn); } .notice.err i { background: var(--negative); }
 .notice.ok b { color: var(--positive); } .notice.warn b { color: var(--warn); } .notice.err b { color: var(--negative); }
@@ -305,7 +303,7 @@ ul.apply b { color: var(--text-base); }
 .pcard h4 { margin: 0; font-size: 16px; }
 .pcard p { margin: 0 0 var(--space-3); font-size: 14px; color: var(--text-subdued); }
 
-.banner { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: var(--space-6); padding: var(--space-4) var(--space-6); border-radius: var(--radius-lg); background: linear-gradient(120deg, var(--promo-cyan), var(--promo-violet) 55%, var(--promo-pink)); color: #fff; }
+.banner { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: var(--space-6); padding: var(--space-4) var(--space-6); border-radius: var(--radius-lg); background: linear-gradient(120deg, color-mix(in srgb, var(--promo-cyan) 65%, black), var(--promo-violet) 55%, var(--promo-pink)); color: #fff; }
 .banner p { margin: 0; }
 .banner .t { font-size: 20px; font-weight: 700; }
 
@@ -491,7 +489,7 @@ footer { padding: var(--space-6) var(--space-8); font-size: 12px; color: var(--t
       <div>
         <p class="eyebrow">Brand guideline</p>
         <h1>Capsule<br>Hot or Not</h1>
-        <p>The app's own slate and cyan palette, set in Figtree, built on the Spotify web player's structure: panels on a dark ground, white pills, and one accent kept for the vote.</p>
+        <p>The app's own slate and cyan palette, set in Figtree, built with the same structure as a modern music-streaming player: panels on a dark ground, white pills, and one accent kept for the vote.</p>
         <div class="meta"><span class="tag">1 theme: dark</span><span class="tag">Figtree 400 / 700</span><span class="tag">0 borders on surfaces</span><span class="tag">1 accent</span></div>
       </div>
       <div class="hero-art" aria-hidden="true">
@@ -718,7 +716,7 @@ footer { padding: var(--space-6) var(--space-8); font-size: 12px; color: var(--t
         <div class="type-row"><div class="spec"><b>caption</b><span>12 / 400</span></div><div style="font-size:12px;color:var(--text-subdued)">Terms &nbsp; Privacy &nbsp; Cookies</div></div>
         <div class="type-row"><div class="spec"><b>eyebrow</b><span>12 / 700 / +0.1em / caps</span></div><div class="eyebrow" style="margin:0">Head-to-head win rate</div></div>
       </div>
-      <div class="callout"><b>Setting Figtree.</b> A friendly geometric sans close to the type Spotify uses, with a tall x-height that stays legible at 12 and 14px. Give display sizes -0.02em tracking and keep body text at 16px on a 24px line height. The type scale uses 400 and 700. Weight 800 is loaded for the largest display headlines only. Load it from Google Fonts as in this file, or self-host the OFL files to avoid the external request.</div>
+      <div class="callout"><b>Setting Figtree.</b> A friendly geometric sans with a tall x-height that stays legible at 12 and 14px. Give display sizes -0.02em tracking and keep body text at 16px on a 24px line height. The type scale uses 400 and 700. Weight 800 is loaded for the largest display headlines only. Load it from Google Fonts as in this file, or self-host the OFL files to avoid the external request.</div>
     </section>
 
     <section class="panel" id="scales">
@@ -782,7 +780,7 @@ footer { padding: var(--space-6) var(--space-8); font-size: 12px; color: var(--t
         <div class="comp-head"><h3>Capsule matchup</h3><span>the player screen &middot; hover previews, voting brings back the glow</span></div>
         <div class="demo on-base">
           <div class="matchup">
-            <div class="cap win" aria-pressed="true"><div class="art" style="background:linear-gradient(135deg,#0b3a4a,#0f172a)"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i><i class="cap-sheen cap-sheen-1"></i><i class="cap-sheen cap-sheen-2"></i><button class="cap-vote icon-btn vote tx tx-accent" type="button" aria-label="Vote for Capsule A"><svg><use href="#i-check"/></svg></button></div><div class="row"><span>Capsule A</span><span class="badge">Winner</span></div></div>
+            <div class="cap win" aria-pressed="true"><div class="art" style="background:linear-gradient(135deg,#0b3a4a,#0f172a)"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i><i class="cap-sheen cap-sheen-1"></i><i class="cap-sheen cap-sheen-2"></i></div><div class="row"><span>Capsule A</span><span class="badge">Winner</span></div></div>
             <div class="vs-clash">
               <svg viewBox="0 0 44 200" preserveAspectRatio="none" aria-hidden="true">
                 <path class="vs-bolt glow" d="M24 0 L6 82 L22 88 L2 168 L38 108 L20 100 L40 40 L20 46 Z"/>
@@ -792,14 +790,14 @@ footer { padding: var(--space-6) var(--space-8); font-size: 12px; color: var(--t
               </svg>
               <span class="vs-label">VS</span>
             </div>
-            <div class="cap lose"><div class="art" style="background:linear-gradient(135deg,#475569,#1e2937)"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i><i class="cap-sheen cap-sheen-1"></i><i class="cap-sheen cap-sheen-2"></i><button class="cap-vote icon-btn vote tx tx-accent" type="button" aria-label="Vote for Capsule B"><svg><use href="#i-check"/></svg></button></div><div class="row"><span>Capsule B</span><span>38%</span></div></div>
+            <div class="cap lose"><div class="art" style="background:linear-gradient(135deg,#475569,#1e2937)"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i><i class="cap-sheen cap-sheen-1"></i><i class="cap-sheen cap-sheen-2"></i></div><div class="row"><span>Capsule B</span><span>38%</span></div></div>
           </div>
         </div>
         <p class="note">Artwork is 616&times;353, cover-fit at <code>radius-sm</code>. The gradients here are placeholder art only, kept to one color each. Live matchups show developer-uploaded capsules. At rest a capsule is bare; hover previews a plain frame; casting a vote drops the frame and glows instead, the way the first version of this app did before this redesign, just in the current accent.</p>
       </div>
 
       <div class="comp">
-        <div class="comp-head"><h3>Artwork list</h3><span>developer collections &middot; rows in a Spotify playlist, not a game</span></div>
+        <div class="comp-head"><h3>Artwork list</h3><span>developer collections &middot; rows in a streaming playlist, not a game</span></div>
         <div class="demo on-base">
           <div class="tile-list" style="max-width:440px">
             <div class="tile"><div class="art" style="background:linear-gradient(135deg,#0b3a4a,#0f172a)"></div><div class="meta"><b>Capsule A</b><span>PEAK &middot; updated 2 days ago</span></div><span class="tag">Active</span></div>
@@ -868,7 +866,7 @@ footer { padding: var(--space-6) var(--space-8); font-size: 12px; color: var(--t
           <span class="links"><span class="btn btn-text">Rewards</span><span class="btn btn-text">Support</span></span>
           <span class="btn btn-lg btn-primary">Sign in</span>
         </div>
-        <div class="mock-side"><b style="font-size:14px;padding:4px">Your games</b><div class="pcard"><h4 style="font-size:13px">Add your first game</h4><span class="btn btn-sm btn-primary" style="font-size:12px">Add a game</span></div></div>
+        <div class="mock-side"><b style="font-size:14px;padding:4px">Your games</b><div class="pcard"><b style="font-size:13px">Add your first game</b><span class="btn btn-sm btn-primary" style="font-size:12px">Add a game</span></div></div>
         <div class="mock-main"><b style="font-size:24px">Main view</b><span style="color:var(--text-subdued);font-size:14px">bg-elevated on bg-base</span></div>
         <div class="banner"><p class="t" style="font-size:16px">Vote on games. Get paid.</p><span class="btn btn-sm btn-primary">Join</span></div>
       </div>
@@ -953,7 +951,7 @@ footer { padding: var(--space-6) var(--space-8); font-size: 12px; color: var(--t
 }</pre>
     </section>
 
-    <footer>Structure adapted from the Spotify web player. No Spotify logo, icon set or typeface is used. Figtree &copy; Erik D. Kennedy, licensed under the SIL Open Font License 1.1.</footer>
+    <footer>Figtree &copy; Erik D. Kennedy, licensed under the SIL Open Font License 1.1.</footer>
   </main>
 </div>
 
