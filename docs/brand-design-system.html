@@ -206,9 +206,19 @@ ul.apply b { color: var(--text-base); }
 .search:has(input:focus-visible) { outline: 3px solid var(--text-base); outline-offset: 2px; }
 
 .matchup { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: var(--space-3); align-items: center; width: 100%; max-width: 640px; }
-.cap { border-radius: var(--radius-md); padding: var(--space-3); display: flex; flex-direction: column; gap: var(--space-3); }
-.cap .art { aspect-ratio: 616 / 353; border-radius: var(--radius-sm); }
-.cap .row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); font-size: 14px; font-weight: 700; }
+.cap { border-radius: var(--radius-md); padding: var(--space-3); display: flex; flex-direction: column; gap: var(--space-3);
+  transition: background-color .15s ease-out; } /* TRYING: following Spotify's own track-row reveal (background transparent → tint on :hover/:focus-within), applied to the whole card */
+.cap.tx-dark { background: transparent; --c-rest: 0; } /* frame is invisible at rest — was always on before */
+.cap:hover, .cap:focus-within, .cap[aria-pressed="true"] {
+  background: linear-gradient(160deg, var(--bg-highlight), color-mix(in srgb, var(--bg-press) 55%, var(--bg-highlight)));
+}
+.cap .art { aspect-ratio: 616 / 353; border-radius: var(--radius-sm); position: relative; }
+/* TRYING: caption row and vote button reveal together with the frame, exactly like Spotify's row controls fading in together */
+.cap .row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); font-size: 14px; font-weight: 700;
+  opacity: 0; transition: opacity .15s ease-out; }
+.cap:hover .row, .cap:focus-within .row, .cap[aria-pressed="true"] .row { opacity: 1; }
+.cap .cap-vote { position: absolute; top: 50%; left: 50%; transform: translate(-50%, calc(-50% + 8px)); opacity: 0; transition: opacity .2s ease-out, transform .2s ease-out; }
+.cap:hover .cap-vote, .cap:focus-within .cap-vote, .cap[aria-pressed="true"] .cap-vote { opacity: 1; transform: translate(-50%, -50%); }
 .cap.lose { opacity: .5; }
 .badge { font-size: 12px; font-weight: 700; padding: 2px var(--space-2); border-radius: var(--radius-pill); background: var(--win); color: #fff; }
 .vs { color: var(--text-subdued); font-weight: 700; font-size: 14px; }
@@ -223,7 +233,8 @@ ul.apply b { color: var(--text-base); }
 .reward .val { font-size: 48px; line-height: 1.05; font-weight: 700; letter-spacing: -.02em; margin-top: var(--space-6); }
 .reward .name { font-size: 14px; color: var(--text-subdued); }
 
-.notice { display: flex; align-items: center; gap: var(--space-3); background: var(--bg-highlight); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); font-size: 14px; width: 100%; max-width: 480px; }
+.notice { display: flex; align-items: center; gap: var(--space-3); background: var(--bg-highlight); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); font-size: 14px; width: 100%; max-width: 480px;
+  box-shadow: 0 16px 24px rgba(0,0,0,.3), 0 6px 8px rgba(0,0,0,.2); /* TRYING: two-layer elevation shadow, like Spotify's floating menus */ }
 .notice i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
 .notice.ok i { background: var(--positive); } .notice.warn i { background: var(--warn); } .notice.err i { background: var(--negative); }
 .notice.ok b { color: var(--positive); } .notice.warn b { color: var(--warn); } .notice.err b { color: var(--negative); }
@@ -686,9 +697,9 @@ footer { padding: var(--space-6) var(--space-8); font-size: 12px; color: var(--t
         <div class="comp-head"><h3>Capsule matchup</h3><span>the core screen &middot; the winner gets the texture, the loser drops to half strength</span></div>
         <div class="demo on-base">
           <div class="matchup">
-            <div class="cap win tx tx-dark" aria-pressed="true"><div class="art" style="background:linear-gradient(135deg,#0b3a4a,#0f172a)"></div><div class="row"><span>Capsule A</span><span class="badge">Winner</span></div></div>
+            <div class="cap win tx tx-dark" aria-pressed="true"><div class="art" style="background:linear-gradient(135deg,#0b3a4a,#0f172a)"><button class="cap-vote icon-btn vote tx tx-accent" type="button" aria-label="Vote for Capsule A"><svg><use href="#i-check"/></svg></button></div><div class="row"><span>Capsule A</span><span class="badge">Winner</span></div></div>
             <span class="vs">vs</span>
-            <div class="cap lose tx tx-dark"><div class="art" style="background:linear-gradient(135deg,#475569,#1e2937)"></div><div class="row"><span>Capsule B</span><span>38%</span></div></div>
+            <div class="cap lose tx tx-dark"><div class="art" style="background:linear-gradient(135deg,#475569,#1e2937)"><button class="cap-vote icon-btn vote tx tx-accent" type="button" aria-label="Vote for Capsule B"><svg><use href="#i-check"/></svg></button></div><div class="row"><span>Capsule B</span><span>38%</span></div></div>
           </div>
         </div>
         <p class="note">Artwork is 616&times;353, cover-fit at <code>radius-sm</code>. The gradients here are placeholder art only, kept to one color each. Live matchups show developer-uploaded capsules.</p>
