@@ -18,7 +18,7 @@
   --accent: #22d3ee; --on-accent: #07090f; --accent-deep: #00b4d8;
   --inverted: #ffffff; --on-inverted: #07090f;
   --promo-cyan: #0891b2; --promo-violet: #6d28d9; --promo-pink: #db2777;
-  --win: #16a34a;
+  --win: #16a34a; --negative: #f87171;
   --font-sans: "Figtree", system-ui, -apple-system, "Segoe UI", "Helvetica Neue", arial, sans-serif;
   --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px; --space-6: 24px; --space-8: 32px;
   --radius-sm: 4px; --radius-md: 8px; --radius-lg: 16px; --radius-pill: 9999px; --radius-circle: 50%;
@@ -29,11 +29,12 @@
 @property --c { syntax: "<number>"; inherits: true; initial-value: 0.2; }
 
 * { box-sizing: border-box; }
-html { background: var(--bg-base); }
+html { background: var(--bg-base); scroll-behavior: smooth; }
 body { margin: 0; background: var(--bg-base); color: var(--text-base); font: 400 16px/1.5 var(--font-sans); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
 a { color: inherit; text-decoration: none; }
 h1, h2, h3, p { margin: 0; }
-.page { max-width: 1400px; margin: 0 auto; padding: var(--space-2); display: flex; flex-direction: column; gap: var(--space-2); }
+.page { max-width: 1400px; margin: 0 auto; padding: var(--space-2); }
+.page > * + * { margin-top: var(--space-2); }   /* block layout, not flex: a flex-item pin target breaks GSAP's spacer sizing */
 .panel { background: var(--bg-elevated); border-radius: var(--radius-md); }
 .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--text-subdued); }
 
@@ -109,11 +110,12 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 .topbar .logo { margin-left: var(--space-2); }
 .topbar .btn-text { color: rgba(226, 232, 240, .82); } .topbar .btn-text:hover { color: var(--text-base); }
 .topbar .grow { flex: 1; }
-.hero { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: var(--space-8) var(--space-4); }
+.hero { position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: var(--space-8) var(--space-4); }
+.hero-copy { width: 100%; }
 .hero h1 { font-size: clamp(44px, 9vw, 96px); line-height: .92; letter-spacing: -.035em; font-weight: 700; }
 .hero h1 .line { display: block; overflow: hidden; padding-bottom: .1em; margin-bottom: -.1em; }
 .hero h1 .inner { display: block; }
-.hero .pitch { color: var(--text-base); opacity: .88; max-width: 52ch; margin-top: var(--space-6); }
+.hero .pitch { color: var(--text-base); opacity: .88; max-width: 52ch; margin: var(--space-6) auto 0; }
 
 .pair { display: grid; grid-template-columns: minmax(0, 380px) auto minmax(0, 380px); gap: var(--space-4); align-items: center; width: 100%; justify-content: center; margin-top: var(--space-8); transition: opacity .25s, transform .25s; }
 .pair.swap { opacity: 0; transform: translateY(8px); }
@@ -122,9 +124,37 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 .ghost { position: absolute; left: 0; right: 0; top: 0; bottom: 28px; border-radius: var(--radius-sm); background: var(--bg-highlight) center / cover no-repeat; }
 .ghost.g1 { transform: translateY(15px) scale(.94); opacity: .55; }
 .ghost.g2 { transform: translateY(28px) scale(.88); opacity: .3; }
-.g-card { position: relative; z-index: 2; display: block; width: 100%; appearance: none; border: 0; padding: 0; background: none; border-radius: var(--radius-sm); cursor: pointer; color: inherit; font: inherit; transition: background-color 100ms, opacity .25s; }
-.g-card:hover { transform: scale(1.02); }
+/* Play — the vote screen, per the design system's Sep 27 update. Bare at rest: no frame, no mat, no plate.
+   Only the artwork and its own edge-light carry any fill. Electric Border, ported from the design system
+   (Balint Ferenczy, codepen.io/BalintFerenczy/pen/KwdoyEN): one --electric variable sets the contrast, subtle
+   at rest and full on hover, keyboard focus, or once voted, so every layer dims and brightens as one unit. */
+.g-card { position: relative; z-index: 2; display: block; width: 100%; appearance: none; border: 0; padding: var(--space-3); background: none; border-radius: var(--radius-md); cursor: pointer; color: inherit; font: inherit; transition: transform .4s cubic-bezier(.16, 1, .3, 1), opacity .3s ease-out; }
 .g-card.picked { animation: bump .32s ease-out; }
+.g-card.win[aria-pressed="true"] { transform: scale(1.05) translateX(6px); }   /* the winner shoves forward */
+.pair:has(.g-card.win[aria-pressed="true"]) .g-card.lose { transform: translateX(-16px) rotate(-3deg) scale(.92); }   /* the loser gets bumped back */
+.g-card .cap-art { position: relative; display: block; isolation: isolate; aspect-ratio: 616 / 353; border-radius: var(--radius-sm); overflow: visible; }
+.g-card .cap-art .art { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: auto; }
+.g-card .cap-art::before, .g-card .cap-glow, .g-card .cap-sheen, .g-card .cap-bg-glow { transition: opacity .25s ease-out; }
+.g-card { --electric: .22; }
+.g-card:hover, .g-card:focus-visible, .g-card[aria-pressed="true"] { --electric: 1; }
+.g-card .cap-glow { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; border: 2px solid var(--accent); }
+.g-card .cap-glow-1 { opacity: calc(var(--electric) * .6); filter: blur(1px); }
+.g-card .cap-glow-2 { opacity: var(--electric); filter: blur(4px); }
+.g-card .cap-art::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; border: 2px solid var(--accent); opacity: var(--electric); filter: url(#electric-turbulent-displace); }
+.g-card .cap-sheen { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; mix-blend-mode: overlay; transform: scale(1.1); filter: blur(16px); background: linear-gradient(-30deg, #fff, transparent 30%, transparent 70%, #fff); }
+.g-card .cap-sheen-1 { opacity: var(--electric); }
+.g-card .cap-sheen-2 { opacity: calc(var(--electric) * .5); }
+.g-card .cap-bg-glow { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: -1; transform: scale(1.1); filter: blur(32px); background: linear-gradient(-30deg, var(--accent), transparent, var(--accent)); opacity: calc(var(--electric) * .3); }
+.g-card .vote-icon { position: absolute; top: 50%; left: 50%; width: 40px; height: 40px; border-radius: 50%; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; opacity: 0; transform: translate(-50%, calc(-50% + 8px)); transition: opacity .2s ease-out, transform .2s ease-out; pointer-events: none; }
+.g-card .vote-icon svg { width: 20px; height: 20px; fill: currentColor; }
+.g-card:hover .vote-icon, .g-card:focus-visible .vote-icon, .g-card[aria-pressed="true"] .vote-icon { opacity: 1; transform: translate(-50%, -50%); }
+/* Lightning clash in place of the plain "vs": two bolts sharing the capsules' own electric filter. */
+.vs-clash { align-self: stretch; justify-self: center; width: 44px; position: relative; display: flex; align-items: center; justify-content: center; }
+.vs-clash svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.vs-bolt { fill: var(--accent); }
+.vs-bolt.glow { filter: blur(5px); opacity: .8; }
+.vs-bolt.crisp { filter: url(#electric-turbulent-displace); }
+.vs-label { position: relative; z-index: 1; color: var(--text-base); font-weight: 700; font-size: 12px; letter-spacing: .05em; background: var(--bg-base); padding: 3px 7px; border-radius: var(--radius-pill); }
 @keyframes deal { from { transform: translateY(16px) scale(.94); opacity: .6; } to { transform: none; opacity: 1; } }   /* the card behind steps forward */
 @keyframes lineUp { from { transform: translateY(105%); } to { transform: none; } }
 @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
@@ -134,7 +164,7 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
   /* Arrival, authored once: headline lines rise out of a mask, then the capsules are dealt in, then the score. Default state stays visible. */
   .hero h1 .inner { animation: lineUp .9s cubic-bezier(.16, 1, .3, 1) both; }
   .hero h1 .line:nth-child(2) .inner { animation-delay: .09s; }
-  .hero .pitch { animation: fadeUp .7s cubic-bezier(.16, 1, .3, 1) .35s both; }
+  .hero .pitch .inner { display: block; animation: fadeUp .7s cubic-bezier(.16, 1, .3, 1) .35s both; }
   .pair .slot:nth-child(1) { animation: deal .8s cubic-bezier(.16, 1, .3, 1) .55s both; }
   .pair .slot:nth-child(3) { animation: deal .8s cubic-bezier(.16, 1, .3, 1) .68s both; }
   .vs, .score { animation: fadeUp .6s cubic-bezier(.16, 1, .3, 1) .9s both; }
@@ -142,11 +172,12 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
   .g-end { animation: fadeUp .55s cubic-bezier(.16, 1, .3, 1) both; }
 }
 @keyframes bump { 0% { transform: scale(1); } 40% { transform: scale(1.06); } 100% { transform: scale(1); } }
-.g-card.lose { opacity: .45; }
+.g-card.lose { opacity: .3; }
 
 .score { position: relative; margin-top: var(--space-2); display: flex; flex-direction: column; align-items: center; gap: var(--space-1); }
 .score-row { position: relative; display: flex; align-items: center; justify-content: center; gap: var(--space-3); }
 .score .num { font-size: 48px; line-height: 1.05; font-weight: 700; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+.mult-hint { font-size: 12px; color: var(--text-subdued); }
 /* Multiplier (app rule: a vote pays 10 x multiplier, and every 10 votes adds 0.1x) */
 .mult { display: inline-block; min-width: 3.6em; text-align: center; overflow: hidden; font-size: 16px; line-height: 1.5; font-weight: 700; font-variant-numeric: tabular-nums; padding: 2px var(--space-3); border-radius: var(--radius-pill); background: var(--bg-highlight); color: var(--text-base); }
 .gain { position: absolute; left: 100%; top: 50%; margin-left: var(--space-3); font-size: 20px; font-weight: 700; color: var(--text-base); opacity: 0; pointer-events: none; white-space: nowrap; font-variant-numeric: tabular-nums; }
@@ -157,12 +188,71 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 /* Match 5: waitlist prompt with the 3 steps. Text only, no card fills. */
 .g-end { display: none; flex-direction: column; align-items: center; gap: var(--space-4); margin-top: var(--space-6); width: 100%; max-width: 720px; }
 .g-end h2 { font-size: 32px; line-height: 1.2; font-weight: 700; letter-spacing: -.01em; }
-.g-end p { color: var(--text-subdued); }
+.g-end > .btn-text { margin-top: calc(-1 * var(--space-1)); }
 .steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-8); width: 100%; margin: var(--space-4) 0; text-align: left; }
 .step b { display: block; font-size: 32px; line-height: 1; margin-bottom: var(--space-2); }
-.step span { font-size: 14px; color: var(--text-subdued); }
+.step span { display: block; font-size: 14px; font-weight: 700; line-height: 1.3; color: var(--text-base); }
+.step small { display: block; margin-top: var(--space-1); font-size: 12px; line-height: 1.4; color: var(--text-subdued); }
 .hero.done .pair, .hero.done .score { display: none; }
 .hero.done .g-end { display: flex; }
+
+/* Shared join form: end-of-demo (always Player) and the finale (Player/Developer switch) */
+.join-form { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); width: 100%; max-width: 360px; }
+/* Collapse/expand, ported from lynkpay.co.uk/visa-preregister: the finale starts as a single pill
+   and opens into the full card on click. A 0fr/1fr grid-rows tween animates the reveal without
+   ever measuring the card's height in JS. */
+.join-shell { display: contents; }
+.join-trigger { width: 100%; }
+.join-form[data-open="true"] .join-trigger { display: none; }
+.join-reveal { display: grid; grid-template-rows: 0fr; width: 100%; transition: grid-template-rows .35s cubic-bezier(.16, 1, .3, 1); }
+.join-form[data-open="true"] .join-reveal { grid-template-rows: 1fr; }
+.join-reveal-inner { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); overflow: hidden; min-height: 0; }
+.join-submit-icon { display: none; width: 20px; height: 20px; }
+/* Toggle CTA, ported from lynkpay.co.uk/visa-preregister: one unified card holding a pill segmented
+   control, the email field and the submit button, so the whole join action reads as one object. */
+.join-card { display: flex; flex-direction: column; gap: var(--space-3); width: 100%; max-width: 360px; padding: var(--space-3); border-radius: var(--radius-lg); background: var(--bg-elevated); }
+.switch { margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: var(--space-2); width: 100%; }
+/* Visible copy: sr-only. The pills say Player/Developer and the field says you@example.com — a label above each would only repeat it. */
+.switch-label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.switch-options { display: flex; height: var(--control-lg); padding: var(--space-1); border-radius: var(--radius-pill); background: var(--bg-highlight); }
+.switch-opt { flex: 1; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-pill); font-size: 14px; font-weight: 700; color: var(--text-subdued); cursor: pointer; transition: background-color .15s ease-out, color .15s ease-out; }
+.switch-opt:hover { color: var(--text-base); }
+.switch-opt:has(input:checked) { background: var(--accent); color: var(--on-accent); }
+.switch-opt:has(input:focus-visible) { outline: 3px solid var(--text-base); outline-offset: 2px; }
+.switch-opt input { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.field { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-1); width: 100%; text-align: left; }
+.field-label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+/* Field: the same pill-and-grain surface as .search, just without the icon. */
+.field-input { display: block; width: 100%; height: var(--control-lg); border-radius: var(--radius-pill); }
+.field-input:has(input:focus-visible) { outline: 3px solid var(--text-base); outline-offset: 2px; }
+.field input { width: 100%; height: 100%; padding: 0 var(--space-5); border: 0; border-radius: inherit; background: transparent; color: var(--text-base); font: 400 16px/1 var(--font-sans); outline: none; }
+.field input::placeholder { color: var(--text-subdued); }
+
+/* Desktop only: the finale join widens horizontally, ported from lynkpay.co.uk/visa-preregister —
+   a pill that grows into a single bar (toggle, field, round submit) instead of stacking down the page.
+   --join-collapsed-w is measured off the trigger's own rendered width by JS, so the pill never jumps;
+   it only becomes animatable once that exact number is known. */
+@media (min-width: 901px) {
+  .join-form:has(.join-shell) { max-width: 480px; }
+  .join-shell { display: block; position: relative; overflow: hidden; height: calc(var(--control-lg) + var(--space-2)); width: var(--join-collapsed-w, 240px); max-width: 100%; border-radius: var(--radius-pill); background: var(--bg-elevated); transition: width .4s cubic-bezier(.16, 1, .3, 1); }
+  .join-form[data-open="true"] .join-shell { width: min(460px, 100%); }
+  .join-trigger { position: absolute; inset: 0; opacity: 1; transition: opacity .2s ease-out; }
+  .join-form[data-open="true"] .join-trigger { display: inline-flex; opacity: 0; pointer-events: none; }
+  .join-reveal { position: absolute; inset: 0; display: block; opacity: 0; pointer-events: none; transition: opacity .25s ease-out .15s; }
+  .join-form[data-open="true"] .join-reveal { opacity: 1; pointer-events: auto; }
+  .join-reveal-inner { display: block; height: 100%; overflow: visible; }
+  .join-card { flex-direction: row; align-items: center; height: 100%; width: 100%; max-width: none; padding: var(--space-1); gap: var(--space-2); border-radius: var(--radius-pill); }
+  .join-card .switch { width: auto; flex: none; }
+  .join-card .switch-options { width: 180px; }
+  .join-card .field { flex: 1; min-width: 0; width: auto; }
+  .join-card .join-submit { flex: none; width: var(--control-lg); padding: 0; border-radius: 50%; }
+  .join-card .join-submit .btn-label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+  .join-card .join-submit-icon { display: block; }
+}
+.form-msg { min-height: 1.4em; margin: 0; font-size: 14px; }
+.form-msg[data-state="error"] { color: var(--negative); }
+.form-msg[data-state="success"] { color: var(--win); }
+.small-print { margin: 0; font-size: 12px; color: var(--text-muted); }
 
 /* Sections: 70vh. Copy sits directly on the panel, no card behind it. */
 .band { min-height: 70vh; min-height: 70svh; padding: var(--space-8); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-8) 64px; align-items: center; }
@@ -195,7 +285,7 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 .dt { position: absolute; left: calc(var(--u) * var(--x)); top: calc(var(--u) * var(--y)); width: calc(var(--u) * 288.88); height: calc(var(--u) * 165.54); border-radius: calc(var(--u) * 4); overflow: hidden; }
 .dt img { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: auto; object-fit: cover; opacity: .6; border-radius: 0; }
 .dt::after { content: ""; position: absolute; inset: 0; background: rgba(7, 9, 15, .55); }
-.dt.best { left: calc(var(--u) * 178); top: calc(var(--u) * 157); width: calc(var(--u) * 274); height: calc(var(--u) * 157.01); overflow: visible; z-index: 2; }
+.dt.best { left: calc(var(--u) * 177); top: calc(var(--u) * 171.5); width: calc(var(--u) * 274); height: calc(var(--u) * 157.01); overflow: visible; z-index: 2; }
 .dt.best::after { display: none; }
 .dt.best img { opacity: 1; border-radius: calc(var(--u) * 2.8); z-index: 1; }   /* above the glow, always */
 .glow { position: absolute; z-index: 0; opacity: .85; inset: calc(var(--u) * -9); border-radius: calc(var(--u) * 14); pointer-events: none; filter: url(#grainGlow);
@@ -223,7 +313,6 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 .finale::before { content: ""; position: absolute; inset: 0; z-index: 1; background: radial-gradient(ellipse at center, rgba(7, 9, 15, .94) 0%, rgba(7, 9, 15, .84) 45%, rgba(7, 9, 15, .68) 100%); }
 .finale .copy-c { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: var(--space-4); max-width: 640px; }
 .finale h2 { font-size: clamp(36px, 5vw, 56px); line-height: 1.05; font-weight: 700; letter-spacing: -.02em; text-wrap: balance; }
-.finale p { color: var(--text-base); opacity: .85; font-size: 18px; }
 
 footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px; line-height: 1.5; color: var(--text-muted); display: flex; flex-direction: column; gap: var(--space-2); max-width: 90ch; }
 
@@ -235,12 +324,12 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
   .steps { grid-template-columns: 1fr; gap: var(--space-4); }
   .wall-col:nth-child(n+4) { display: none; }
   .dev-grid { gap: var(--space-2); }
-  .topbar .links { display: none; }
-  .topbar .btn-text { display: none; }   /* phones: the logo and the waitlist button are what matter here */
+  .topbar .links { display: none; }   /* phones: the logo and the waitlist button are what matter here */
   .car-stage .icon-btn { display: none; }   /* phones: swipe or use the dots */
   .viewport { touch-action: pan-y; }
 }
 @media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
   * { transition: none !important; animation: none !important; } .wall-col { animation: none; } .track { transition: none; } .g-card.picked { animation: none; }
   .btn:hover, .icon-btn:hover { transform: none; }
 }
@@ -279,6 +368,30 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
     <feComposite in="soft" in2="grain" operator="in"/>
   </filter>
   <symbol id="i-next" viewBox="0 0 24 24"><path d="M9.3 5.3 8 6.7l5.3 5.3L8 17.3l1.3 1.4L16 12z"/></symbol>
+  <!-- Electric Border filter (design system, Sep 27): Balint Ferenczy, codepen.io/BalintFerenczy/pen/KwdoyEN.
+       Flow comes from animating feOffset dx/dy on a fixed turbulence field, not the seed, so it glides. -->
+  <filter id="electric-turbulent-displace" color-interpolation-filters="sRGB" x="-20%" y="-20%" width="140%" height="140%">
+    <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="10" result="noise1" seed="1" />
+    <feOffset in="noise1" dx="0" dy="0" result="offsetNoise1">
+      <animate attributeName="dy" values="700; 0" dur="6.1s" repeatCount="indefinite" calcMode="linear" />
+    </feOffset>
+    <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="10" result="noise2" seed="1" />
+    <feOffset in="noise2" dx="0" dy="0" result="offsetNoise2">
+      <animate attributeName="dy" values="0; -700" dur="5.7s" repeatCount="indefinite" calcMode="linear" />
+    </feOffset>
+    <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="10" result="noise3" seed="2" />
+    <feOffset in="noise3" dx="0" dy="0" result="offsetNoise3">
+      <animate attributeName="dx" values="490; 0" dur="6.5s" repeatCount="indefinite" calcMode="linear" />
+    </feOffset>
+    <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="10" result="noise4" seed="2" />
+    <feOffset in="noise4" dx="0" dy="0" result="offsetNoise4">
+      <animate attributeName="dx" values="0; -490" dur="5.9s" repeatCount="indefinite" calcMode="linear" />
+    </feOffset>
+    <feComposite in="offsetNoise1" in2="offsetNoise2" result="part1" />
+    <feComposite in="offsetNoise3" in2="offsetNoise4" result="part2" />
+    <feBlend in="part1" in2="part2" mode="color-dodge" result="combinedNoise" />
+    <feDisplacementMap in="SourceGraphic" in2="combinedNoise" scale="30" xChannelSelector="R" yChannelSelector="B" />
+  </filter>
 </svg>
 
 <div class="page">
@@ -290,39 +403,48 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
       <a class="logo" href="#" aria-label="CapsuleHotOrNot" style="--h: 32px"><svg viewBox="0 0 1264.19 300.17" aria-hidden="true" focusable="false"><path class="lg-sym" fill-rule="evenodd" d="M17.56 75.57 L228.09 1.44 A26.33 26.33 0 0 1 261.67 17.53 L306.85 145.80 A26.33 26.33 0 0 1 290.76 179.39 L80.23 253.52 A26.33 26.33 0 0 1 46.65 237.43 L1.47 109.16 A26.33 26.33 0 0 1 17.56 75.57Z M19.47 80.98 L229.99 6.84 A20.6 20.6 0 0 1 256.27 19.43 L301.44 147.71 A20.6 20.6 0 0 1 288.85 173.98 L78.33 248.12 A20.6 20.6 0 0 1 52.05 235.53 L6.88 107.25 A20.6 20.6 0 0 1 19.47 80.98Z M178.94 54.88 L388.07 132.87 A20.6 20.6 0 0 1 400.18 159.36 L352.66 286.79 A20.6 20.6 0 0 1 326.16 298.90 L117.03 220.91 A20.6 20.6 0 0 1 104.92 194.42 L152.44 66.99 A20.6 20.6 0 0 1 178.94 54.88Z"/><clipPath id="lg-clip-live"><rect class="lg-clip" x="410" y="0" width="860" height="300.17"/></clipPath><g clip-path="url(#lg-clip-live)"><rect x="410" y="0" width="860" height="300.17" fill="none" pointer-events="all"/><use class="lg-l1" href="#lg-line1"/><use class="lg-l2" href="#lg-line2"/></g></svg></a>
       <span class="grow"></span>
       <span class="links"><a class="btn btn-text" href="#players">Players</a><a class="btn btn-text" href="#developers">Developers</a></span>
-      <a class="btn btn-text" href="#">Log in</a>
-      <a class="btn btn-lg btn-primary tx tx-light" href="#">Join the waitlist</a>
+      <a class="btn btn-lg btn-primary tx tx-light" href="#wall" data-join>Join the waitlist</a>
     </header>
 
     <div class="hero" id="hero">
-      <h1><span class="line"><span class="inner">Two capsules.</span></span> <span class="line"><span class="inner">One click.</span></span></h1>
-      <p class="pitch">Tap the capsule you'd click on Steam. Every matchup is a real vote from a real Steam library, yours included once you're in.</p>
+      <div class="hero-copy">
+        <h1><span class="line"><span class="inner">Vote and</span></span> <span class="line"><span class="inner">get paid</span></span></h1>
+        <p class="pitch"><span class="inner">Pick the capsule you'd click on Steam. Once you're in, every vote earns points.</span></p>
+      </div>
 
       <div class="pair" id="pair">
         <div class="slot"><i class="ghost g2"></i><i class="ghost g1"></i>
-          <button type="button" class="g-card" id="c0" aria-label="Pick the left capsule"><img class="art" id="a0" alt="" src="art/main_2771630.jpg"></button></div>
-        <span class="vs">vs</span>
+          <button type="button" class="g-card" id="c0" aria-label="Pick the left capsule"><span class="cap-art"><img class="art" id="a0" alt="" src="art/main_2771630.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i><i class="cap-sheen cap-sheen-1"></i><i class="cap-sheen cap-sheen-2"></i><span class="vote-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span></span></button></div>
+        <span class="vs-clash" aria-hidden="true"><svg viewBox="0 0 44 200" preserveAspectRatio="none"><path class="vs-bolt glow" d="M24 0 L6 82 L22 88 L2 168 L38 108 L20 100 L40 40 L20 46 Z"/><path class="vs-bolt crisp" d="M24 0 L6 82 L22 88 L2 168 L38 108 L20 100 L40 40 L20 46 Z"/><path class="vs-bolt glow" d="M20 200 L38 118 L22 112 L42 32 L6 92 L24 100 L4 160 L24 154 Z"/><path class="vs-bolt crisp" d="M20 200 L38 118 L22 112 L42 32 L6 92 L24 100 L4 160 L24 154 Z"/></svg><span class="vs-label">VS</span></span>
         <div class="slot"><i class="ghost g2"></i><i class="ghost g1"></i>
-          <button type="button" class="g-card" id="c1" aria-label="Pick the right capsule"><img class="art" id="a1" alt="" src="art/main_3593620.jpg"></button></div>
+          <button type="button" class="g-card" id="c1" aria-label="Pick the right capsule"><span class="cap-art"><img class="art" id="a1" alt="" src="art/main_3593620.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i><i class="cap-sheen cap-sheen-1"></i><i class="cap-sheen cap-sheen-2"></i><span class="vote-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span></span></button></div>
       </div>
 
       <div class="score">
         <span class="mult-pop" id="multPop" aria-hidden="true"><b></b><i>Multiplier up</i></span>
         <div class="score-row"><span class="num" id="score">105</span><span class="mult" id="mult" title="Multiplier">x1.0</span></div>
         <span class="eyebrow">Points</span>
+        <p class="mult-hint">Keep voting to raise your multiplier.</p>
       </div>
 
-      <!-- Match 5: prompt to join the waitlist. Steps and bonus come from the wireframe (200 pts);
-           the Sep 24 meeting notes said 250, so confirm the number. -->
+      <!-- Match 5: prompt to join the waitlist. The steps and points come from the app: joining the waitlist pays nothing,
+           linking Steam pays SIGNUP_BONUS (+300) and verifying the email pays EMAIL_BONUS (+200), 500 in total (db.py). -->
       <div class="g-end" id="gend">
-        <h2>Keep your points and get 200 more</h2>
-        <p>You're on <strong id="finalScore">0</strong> points at <strong id="finalMult">x1.0</strong>. Finish three steps to add the bonus.</p>
+        <h2>Get 500 points to start</h2>
         <div class="steps">
           <div class="step"><b>1</b><span>Join the waitlist</span></div>
-          <div class="step"><b>2</b><span>Log in</span></div>
-          <div class="step"><b>3</b><span>Get 200 more points</span></div>
+          <div class="step"><b>2</b><span>Link your Steam account</span><small>+300 points</small></div>
+          <div class="step"><b>3</b><span>Verify your email</span><small>+200 points</small></div>
         </div>
-        <a class="btn btn-lg btn-primary tx tx-light" href="#">Join the waitlist</a>
+        <form class="join-form" id="demoForm" data-side="player" novalidate>
+          <label class="field">
+            <span class="field-label">Email</span>
+            <span class="field-input tx tx-dark"><input type="email" name="email" placeholder="you@example.com" autocomplete="email" required></span>
+          </label>
+          <button type="submit" class="btn btn-lg btn-primary tx tx-light">Join the waitlist</button>
+          <p class="form-msg" aria-live="polite"></p>
+        </form>
+        <a class="btn btn-text" href="#wall" data-join="developer">Got a game? Join as a developer</a>
       </div>
     </div>
   </section>
@@ -339,9 +461,9 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
     </div>
     <div class="copy">
       <p class="eyebrow">For players</p>
-      <h2>Vote on games. Get paid.</h2>
-      <p>Join and play for free, at no cost. Every pick earns points. Points convert straight into gift cards, with no entries, no draws and no catch.</p>
-      <a class="btn btn-text" href="#">Join as a player &rarr;</a>
+      <h2>Vote on new games and earn gift cards</h2>
+      <p>It's free to join. Every vote earns points, and you choose which gift card to spend them on.</p>
+      <a class="btn btn-text" href="#wall" data-join="player">Join as a player &rarr;</a>
     </div>
   </section>
 
@@ -350,8 +472,8 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
     <div class="copy">
       <p class="eyebrow">For developers and studios</p>
       <h2>Know which capsule wins before you spend on marketing.</h2>
-      <p>Upload your capsule variants and see how each one does head to head against players whose Steam library matches your genre. You get the results before launch, while there is still time to change the art.</p>
-      <a class="btn btn-text" href="#">Join as a developer &rarr;</a>
+      <p>Upload versions of your capsule art and see which one players in your genre pick, head to head. You get the results before launch, while you can still change the art.</p>
+      <a class="btn btn-text" href="#wall" data-join="developer">Join as a developer &rarr;</a>
     </div>
     <div class="dev-col"><div class="dev-stage" id="devStage" aria-hidden="true"></div></div>
   </section>
@@ -361,8 +483,32 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
     <div class="wall-cols" id="wallCols" aria-hidden="true"></div>
     <div class="copy-c">
       <h2>Get in before the first vote.</h2>
-      <p>Free for players. No cost to join the developer waitlist either.</p>
-      <a class="btn btn-lg btn-primary tx tx-light" href="#">Join the waitlist</a>
+      <form class="join-form" id="finaleForm" data-side="player" novalidate>
+        <div class="join-shell">
+          <button type="button" class="btn btn-lg btn-primary tx tx-light join-trigger" aria-expanded="false" aria-controls="finaleReveal">Join the waitlist</button>
+          <div class="join-reveal" id="finaleReveal"><div class="join-reveal-inner">
+            <div class="join-card">
+              <fieldset class="switch">
+                <legend class="switch-label">I'm joining as a</legend>
+                <div class="switch-options">
+                  <label class="switch-opt"><input type="radio" name="side" value="player" checked><span>Player</span></label>
+                  <label class="switch-opt"><input type="radio" name="side" value="developer"><span>Developer</span></label>
+                </div>
+              </fieldset>
+              <label class="field">
+                <span class="field-label">Email</span>
+                <span class="field-input tx tx-dark"><input type="email" name="email" placeholder="you@example.com" autocomplete="email" required></span>
+              </label>
+              <button type="submit" class="btn btn-lg btn-primary tx tx-light join-submit">
+                <span class="btn-label">Join the waitlist</span>
+                <svg class="join-submit-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </div>
+          </div></div>
+        </div>
+        <p class="form-msg" aria-live="polite"></p>
+        <p class="small-print">Free to join. We'll email you when voting opens.</p>
+      </form>
     </div>
   </section>
 
@@ -456,7 +602,7 @@ function buildCols(host, cols, per, seed, base) {
     cards[i].classList.add('win', 'picked'); cards[i].setAttribute('aria-pressed', 'true'); cards[1 - i].classList.add('lose');
     n += 1;
     if (n >= MAX) {
-      setTimeout(function () { document.getElementById('finalScore').textContent = score; document.getElementById('finalMult').textContent = 'x' + multFor(votes).toFixed(1); hero.classList.add('done'); }, 650);
+      setTimeout(function () { hero.classList.add('done'); }, 650);
       return;
     }
     setTimeout(function () {
@@ -512,8 +658,9 @@ function buildCols(host, cols, per, seed, base) {
    In this app a click on a capsule is the vote, so CTR = picked when shown = win rate.
    The heatmap (win rate by player genre segment) is on the roadmap, not in the build yet. All numbers are sample data. */
 (function () {
-  // x, y in the Paper frame's own units (628 x 500). Tiles hang over the edges on purpose, the frame clips them.
-  var TILES = [[-141, -41, "main_1730600.jpg"], [178, -41, "main_2217040.jpg"], [481, -41, "main_876240.jpg"], [-141, 152, "main_4062790.jpg"], [481, 157, "main_4958620.jpg"], [-141, 328, "main_4598970.jpg"], [178, 329, "main_4690740.jpg"], [481, 329, "main_4240600.jpg"]];
+  // Same tile size as the Paper design (288.88 x 165.54), now on a clean 3x3 grid with one consistent 16px gap in both
+  // directions, still bled past the frame edges by the same amount on every side so it clips the same way.
+  var TILES = [[-135.3, -14.3, "main_1730600.jpg"], [169.6, -14.3, "main_2217040.jpg"], [474.4, -14.3, "main_876240.jpg"], [-135.3, 167.2, "main_4062790.jpg"], [474.4, 167.2, "main_4958620.jpg"], [-135.3, 348.8, "main_4598970.jpg"], [169.6, 348.8, "main_4690740.jpg"], [474.4, 348.8, "main_4240600.jpg"]];
   var tiles = TILES.map(function (t) {
     return '<div class="dt" style="--x:' + t[0] + ';--y:' + t[1] + '"><img class="art" alt="" src="' + artUrl(t[2]) + '"></div>';
   }).join('');
@@ -533,6 +680,36 @@ function buildCols(host, cols, per, seed, base) {
 /* Closing section: the wall as decoration under a dark overlay, the copy is the focus. */
 buildCols(document.getElementById('wallCols'), 6, 8, 0, 56);
 
+
+/* Hero scroll-scrub (GSAP ScrollTrigger, scrub-tied to scroll position, not a one-off trigger):
+   the copy has already appeared on load (CSS entrance above). As the visitor starts scrolling, the
+   headline and pitch sink and fade while the capsule matchup grows to a prominent size and rises to
+   settle at dead center of the viewport, taking over the vertical room the copy freed up (computed
+   from its own height so the move is smooth, not a layout snap). That transform finishes early in
+   the pin's scroll range, then a hold segment keeps it pinned in view before the page releases. */
+(function () {
+  if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') return;
+  gsap.matchMedia().add('(prefers-reduced-motion: no-preference)', function () {
+    var heroCopy = document.querySelector('.hero-copy');
+    var pair = document.querySelector('.pair');
+    var lift = (heroCopy && pair) ? heroCopy.offsetHeight + parseFloat(getComputedStyle(pair).marginTop) : 0;
+    var tl = gsap.timeline({ defaults: { ease: 'none' } })
+      .to('.hero-copy', { y: 40, opacity: 0, duration: 1 }, 0)
+      .fromTo('.pair', { y: 26, scale: 0.96, opacity: 0.8 }, { y: -(lift / 2), scale: 1.22, opacity: 1, transformOrigin: '50% 50%', duration: 1 }, 0)
+      .to({}, { duration: 2 });
+    ScrollTrigger.create({ trigger: '.fold', start: 'top top', end: '+=220%', pin: true, scrub: 0.4, animation: tl });
+  });
+})();
+
+/* GSAP markers (pin distances, "in view" triggers) are computed from the page's layout at the moment each
+   ScrollTrigger is created. Figtree loads async from Google Fonts and can still reflow heights afterward,
+   which would leave every marker below the hero stale. Refresh once fonts and images have settled. */
+(function () {
+  if (typeof ScrollTrigger === 'undefined') return;
+  function refresh() { ScrollTrigger.refresh(); }
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(refresh);
+  window.addEventListener('load', refresh);
+})();
 
 /* Texture contrast (design system v1.1): GSAP eases --c between rest, in view and active. No GSAP: plain CSS switches instead. */
 (function () {
@@ -630,6 +807,93 @@ function symbolPath(p) { var s = symbolParts(p); return s.ringOuter + ' ' + s.ri
       return function () { undo.forEach(function (fn) { fn(); }); };
     }
   );
+})();
+
+/* Join flow: the finale form is the one place that submits (Player/Developer switch); every other
+   "Join…" CTA either sets that switch and scrolls to it, or — the end-of-demo panel — submits its
+   own always-Player copy of the same form inline, right where the visitor already is. */
+(function () {
+  var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  var finale = document.getElementById('finaleForm');
+  var finaleTrigger = finale && finale.querySelector('.join-trigger');
+  var finaleShell = finale && finale.querySelector('.join-shell');
+
+  // Desktop horizontal collapse: the shell's collapsed width is set to the trigger's own natural
+  // width, via a CSS variable, so the width transition has a real number to animate from instead
+  // of "auto" (which CSS can't tween). The trigger itself is pinned edge-to-edge (inset:0) once
+  // desktop CSS applies, so it can't be measured directly — a detached clone, freed from that
+  // positioning via inline styles, sizes to its own content instead.
+  function measureCollapsedWidth() {
+    if (!finaleShell || finale.dataset.open === 'true') return;
+    var clone = finaleTrigger.cloneNode(true);
+    clone.style.cssText = 'position:absolute; visibility:hidden; pointer-events:none; left:-9999px; top:-9999px; right:auto; bottom:auto; inset:auto; width:auto; opacity:1;';
+    document.body.appendChild(clone);
+    var w = clone.offsetWidth;
+    document.body.removeChild(clone);
+    if (w) finaleShell.style.setProperty('--join-collapsed-w', w + 'px');
+  }
+  measureCollapsedWidth();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(measureCollapsedWidth);
+  var resizeTimer;
+  window.addEventListener('resize', function () { clearTimeout(resizeTimer); resizeTimer = setTimeout(measureCollapsedWidth, 150); });
+
+  function openFinale(focusEmail) {
+    if (!finale || finale.dataset.open === 'true') return;
+    finale.dataset.open = 'true';
+    if (finaleTrigger) finaleTrigger.setAttribute('aria-expanded', 'true');
+    if (focusEmail) {
+      var reveal = finale.querySelector('.join-reveal');
+      reveal.addEventListener('transitionend', function once() {
+        reveal.removeEventListener('transitionend', once);
+        finale.querySelector('input[name="email"]').focus();
+      });
+    }
+  }
+  if (finaleTrigger) finaleTrigger.addEventListener('click', function () { openFinale(true); });
+
+  document.querySelectorAll('[data-join]').forEach(function (el) {
+    el.addEventListener('click', function (e) {
+      var side = el.getAttribute('data-join');
+      if (side && finale) {
+        var radio = finale.querySelector('input[name="side"][value="' + side + '"]');
+        if (radio) { radio.checked = true; radio.dispatchEvent(new Event('change', { bubbles: true })); }
+      }
+      openFinale(false);
+      var target = document.getElementById('wall');
+      if (target) { e.preventDefault(); target.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    });
+  });
+
+  if (finale) {
+    var emailField = finale.querySelector('input[name="email"]');
+    var smallPrint = finale.querySelector('.small-print');
+    function syncSide() {
+      var dev = finale.querySelector('input[name="side"]:checked').value === 'developer';
+      finale.dataset.side = dev ? 'developer' : 'player';
+      emailField.placeholder = dev ? 'you@yourstudio.com' : 'you@example.com';
+      smallPrint.textContent = dev ? "Free to join. We'll email you when studio onboarding opens." : "Free to join. We'll email you when voting opens.";
+    }
+    finale.querySelectorAll('input[name="side"]').forEach(function (r) { r.addEventListener('change', syncSide); });
+  }
+
+  document.querySelectorAll('.join-form').forEach(function (form) {
+    var emailField = form.querySelector('input[name="email"]');
+    var msgField = form.querySelector('.form-msg');
+    function setMsg(text, state) { msgField.textContent = text; if (state) msgField.setAttribute('data-state', state); else msgField.removeAttribute('data-state'); }
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var email = emailField.value.trim();
+      if (!email) { setMsg('Enter your email.', 'error'); emailField.focus(); return; }
+      if (!EMAIL_RE.test(email)) { setMsg('Check your email address and try again.', 'error'); emailField.focus(); return; }
+      var dev = (form.dataset.side || (form.querySelector('input[name="side"]:checked') || {}).value) === 'developer';
+      setMsg('Joining…');
+      setTimeout(function () {
+        setMsg("You're on the waitlist. We'll email " + email + (dev ? ' when studio onboarding opens.' : ' when voting opens.'), 'success');
+        form.reset();
+        if (finale) { var d = finale.querySelector('input[name="side"]:checked'); if (d) d.dispatchEvent(new Event('change', { bubbles: true })); }
+      }, 500);
+    });
+  });
 })();
 </script>
 </body>
