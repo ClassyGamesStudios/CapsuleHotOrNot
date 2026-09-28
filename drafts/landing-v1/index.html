@@ -669,6 +669,24 @@ function buildCols(host, cols, per, seed, base) {
 /* Closing section: the wall as decoration under a dark overlay, the copy is the focus. */
 buildCols(document.getElementById('wallCols'), 6, 8, 0, 56);
 
+/* Hero intro: "Vote and get paid" holds alone for 3s, then sinks and fades while the capsule
+   matchup rises to take over the space it leaves. Auto-plays once on load, not tied to scroll —
+   lift is measured at the 3s mark (not up front) so a late-loading webfont can't throw it off. */
+(function () {
+  if (typeof gsap === 'undefined') return;
+  gsap.matchMedia().add('(prefers-reduced-motion: no-preference)', function () {
+    gsap.delayedCall(3, function () {
+      var heroCopy = document.querySelector('.hero-copy');
+      var pair = document.querySelector('.pair');
+      if (!heroCopy || !pair) return;
+      var lift = heroCopy.offsetHeight + parseFloat(getComputedStyle(pair).marginTop);
+      gsap.timeline({ defaults: { ease: 'power2.inOut', duration: 0.9 } })
+        .to(heroCopy, { y: 40, opacity: 0 }, 0)
+        .to(pair, { y: -lift }, 0);
+    });
+  });
+})();
+
 /* GSAP markers (pin distances, "in view" triggers) are computed from the page's layout at the moment each
    ScrollTrigger is created. Figtree loads async from Google Fonts and can still reflow heights afterward,
    which would leave every marker below the hero stale. Refresh once fonts and images have settled. */
