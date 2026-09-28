@@ -125,17 +125,13 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 .pair.swap { opacity: 0; transform: translateY(8px); }
 .vs { color: var(--text-subdued); font-weight: 700; font-size: 14px; }
 .slot { position: relative; }
-.ghost { position: absolute; inset: 0; border-radius: var(--radius-sm); background: var(--bg-highlight) center / cover no-repeat; box-shadow: 0 8px 20px rgba(0, 0, 0, .35); }
-/* Inverted pyramid: the current match sits at the point (bottom, unmoved), and each layer back
-   fans upward and outward from there — wider the higher it sits, same card size, darker wash the
-   deeper it recedes. Reads as a queue stacked up behind the match in front, not a shrunken echo. */
-.ghost::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: linear-gradient(0deg, rgba(0, 0, 0, .3) 0%, rgba(0, 0, 0, 1) 100%); }
-.pair .slot:first-child .ghost.g1 { transform: translate(-5%, -6px); }
-.pair .slot:first-child .ghost.g2 { transform: translate(-9%, -12px); }
-.pair .slot:last-child .ghost.g1 { transform: translate(5%, -6px); }
-.pair .slot:last-child .ghost.g2 { transform: translate(9%, -12px); }
-.ghost.g1::after { opacity: .45; }
-.ghost.g2::after { opacity: .78; }
+/* Queue: the next two matches as their own smaller rows below the current one, not layers peeking
+   out from behind it. Same no-edit rule as the current match — no border, no glow, just smaller. */
+.queue { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); width: 100%; margin-top: var(--space-6); }
+.queue-row { display: flex; align-items: center; justify-content: center; gap: var(--space-3); width: 100%; max-width: min(92vw, 720px); }
+.queue-row-2 { max-width: min(80vw, 600px); }
+.queue-art { flex: 1; min-width: 0; }
+.queue-vs { flex: none; color: var(--text-subdued); font-weight: 700; font-size: 13px; text-transform: lowercase; }
 /* Play — the vote screen. Bare at rest: no frame, no mat, no plate, and the capsule artwork itself is never
    edited — client constraint, since any visual change to the artwork breaks the A/B-testing claim made to
    developers. Only a glow ring outside the artwork's edge and an ambient blur behind it respond to state;
@@ -196,7 +192,7 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 .step b { display: block; font-size: 32px; line-height: 1; margin-bottom: var(--space-2); }
 .step span { display: block; font-size: 14px; font-weight: 700; line-height: 1.3; color: var(--text-base); }
 .step small { display: block; margin-top: var(--space-1); font-size: 12px; line-height: 1.4; color: var(--text-subdued); }
-.hero.done .hero-copy, .hero.done .pair, .hero.done .score { display: none; }
+.hero.done .hero-copy, .hero.done .pair, .hero.done .queue, .hero.done .score { display: none; }
 .hero.done .g-end { display: flex; }
 
 /* Shared join form: end-of-demo (always Player) and the finale (Player/Developer switch) */
@@ -324,10 +320,10 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
   .copy h2 { font-size: 32px; }
   .pair { grid-template-columns: minmax(0, min(92vw, 560px)); }
   .vs { text-align: center; }
-  /* Stacked layout: both cards fan the same way (right) instead of mirroring away from a center
-     that no longer exists side by side — reads as one consistent cascade up the column. */
-  .pair .slot:first-child .ghost.g1, .pair .slot:last-child .ghost.g1 { transform: translate(5%, -6px); }
-  .pair .slot:first-child .ghost.g2, .pair .slot:last-child .ghost.g2 { transform: translate(9%, -12px); }
+  /* The queue adds ~200px of height, which is exactly what pushes the hero past one phone
+     screen — conflicts with the earlier "capsules visible on load, no scroll" fix. Desktop has
+     the room (verified), a phone doesn't, so the queue is desktop-only. */
+  .queue { display: none; }
   .steps { grid-template-columns: 1fr; gap: var(--space-4); }
   .wall-col:nth-child(n+4) { display: none; }
   .dev-grid { gap: var(--space-2); }
@@ -418,11 +414,26 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
       </div>
 
       <div class="pair" id="pair">
-        <div class="slot"><i class="ghost g2"></i><i class="ghost g1"></i>
+        <div class="slot">
           <button type="button" class="g-card" id="c0" aria-label="Pick the left capsule"><span class="cap-art"><img class="art" id="a0" alt="" src="art/main_2771630.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i></span></button></div>
         <span class="vs-clash" aria-hidden="true"><svg viewBox="0 0 44 200" preserveAspectRatio="none"><path class="vs-bolt glow" d="M24 0 L6 82 L22 88 L2 168 L38 108 L20 100 L40 40 L20 46 Z"/><path class="vs-bolt crisp" d="M24 0 L6 82 L22 88 L2 168 L38 108 L20 100 L40 40 L20 46 Z"/><path class="vs-bolt glow" d="M20 200 L38 118 L22 112 L42 32 L6 92 L24 100 L4 160 L24 154 Z"/><path class="vs-bolt crisp" d="M20 200 L38 118 L22 112 L42 32 L6 92 L24 100 L4 160 L24 154 Z"/></svg><span class="vs-label">VS</span></span>
-        <div class="slot"><i class="ghost g2"></i><i class="ghost g1"></i>
+        <div class="slot">
           <button type="button" class="g-card" id="c1" aria-label="Pick the right capsule"><span class="cap-art"><img class="art" id="a1" alt="" src="art/main_3593620.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i></span></button></div>
+      </div>
+
+      <!-- Queue: the next two matches, shown full and shrinking — not peeking behind the current
+           cards. No border, no glow: same no-edits rule as the current match, just smaller. -->
+      <div class="queue" id="queue">
+        <div class="queue-row">
+          <img class="art queue-art" id="q1a" alt="">
+          <span class="queue-vs">vs</span>
+          <img class="art queue-art" id="q1b" alt="">
+        </div>
+        <div class="queue-row queue-row-2">
+          <img class="art queue-art" id="q2a" alt="">
+          <span class="queue-vs">vs</span>
+          <img class="art queue-art" id="q2b" alt="">
+        </div>
       </div>
 
       <div class="score">
@@ -551,7 +562,10 @@ function buildCols(host, cols, per, seed, base) {
   var pair = document.getElementById('pair'), hero = document.getElementById('hero');
   var cards = [document.getElementById('c0'), document.getElementById('c1')];
   var imgs = [document.getElementById('a0'), document.getElementById('a1')];
-  var slots = document.querySelectorAll('.slot');
+  var queueImgs = [
+    [document.getElementById('q1a'), document.getElementById('q1b')],
+    [document.getElementById('q2a'), document.getElementById('q2b')]
+  ];
   var scoreEl = document.getElementById('score');
   var score = parseInt(scoreEl.textContent, 10), n = 0, busy = false;
   // Multiplier, same rule as db.py: a vote pays round(10 x multiplier), and every 10 votes adds 0.1x.
@@ -593,8 +607,8 @@ function buildCols(host, cols, per, seed, base) {
     for (var s = 0; s < 2; s++) {
       imgs[s].src = artUrl(at(n, s));
       if (n > 0) { cards[s].classList.add('enter'); cards[s].addEventListener('animationend', function () { this.classList.remove('enter'); }, { once: true }); }
-      slots[s].querySelector('.g1').style.backgroundImage = 'url(' + artUrl(at(n + 1, s)) + ')';
-      slots[s].querySelector('.g2').style.backgroundImage = 'url(' + artUrl(at(n + 2, s)) + ')';
+      queueImgs[0][s].src = artUrl(at(n + 1, s));
+      queueImgs[1][s].src = artUrl(at(n + 2, s));
     }
   }
   paint();
@@ -698,13 +712,14 @@ buildCols(document.getElementById('wallCols'), 6, 8, 0, 56);
     gsap.delayedCall(3, function () {
       var heroCopy = document.querySelector('.hero-copy');
       var pair = document.querySelector('.pair');
+      var queue = document.querySelector('.queue');
       var score = document.querySelector('.score');
       var cards = document.querySelectorAll('.g-card');
       if (!heroCopy || !pair || !score) return;
       var lift = heroCopy.offsetHeight + parseFloat(getComputedStyle(pair).marginTop);
       gsap.timeline()
         .to(heroCopy, { y: -24, scale: 0.86, opacity: 0, filter: 'blur(10px)', duration: 0.6, ease: 'power3.in' }, 0)
-        .to([pair, score], { y: -lift, duration: 0.9, ease: 'expo.out' }, 0.08)
+        .to([pair, queue, score], { y: -lift, duration: 0.9, ease: 'expo.out' }, 0.08)
         .fromTo(cards, { scale: 1 }, { scale: 1.04, duration: 0.5, ease: 'back.out(2.2)', stagger: 0.08, yoyo: true, repeat: 1 }, 0.22);
     });
   });
