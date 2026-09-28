@@ -141,9 +141,6 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 .g-card .cap-glow-1 { opacity: calc(var(--electric) * .6); filter: blur(1px); }
 .g-card .cap-glow-2 { opacity: var(--electric); filter: blur(4px); }
 .g-card .cap-bg-glow { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: -1; transform: scale(1.1); filter: blur(32px); background: linear-gradient(-30deg, var(--accent), transparent, var(--accent)); opacity: calc(var(--electric) * .3); }
-.g-card .vote-icon { position: absolute; top: 50%; left: 50%; width: 40px; height: 40px; border-radius: 50%; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; opacity: 0; transform: translate(-50%, calc(-50% + 8px)); transition: opacity .2s ease-out, transform .2s ease-out; pointer-events: none; }
-.g-card .vote-icon svg { width: 20px; height: 20px; fill: currentColor; }
-.g-card:hover .vote-icon, .g-card:focus-visible .vote-icon, .g-card[aria-pressed="true"] .vote-icon { opacity: 1; transform: translate(-50%, -50%); }
 /* Lightning clash in place of the plain "vs": two bolts sharing the capsules' own electric filter. */
 .vs-clash { align-self: stretch; justify-self: center; width: 44px; position: relative; display: flex; align-items: center; justify-content: center; }
 .vs-clash svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
@@ -333,7 +330,6 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <symbol id="i-check" viewBox="0 0 24 24"><path d="m9.5 16.6-4.1-4.1L4 13.9l5.5 5.5L20 8.9l-1.4-1.4-9.1 9.1Z"/></symbol>
   <symbol id="i-prev" viewBox="0 0 24 24"><path d="M14.7 5.3 8 12l6.7 6.7 1.4-1.4L10.8 12l5.3-5.3z"/></symbol>
 <defs>
     <g id="lg-symbol"><path fill-rule="evenodd" d="M17.56 75.57 L228.09 1.44 A26.33 26.33 0 0 1 261.67 17.53 L306.85 145.80 A26.33 26.33 0 0 1 290.76 179.39 L80.23 253.52 A26.33 26.33 0 0 1 46.65 237.43 L1.47 109.16 A26.33 26.33 0 0 1 17.56 75.57Z M19.47 80.98 L229.99 6.84 A20.6 20.6 0 0 1 256.27 19.43 L301.44 147.71 A20.6 20.6 0 0 1 288.85 173.98 L78.33 248.12 A20.6 20.6 0 0 1 52.05 235.53 L6.88 107.25 A20.6 20.6 0 0 1 19.47 80.98Z M178.94 54.88 L388.07 132.87 A20.6 20.6 0 0 1 400.18 159.36 L352.66 286.79 A20.6 20.6 0 0 1 326.16 298.90 L117.03 220.91 A20.6 20.6 0 0 1 104.92 194.42 L152.44 66.99 A20.6 20.6 0 0 1 178.94 54.88Z"/></g>
@@ -410,10 +406,10 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
 
       <div class="pair" id="pair">
         <div class="slot"><i class="ghost g2"></i><i class="ghost g1"></i>
-          <button type="button" class="g-card" id="c0" aria-label="Pick the left capsule"><span class="cap-art"><img class="art" id="a0" alt="" src="art/main_2771630.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i><span class="vote-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span></span></button></div>
+          <button type="button" class="g-card" id="c0" aria-label="Pick the left capsule"><span class="cap-art"><img class="art" id="a0" alt="" src="art/main_2771630.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i></span></button></div>
         <span class="vs-clash" aria-hidden="true"><svg viewBox="0 0 44 200" preserveAspectRatio="none"><path class="vs-bolt glow" d="M24 0 L6 82 L22 88 L2 168 L38 108 L20 100 L40 40 L20 46 Z"/><path class="vs-bolt crisp" d="M24 0 L6 82 L22 88 L2 168 L38 108 L20 100 L40 40 L20 46 Z"/><path class="vs-bolt glow" d="M20 200 L38 118 L22 112 L42 32 L6 92 L24 100 L4 160 L24 154 Z"/><path class="vs-bolt crisp" d="M20 200 L38 118 L22 112 L42 32 L6 92 L24 100 L4 160 L24 154 Z"/></svg><span class="vs-label">VS</span></span>
         <div class="slot"><i class="ghost g2"></i><i class="ghost g1"></i>
-          <button type="button" class="g-card" id="c1" aria-label="Pick the right capsule"><span class="cap-art"><img class="art" id="a1" alt="" src="art/main_3593620.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i><span class="vote-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span></span></button></div>
+          <button type="button" class="g-card" id="c1" aria-label="Pick the right capsule"><span class="cap-art"><img class="art" id="a1" alt="" src="art/main_3593620.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i></span></button></div>
       </div>
 
       <div class="score">
