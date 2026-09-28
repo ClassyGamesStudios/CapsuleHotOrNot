@@ -14,7 +14,7 @@
 :root {
   color-scheme: dark;
   --bg-base: #07090f; --bg-elevated: #0f172a; --bg-highlight: #1e2937; --bg-press: #334155; --bg-tinted: #475569;
-  --text-base: #e2e8f0; --text-subdued: #94a3b8; --text-muted: #64748b;
+  --text-base: #e2e8f0; --text-subdued: #94a3b8; --text-muted: #6c7a97;
   --accent: #22d3ee; --on-accent: #07090f; --accent-deep: #00b4d8;
   --inverted: #ffffff; --on-inverted: #07090f;
   --promo-cyan: #0891b2; --promo-violet: #6d28d9; --promo-pink: #db2777;
@@ -124,26 +124,22 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 .ghost { position: absolute; left: 0; right: 0; top: 0; bottom: 28px; border-radius: var(--radius-sm); background: var(--bg-highlight) center / cover no-repeat; }
 .ghost.g1 { transform: translateY(15px) scale(.94); opacity: .55; }
 .ghost.g2 { transform: translateY(28px) scale(.88); opacity: .3; }
-/* Play — the vote screen, per the design system's Sep 27 update. Bare at rest: no frame, no mat, no plate.
-   Only the artwork and its own edge-light carry any fill. Electric Border, ported from the design system
-   (Balint Ferenczy, codepen.io/BalintFerenczy/pen/KwdoyEN): one --electric variable sets the contrast, subtle
-   at rest and full on hover, keyboard focus, or once voted, so every layer dims and brightens as one unit. */
+/* Play — the vote screen. Bare at rest: no frame, no mat, no plate, and the capsule artwork itself is never
+   edited — client constraint, since any visual change to the artwork breaks the A/B-testing claim made to
+   developers. Only a glow ring outside the artwork's edge and an ambient blur behind it respond to state;
+   one --electric variable sets the contrast, subtle at rest and full on hover, keyboard focus, or once voted. */
 .g-card { position: relative; z-index: 2; display: block; width: 100%; appearance: none; border: 0; padding: var(--space-3); background: none; border-radius: var(--radius-md); cursor: pointer; color: inherit; font: inherit; transition: transform .4s cubic-bezier(.16, 1, .3, 1), opacity .3s ease-out; }
 .g-card.picked { animation: bump .32s ease-out; }
 .g-card.win[aria-pressed="true"] { transform: scale(1.05) translateX(6px); }   /* the winner shoves forward */
 .pair:has(.g-card.win[aria-pressed="true"]) .g-card.lose { transform: translateX(-16px) rotate(-3deg) scale(.92); }   /* the loser gets bumped back */
 .g-card .cap-art { position: relative; display: block; isolation: isolate; aspect-ratio: 616 / 353; border-radius: var(--radius-sm); overflow: visible; }
 .g-card .cap-art .art { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: auto; }
-.g-card .cap-art::before, .g-card .cap-glow, .g-card .cap-sheen, .g-card .cap-bg-glow { transition: opacity .25s ease-out; }
+.g-card .cap-glow, .g-card .cap-bg-glow { transition: opacity .25s ease-out; }
 .g-card { --electric: .22; }
 .g-card:hover, .g-card:focus-visible, .g-card[aria-pressed="true"] { --electric: 1; }
 .g-card .cap-glow { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; border: 2px solid var(--accent); }
 .g-card .cap-glow-1 { opacity: calc(var(--electric) * .6); filter: blur(1px); }
 .g-card .cap-glow-2 { opacity: var(--electric); filter: blur(4px); }
-.g-card .cap-art::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; border: 2px solid var(--accent); opacity: var(--electric); filter: url(#electric-turbulent-displace); }
-.g-card .cap-sheen { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; mix-blend-mode: overlay; transform: scale(1.1); filter: blur(16px); background: linear-gradient(-30deg, #fff, transparent 30%, transparent 70%, #fff); }
-.g-card .cap-sheen-1 { opacity: var(--electric); }
-.g-card .cap-sheen-2 { opacity: calc(var(--electric) * .5); }
 .g-card .cap-bg-glow { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: -1; transform: scale(1.1); filter: blur(32px); background: linear-gradient(-30deg, var(--accent), transparent, var(--accent)); opacity: calc(var(--electric) * .3); }
 .g-card .vote-icon { position: absolute; top: 50%; left: 50%; width: 40px; height: 40px; border-radius: 50%; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; opacity: 0; transform: translate(-50%, calc(-50% + 8px)); transition: opacity .2s ease-out, transform .2s ease-out; pointer-events: none; }
 .g-card .vote-icon svg { width: 20px; height: 20px; fill: currentColor; }
@@ -414,10 +410,10 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
 
       <div class="pair" id="pair">
         <div class="slot"><i class="ghost g2"></i><i class="ghost g1"></i>
-          <button type="button" class="g-card" id="c0" aria-label="Pick the left capsule"><span class="cap-art"><img class="art" id="a0" alt="" src="art/main_2771630.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i><i class="cap-sheen cap-sheen-1"></i><i class="cap-sheen cap-sheen-2"></i><span class="vote-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span></span></button></div>
+          <button type="button" class="g-card" id="c0" aria-label="Pick the left capsule"><span class="cap-art"><img class="art" id="a0" alt="" src="art/main_2771630.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i><span class="vote-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span></span></button></div>
         <span class="vs-clash" aria-hidden="true"><svg viewBox="0 0 44 200" preserveAspectRatio="none"><path class="vs-bolt glow" d="M24 0 L6 82 L22 88 L2 168 L38 108 L20 100 L40 40 L20 46 Z"/><path class="vs-bolt crisp" d="M24 0 L6 82 L22 88 L2 168 L38 108 L20 100 L40 40 L20 46 Z"/><path class="vs-bolt glow" d="M20 200 L38 118 L22 112 L42 32 L6 92 L24 100 L4 160 L24 154 Z"/><path class="vs-bolt crisp" d="M20 200 L38 118 L22 112 L42 32 L6 92 L24 100 L4 160 L24 154 Z"/></svg><span class="vs-label">VS</span></span>
         <div class="slot"><i class="ghost g2"></i><i class="ghost g1"></i>
-          <button type="button" class="g-card" id="c1" aria-label="Pick the right capsule"><span class="cap-art"><img class="art" id="a1" alt="" src="art/main_3593620.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i><i class="cap-sheen cap-sheen-1"></i><i class="cap-sheen cap-sheen-2"></i><span class="vote-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span></span></button></div>
+          <button type="button" class="g-card" id="c1" aria-label="Pick the right capsule"><span class="cap-art"><img class="art" id="a1" alt="" src="art/main_3593620.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i><span class="vote-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span></span></button></div>
       </div>
 
       <div class="score">
