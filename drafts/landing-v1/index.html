@@ -260,6 +260,11 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 .copy p:not(.eyebrow) { color: var(--text-subdued); max-width: 46ch; }
 .copy .btn-text { padding-left: 0; font-size: 16px; color: var(--text-base); margin-top: var(--space-2); }
 
+/* Statement: one big line of copy carrying the whole section, right after the hero. */
+.statement { min-height: 60vh; min-height: 60svh; padding: var(--space-8); display: flex; flex-direction: column; align-items: flex-start; justify-content: center; }
+.statement-eyebrow { font-size: 14px; font-weight: 400; color: var(--text-subdued); margin: 0 0 var(--space-3); }
+.statement-text { max-width: 1100px; margin: 0; font-size: clamp(28px, 4.2vw, 56px); line-height: 1.22; font-weight: 500; letter-spacing: -.01em; color: var(--text-base); text-wrap: balance; }
+
 /* Players: gift-card carousel. Same mechanics as /player/join (auto-advance, arrows, dots jump to a card),
    drawn with the design system's neutral reward card: value and points first, brand as plain text. */
 .carousel { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); min-width: 0; }
@@ -318,6 +323,7 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
 @media (max-width: 900px) {
   .band { grid-template-columns: 1fr; padding: var(--space-4); }
   .copy h2 { font-size: 32px; }
+  .statement { padding: var(--space-4); }
   .pair { grid-template-columns: minmax(0, min(92vw, 560px)); }
   .vs { text-align: center; }
   /* The queue adds ~200px of height, which is exactly what pushes the hero past one phone
@@ -463,6 +469,12 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
         <a class="btn btn-text" href="#wall" data-join="developer">Got a game? Join as a developer</a>
       </div>
     </div>
+  </section>
+
+  <!-- STATEMENT: what the site is for, in one line. 60vh -->
+  <section class="statement">
+    <p class="statement-eyebrow">Why Capsule HotOrNot</p>
+    <p class="statement-text">Vote on the capsule that grabs you and earn points toward gift cards. Developers get genre-matched win rates before launch, from verified Steam players, not a generic panel.</p>
   </section>
 
   <!-- PLAYERS: carousel left, copy right. 70vh -->
