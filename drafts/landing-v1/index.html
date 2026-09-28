@@ -126,8 +126,11 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 .vs { color: var(--text-subdued); font-weight: 700; font-size: 14px; }
 .slot { position: relative; padding-bottom: 28px; }              /* room for the next matches waiting behind */
 .ghost { position: absolute; left: 0; right: 0; top: 0; bottom: 28px; border-radius: var(--radius-sm); background: var(--bg-highlight) center / cover no-repeat; }
-.ghost.g1 { transform: translateY(15px) scale(.94); opacity: .55; }
-.ghost.g2 { transform: translateY(28px) scale(.88); opacity: .3; }
+/* Inverted pyramid: each layer back sits lower AND wider than the one in front (not smaller and
+   centered), so its edges peek out past the current card — reads as a fanned stack of more
+   matches queued up, not just one card with a shadow behind it. */
+.ghost.g1 { left: -2%; right: -2%; transform: translateY(20px); opacity: .55; }
+.ghost.g2 { left: -4%; right: -4%; transform: translateY(38px); opacity: .3; }
 /* Play — the vote screen. Bare at rest: no frame, no mat, no plate, and the capsule artwork itself is never
    edited — client constraint, since any visual change to the artwork breaks the A/B-testing claim made to
    developers. Only a glow ring outside the artwork's edge and an ambient blur behind it respond to state;
