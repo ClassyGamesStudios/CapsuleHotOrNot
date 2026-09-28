@@ -124,13 +124,18 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 .pair { display: grid; grid-template-columns: minmax(0, 600px) auto minmax(0, 600px); gap: var(--space-6); align-items: center; width: 100%; justify-content: center; margin-top: var(--space-8); transition: opacity .25s, transform .25s; }
 .pair.swap { opacity: 0; transform: translateY(8px); }
 .vs { color: var(--text-subdued); font-weight: 700; font-size: 14px; }
-.slot { position: relative; padding-bottom: 28px; }              /* room for the next matches waiting behind */
-.ghost { position: absolute; left: 0; right: 0; top: 0; bottom: 28px; border-radius: var(--radius-sm); background: var(--bg-highlight) center / cover no-repeat; }
-/* Inverted pyramid: each layer back sits lower AND wider than the one in front (not smaller and
-   centered), so its edges peek out past the current card — reads as a fanned stack of more
-   matches queued up, not just one card with a shadow behind it. */
-.ghost.g1 { left: -2%; right: -2%; transform: translateY(20px); opacity: .55; }
-.ghost.g2 { left: -4%; right: -4%; transform: translateY(38px); opacity: .3; }
+.slot { position: relative; padding-bottom: 46px; }              /* room for the next matches waiting behind */
+.ghost { position: absolute; left: 0; right: 0; top: 0; bottom: 46px; border-radius: var(--radius-sm); background: var(--bg-highlight) center / cover no-repeat; box-shadow: 0 12px 28px rgba(0, 0, 0, .35); }
+/* Inverted pyramid: each layer back is the same size as the one in front, just fanned diagonally
+   outward (away from center, not toward the VS badge) and down, with a darker wash over each one
+   the deeper it sits — reads as a real deck of queued matches, not one card with a shrunken echo. */
+.ghost::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: linear-gradient(180deg, rgba(0, 0, 0, .3) 0%, rgba(0, 0, 0, 1) 100%); }
+.pair .slot:first-child .ghost.g1 { transform: translate(-4%, 22px); }
+.pair .slot:first-child .ghost.g2 { transform: translate(-7.5%, 42px); }
+.pair .slot:last-child .ghost.g1 { transform: translate(4%, 22px); }
+.pair .slot:last-child .ghost.g2 { transform: translate(7.5%, 42px); }
+.ghost.g1::after { opacity: .45; }
+.ghost.g2::after { opacity: .78; }
 /* Play — the vote screen. Bare at rest: no frame, no mat, no plate, and the capsule artwork itself is never
    edited — client constraint, since any visual change to the artwork breaks the A/B-testing claim made to
    developers. Only a glow ring outside the artwork's edge and an ambient blur behind it respond to state;
@@ -319,6 +324,10 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
   .copy h2 { font-size: 32px; }
   .pair { grid-template-columns: minmax(0, min(92vw, 560px)); }
   .vs { text-align: center; }
+  /* Stacked layout: both cards fan the same way (right) instead of mirroring away from a center
+     that no longer exists side by side — reads as one consistent cascade down the column. */
+  .pair .slot:first-child .ghost.g1, .pair .slot:last-child .ghost.g1 { transform: translate(4%, 22px); }
+  .pair .slot:first-child .ghost.g2, .pair .slot:last-child .ghost.g2 { transform: translate(7.5%, 42px); }
   .steps { grid-template-columns: 1fr; gap: var(--space-4); }
   .wall-col:nth-child(n+4) { display: none; }
   .dev-grid { gap: var(--space-2); }
