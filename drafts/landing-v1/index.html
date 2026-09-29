@@ -191,21 +191,23 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 .hero.done .hero-copy, .hero.done .pair, .hero.done .queue, .hero.done .score { display: none; }
 .hero.done .g-end { display: flex; }
 
-/* Shared join form: end-of-demo (always Player) and the finale (Player/Developer switch) */
+/* Shared join form: end-of-demo (always Player) and the finale (Player/Developer switch).
+   Collapse/expand ported exactly from lynkpay.co.uk/visa-preregister (inspected directly: computed
+   transitions, not guessed). Their mechanic is NOT a height/grow tween — the layout swap is instant
+   (trigger set to display:none, card set to display:flex, no transition on that at all) and the only
+   animated thing is a 150ms opacity crossfade on both, eased with their "ease-emphasized" curve
+   (cubic-bezier(.3, 0, 0, 1), confirmed from the live site's computed styles). And on their desktop
+   breakpoint there's no collapsed state to begin with — the card is simply always shown, no trigger,
+   no click. Mapped onto our own 900px breakpoint below rather than their literal 640px, so it stays
+   consistent with the rest of this page's responsive system. */
 .join-form { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); width: 100%; max-width: 360px; }
-/* Collapse/expand, ported from lynkpay.co.uk/visa-preregister: the finale starts as a single pill
-   and opens into the full card on click. A 0fr/1fr grid-rows tween animates the reveal without
-   ever measuring the card's height in JS. */
-.join-shell { display: contents; }
-.join-trigger { width: 100%; }
-.join-form[data-open="true"] .join-trigger { display: none; }
-.join-reveal { display: grid; grid-template-rows: 0fr; width: 100%; transition: grid-template-rows .35s cubic-bezier(.16, 1, .3, 1); }
-.join-form[data-open="true"] .join-reveal { grid-template-rows: 1fr; }
-.join-reveal-inner { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); overflow: hidden; min-height: 0; }
-.join-submit-icon { display: none; width: 20px; height: 20px; }
-/* Toggle CTA, ported from lynkpay.co.uk/visa-preregister: one unified card holding a pill segmented
-   control, the email field and the submit button, so the whole join action reads as one object. */
-.join-card { display: flex; flex-direction: column; gap: var(--space-3); width: 100%; max-width: 360px; padding: var(--space-3); border-radius: var(--radius-lg); background: var(--bg-elevated); }
+.join-shell { position: relative; overflow: hidden; border-radius: var(--radius-lg); background: var(--bg-elevated); }
+.join-trigger { width: 100%; opacity: 1; transition: opacity .15s cubic-bezier(.3, 0, 0, 1); }
+.join-reveal { display: none; opacity: 0; transition: opacity .15s cubic-bezier(.3, 0, 0, 1); }
+.join-form[data-open="true"] .join-reveal { display: block; opacity: 1; }
+.join-reveal-inner { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); padding: var(--space-3); }
+.join-submit-icon { width: 20px; height: 20px; }
+.join-card { display: flex; flex-direction: column; gap: var(--space-3); width: 100%; }
 .switch { margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: var(--space-2); width: 100%; }
 /* Visible copy: sr-only. The pills say Player/Developer and the field says you@example.com — a label above each would only repeat it. */
 .switch-label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
@@ -223,26 +225,22 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 .field input { width: 100%; height: 100%; padding: 0 var(--space-5); border: 0; border-radius: inherit; background: transparent; color: var(--text-base); font: 400 16px/1 var(--font-sans); outline: none; }
 .field input::placeholder { color: var(--text-subdued); }
 
-/* Desktop only: the finale join widens horizontally, ported from lynkpay.co.uk/visa-preregister —
-   a pill that grows into a single bar (toggle, field, round submit) instead of stacking down the page.
-   --join-collapsed-w is measured off the trigger's own rendered width by JS, so the pill never jumps;
-   it only becomes animatable once that exact number is known. */
+/* Desktop only: matches lynkpay's real desktop behavior, which is NOT a collapsed pill that expands
+   on click — on their site the card is simply always shown at this width, no trigger, no interaction
+   needed. Forced with !important since the trigger/reveal display is otherwise JS-owned (see the
+   script) for the mobile crossfade timing; here it's a static, permanent state regardless of JS. */
 @media (min-width: 901px) {
   .join-form:has(.join-shell) { max-width: 480px; }
-  .join-shell { display: block; position: relative; overflow: hidden; height: calc(var(--control-lg) + var(--space-2)); width: var(--join-collapsed-w, 240px); max-width: 100%; border-radius: var(--radius-pill); background: var(--bg-elevated); transition: width .4s cubic-bezier(.16, 1, .3, 1); }
-  .join-form[data-open="true"] .join-shell { width: min(460px, 100%); }
-  .join-trigger { position: absolute; inset: 0; opacity: 1; transition: opacity .2s ease-out; }
-  .join-form[data-open="true"] .join-trigger { display: inline-flex; opacity: 0; pointer-events: none; }
-  .join-reveal { position: absolute; inset: 0; display: block; opacity: 0; pointer-events: none; transition: opacity .25s ease-out .15s; }
-  .join-form[data-open="true"] .join-reveal { opacity: 1; pointer-events: auto; }
-  .join-reveal-inner { display: block; height: 100%; overflow: visible; }
-  .join-card { flex-direction: row; align-items: center; height: 100%; width: 100%; max-width: none; padding: var(--space-1); gap: var(--space-2); border-radius: var(--radius-pill); }
+  .join-shell { width: min(720px, 92vw); border-radius: var(--radius-pill); transition: width .3s cubic-bezier(.3, 0, 0, 1); }
+  .join-trigger { display: none !important; }
+  .join-reveal { display: block !important; opacity: 1 !important; }
+  .join-reveal-inner { padding: var(--space-1); }
+  .join-card { flex-direction: row; align-items: center; gap: var(--space-2); border-radius: var(--radius-pill); }
   .join-card .switch { width: auto; flex: none; }
   .join-card .switch-options { width: 180px; }
   .join-card .field { flex: 1; min-width: 0; width: auto; }
   .join-card .join-submit { flex: none; width: var(--control-lg); padding: 0; border-radius: 50%; }
   .join-card .join-submit .btn-label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-  .join-card .join-submit-icon { display: block; }
 }
 .form-msg { min-height: 1.4em; margin: 0; font-size: 14px; }
 .form-msg[data-state="error"] { color: var(--negative); }
@@ -857,41 +855,28 @@ function symbolPath(p) { var s = symbolParts(p); return s.ringOuter + ' ' + s.ri
   var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   var finale = document.getElementById('finaleForm');
 
-  // Desktop horizontal collapse: the shell's collapsed width is set to the trigger's own natural
-  // width, via a CSS variable, so the width transition has a real number to animate from instead
-  // of "auto" (which CSS can't tween). The trigger itself is pinned edge-to-edge (inset:0) once
-  // desktop CSS applies, so it can't be measured directly — a detached clone, freed from that
-  // positioning via inline styles, sizes to its own content instead.
+  // Reveal sequencing, matching lynkpay's actual mechanic exactly: the layout swap itself is
+  // instant (no width/height tween at all), and BOTH the trigger's fade-out and the card's fade-in
+  // are a single simultaneous 150ms opacity crossfade, not one-after-the-other. That only reads as
+  // a crossfade if the reveal is already display:block (opacity still 0) and a reflow has happened
+  // *before* we flip data-open — otherwise the browser has nothing to transition from.
   function setupCollapsible(form) {
     var trigger = form.querySelector('.join-trigger');
     var shell = form.querySelector('.join-shell');
-    if (!trigger || !shell) return function () {};
-
-    function measureCollapsedWidth() {
-      if (form.dataset.open === 'true') return;
-      var clone = trigger.cloneNode(true);
-      clone.style.cssText = 'position:absolute; visibility:hidden; pointer-events:none; left:-9999px; top:-9999px; right:auto; bottom:auto; inset:auto; width:auto; opacity:1;';
-      document.body.appendChild(clone);
-      var w = clone.offsetWidth;
-      document.body.removeChild(clone);
-      if (w) shell.style.setProperty('--join-collapsed-w', w + 'px');
-    }
-    measureCollapsedWidth();
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(measureCollapsedWidth);
-    var resizeTimer;
-    window.addEventListener('resize', function () { clearTimeout(resizeTimer); resizeTimer = setTimeout(measureCollapsedWidth, 150); });
+    var reveal = form.querySelector('.join-reveal');
+    if (!trigger || !shell || !reveal) return function () {};
 
     function open(focusEmail) {
       if (form.dataset.open === 'true') return;
-      form.dataset.open = 'true';
+      reveal.style.display = 'block';
+      reveal.getBoundingClientRect();   // force layout so the next line's opacity change transitions
+      form.dataset.open = 'true';       // CSS: reveal opacity 0->1; trigger fades via its own rule below
+      trigger.style.opacity = '0';
       trigger.setAttribute('aria-expanded', 'true');
-      if (focusEmail) {
-        var reveal = form.querySelector('.join-reveal');
-        reveal.addEventListener('transitionend', function once() {
-          reveal.removeEventListener('transitionend', once);
-          form.querySelector('input[name="email"]').focus();
-        });
-      }
+      setTimeout(function () {
+        trigger.style.display = 'none';   // matches lynkpay: removed from layout only once the fade finishes
+        if (focusEmail) form.querySelector('input[name="email"]').focus();
+      }, 150);
     }
     trigger.addEventListener('click', function () { open(true); });
     return open;
