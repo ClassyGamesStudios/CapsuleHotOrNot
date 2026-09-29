@@ -131,6 +131,10 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 .queue-row { display: flex; align-items: center; justify-content: center; gap: var(--space-3); width: 100%; max-width: min(92vw, 720px); }
 .queue-row-2 { max-width: min(80vw, 600px); }
 .queue-art { flex: 1; min-width: 0; }
+/* Progressive dark + blur the deeper a row sits, so the current match (no filter at all) stays the
+   one clean, unambiguous focal point instead of competing with same-brightness rows beneath it. */
+.queue-row .queue-art { filter: brightness(.55) blur(1.5px); }
+.queue-row-2 .queue-art { filter: brightness(.38) blur(3px); }
 .queue-vs { flex: none; color: var(--text-subdued); font-weight: 700; font-size: 13px; text-transform: lowercase; }
 /* Play — the vote screen. Bare at rest: no frame, no mat, no plate, and the capsule artwork itself is never
    edited — client constraint, since any visual change to the artwork breaks the A/B-testing claim made to
@@ -729,12 +733,19 @@ function buildCols(host, cols, per, seed, base) {
 buildCols(document.getElementById('wallCols'), 6, 8, 0, 56);
 
 /* Hero intro: "Vote and get paid" holds alone for 3s, then retreats — shrinking, blurring and
-   rising away — while the capsule matchup and the score beneath it rise together to take over the
-   space it leaves (both get the same lift, so the gap between them stays exactly what it was at
-   rest, not the stale gap you'd get animating the pair alone). Auto-plays once on load, not tied
-   to scroll. Lift is measured at the 3s mark, not up front, so a late-loading webfont can't throw
-   it off. Cards get a slight staggered scale-pop on landing so the choreography reads as one
-   deliberate move rather than a flat translate. */
+   rising away — while the capsule matchup, queue and score rise together so the CURRENT MATCH ends
+   up the focal point, vertically centered in the VIEWPORT, not just "wherever it lands once the
+   headline's height is subtracted." Those aren't the same thing: (1) once the queue rows exist,
+   pair+queue+score together are shorter than the original headline+pair+queue+score block, so
+   lifting by only the headline's height leaves the group's top pinned to where the block USED to
+   start, stranding the leftover space below the score instead of splitting it evenly; and (2) with
+   the queue rows added, .hero's own box can now be taller than the viewport itself, so even
+   centering "within .hero" doesn't mean centering on screen. Centering against window.innerHeight
+   directly is what actually achieves "focus point in the middle of the viewport," assuming the page
+   is still scrolled to top when this runs (true here — it's the load intro, before any scroll).
+   Auto-plays once on load, not tied to scroll. Measured at the 3s mark, not up front, so a
+   late-loading webfont can't throw it off. Cards get a slight staggered scale-pop on landing so the
+   choreography reads as one deliberate move rather than a flat translate. */
 (function () {
   if (typeof gsap === 'undefined') return;
   gsap.matchMedia().add('(prefers-reduced-motion: no-preference)', function () {
@@ -745,7 +756,9 @@ buildCols(document.getElementById('wallCols'), 6, 8, 0, 56);
       var score = document.querySelector('.score');
       var cards = document.querySelectorAll('.g-card');
       if (!heroCopy || !pair || !score) return;
-      var lift = heroCopy.offsetHeight + parseFloat(getComputedStyle(pair).marginTop);
+      var groupTop = pair.getBoundingClientRect().top;
+      var groupBottom = score.getBoundingClientRect().bottom;
+      var lift = groupTop - (window.innerHeight - (groupBottom - groupTop)) / 2;
       gsap.timeline()
         .to(heroCopy, { y: -24, scale: 0.86, opacity: 0, filter: 'blur(10px)', duration: 0.6, ease: 'power3.in' }, 0)
         .to([pair, queue, score], { y: -lift, duration: 0.9, ease: 'expo.out' }, 0.08)
