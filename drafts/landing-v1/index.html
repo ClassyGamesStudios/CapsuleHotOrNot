@@ -110,32 +110,39 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 .topbar .logo { margin-left: var(--space-2); }
 .topbar .btn-text { color: rgba(226, 232, 240, .82); } .topbar .btn-text:hover { color: var(--text-base); }
 .topbar .grow { flex: 1; }
-.hero { position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: var(--space-8) var(--space-4); }
-.hero-copy { width: 100%; }
+/* Hero stage. Nothing overlaps except the headline tucked behind the live match's top edge. Top to bottom: headline, live match (the focus point), score,
+   next match, the one after. Every match is absolutely positioned in the same box and moved with transform only, so nothing reflows when one changes.
+   --hd is the height of the live match; queue offsets are derived from it (plus the score's height and two gaps), so the stack never touches at any width. */
+.hero { --hd: 280px; --sc: 78px; --gap: 12px; --tp: calc(clamp(56px, 11vw, 168px) * .92 - 48px); --stack: calc(var(--hd) * 1.9 + var(--sc) + 34px); --ease-io: cubic-bezier(.65, 0, .35, 1); position: relative; flex: 1; min-height: 810px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: var(--space-8) var(--space-4); }
+.hero-copy { position: absolute; left: 0; right: 0; bottom: calc(50% - (var(--tp) - var(--stack)) / 2 - 48px); z-index: 0; pointer-events: none; display: flex; justify-content: center; }
 .hero h1 {
   font-size: clamp(56px, 11vw, 168px); line-height: .92; letter-spacing: -.035em; font-weight: 700;
-  background: linear-gradient(180deg, var(--text-base) 0%, color-mix(in srgb, var(--accent) 35%, var(--bg-base)) 100%);
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-  filter: drop-shadow(0 0 48px color-mix(in srgb, var(--accent) 22%, transparent));
+  color: color-mix(in srgb, var(--text-base) 42%, transparent);   /* a quiet layer: it must never compete with the live match */
+  filter: drop-shadow(0 6px 24px rgba(7, 9, 15, .35));
 }
 .hero h1 .line { display: block; overflow: hidden; padding-bottom: .1em; margin-bottom: -.1em; }
 .hero h1 .inner { display: block; }
+/* Text layer: at rest it waits below the cards, out of sight. To speak it rises into the space above them, then drops back behind. */
+.copy-line { transition: transform .45s var(--ease-io), opacity .45s var(--ease-io); transform: translateY(72px); opacity: 0; }
+.copy-b { position: absolute; left: 0; right: 0; bottom: 0; }
+.hero[data-copy="a"] .copy-a, .hero[data-copy="b"] .copy-b { transform: none; opacity: 1; }
+.hero:not([data-copy="a"]) .copy-a { transition-duration: .6s; }
 
-.pair { display: grid; grid-template-columns: minmax(0, 600px) auto minmax(0, 600px); gap: var(--space-6); align-items: center; width: 100%; justify-content: center; margin-top: var(--space-8); transition: opacity .25s, transform .25s; }
-.pair.swap { opacity: 0; transform: translateY(8px); }
+.deck { position: absolute; left: 0; right: 0; top: calc(50% + (var(--tp) - var(--stack)) / 2); height: var(--hd); z-index: 2; }
+/* One match = two capsules and the clash between them. Its place in the queue is a single attribute, data-d (0 live, 1 next, 2 after, 3 waiting to enter, out leaving);
+   JS only rotates that number and CSS eases between the states, so a card always travels from behind to the focus point on the same in-out curve. */
+.match { --y: 0%; --s: 1; --b: 1; --bl: 0px; position: absolute; inset: 0; display: grid; grid-template-columns: minmax(0, calc((var(--hd) - 24px) * 1.745 + 24px)) auto minmax(0, calc((var(--hd) - 24px) * 1.745 + 24px)); gap: var(--space-6); align-items: center; justify-content: center;
+  transform: translateY(var(--y)) scale(var(--s)); filter: brightness(var(--b)) blur(var(--bl));
+  transition: transform .8s var(--ease-io), filter .8s var(--ease-io), opacity .8s var(--ease-io); will-change: transform; }
+.match[data-d="0"] { --y: 0%; --s: 1; --b: 1; --bl: 0px; z-index: 3; }
+.match[data-d="1"] { --y: calc(var(--hd) * .75 + var(--sc) + var(--gap) + 10px); --s: .5; --b: .55; --bl: 1.5px; z-index: 2; }
+.match[data-d="2"] { --y: calc(var(--hd) * 1.2 + var(--sc) + var(--gap) * 2 + 10px); --s: .4; --b: .38; --bl: 3px; z-index: 1; }
+.match[data-d="3"] { --y: calc(var(--hd) * 1.2 + var(--sc) + var(--gap) * 2 + 10px); --s: .34; --b: .3; --bl: 4px; z-index: 0; opacity: 0; }
+.match[data-d="out"] { --y: calc(var(--hd) * -.1); --s: 1.04; z-index: 3; opacity: 0; transition-duration: .36s; transition-timing-function: cubic-bezier(.5, 0, 1, 1); }
+.match.no-t { transition: none; }
+.match[inert] .g-card { pointer-events: none; }
 .vs { color: var(--text-subdued); font-weight: 700; font-size: 14px; }
 .slot { position: relative; }
-/* Queue: the next two matches as their own smaller rows below the current one, not layers peeking
-   out from behind it. Same no-edit rule as the current match — no border, no glow, just smaller. */
-.queue { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); width: 100%; margin-top: var(--space-6); }
-.queue-row { display: flex; align-items: center; justify-content: center; gap: var(--space-3); width: 100%; max-width: min(92vw, 720px); }
-.queue-row-2 { max-width: min(80vw, 600px); }
-.queue-art { flex: 1; min-width: 0; }
-/* Progressive dark + blur the deeper a row sits, so the current match (no filter at all) stays the
-   one clean, unambiguous focal point instead of competing with same-brightness rows beneath it. */
-.queue-row .queue-art { filter: brightness(.55) blur(1.5px); }
-.queue-row-2 .queue-art { filter: brightness(.38) blur(3px); }
-.queue-vs { flex: none; color: var(--text-subdued); font-weight: 700; font-size: 13px; text-transform: lowercase; }
 /* Play — the vote screen. Bare at rest: no frame, no mat, no plate, and the capsule artwork itself is never
    edited — client constraint, since any visual change to the artwork breaks the A/B-testing claim made to
    developers. Only a glow ring outside the artwork's edge and an ambient blur behind it respond to state;
@@ -143,7 +150,7 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 .g-card { position: relative; z-index: 2; display: block; width: 100%; appearance: none; border: 0; padding: var(--space-3); background: none; border-radius: var(--radius-md); cursor: pointer; color: inherit; font: inherit; transition: transform .4s cubic-bezier(.16, 1, .3, 1), opacity .3s ease-out; }
 .g-card.picked { animation: bump .32s ease-out; }
 .g-card.win[aria-pressed="true"] { transform: scale(1.05) translateX(6px); }   /* the winner shoves forward */
-.pair:has(.g-card.win[aria-pressed="true"]) .g-card.lose { transform: translateX(-16px) rotate(-3deg) scale(.92); }   /* the loser gets bumped back */
+.match:has(.g-card.win[aria-pressed="true"]) .g-card.lose { transform: translateX(-16px) rotate(-3deg) scale(.92); }   /* the loser gets bumped back */
 .g-card .cap-art { position: relative; display: block; isolation: isolate; aspect-ratio: 616 / 353; border-radius: var(--radius-sm); overflow: visible; }
 .g-card .cap-art .art { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: auto; }
 .g-card .cap-glow, .g-card .cap-bg-glow { transition: opacity .25s ease-out; }
@@ -153,12 +160,11 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 .g-card .cap-glow-1 { opacity: calc(var(--electric) * .6); filter: blur(1px); }
 .g-card .cap-glow-2 { opacity: var(--electric); filter: blur(4px); }
 .g-card .cap-bg-glow { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: -1; transform: scale(1.1); filter: blur(32px); background: linear-gradient(-30deg, var(--accent), transparent, var(--accent)); opacity: calc(var(--electric) * .3); }
-/* Lightning clash in place of the plain "vs": two bolts sharing the capsules' own electric filter. */
+/* Lightning clash in place of the plain "vs": two plain bolts, each with a soft glow behind it. No displacement filter. */
 .vs-clash { align-self: stretch; justify-self: center; width: 44px; position: relative; display: flex; align-items: center; justify-content: center; }
 .vs-clash svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .vs-bolt { fill: var(--accent); }
 .vs-bolt.glow { filter: blur(5px); opacity: .8; }
-.vs-bolt.crisp { filter: url(#electric-turbulent-displace); }
 .vs-label { position: relative; z-index: 1; color: var(--text-base); font-weight: 700; font-size: 12px; letter-spacing: .05em; background: var(--bg-base); padding: 3px 7px; border-radius: var(--radius-pill); }
 @keyframes deal { from { transform: translateY(16px) scale(.94); opacity: .6; } to { transform: none; opacity: 1; } }   /* the card behind steps forward */
 @keyframes lineUp { from { transform: translateY(105%); } to { transform: none; } }
@@ -168,8 +174,8 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 @media (prefers-reduced-motion: no-preference) {
   /* Arrival, authored once: headline lines rise out of a mask, then the capsules are dealt in, then the score. Default state stays visible. */
   .hero h1 .inner { animation: lineUp .9s cubic-bezier(.16, 1, .3, 1) both; }
-  .pair .slot:nth-child(1) { animation: deal .8s cubic-bezier(.16, 1, .3, 1) .3s both; }
-  .pair .slot:nth-child(3) { animation: deal .8s cubic-bezier(.16, 1, .3, 1) .43s both; }
+  .match.first .slot:nth-child(1) { animation: deal .8s cubic-bezier(.16, 1, .3, 1) .3s both; }
+  .match.first .slot:nth-child(3) { animation: deal .8s cubic-bezier(.16, 1, .3, 1) .43s both; }
   .vs, .score { animation: fadeUp .6s cubic-bezier(.16, 1, .3, 1) .65s both; }
   .ghost { animation: ghostIn .5s ease-out both; }
   .g-end { animation: fadeUp .55s cubic-bezier(.16, 1, .3, 1) both; }
@@ -177,10 +183,9 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 @keyframes bump { 0% { transform: scale(1); } 40% { transform: scale(1.06); } 100% { transform: scale(1); } }
 .g-card.lose { opacity: .3; }
 
-.score { position: relative; margin-top: var(--space-2); display: flex; flex-direction: column; align-items: center; gap: var(--space-1); }
+.score { position: absolute; left: 50%; margin-left: -110px; width: 220px; top: calc(50% + (var(--tp) - var(--stack)) / 2 + var(--hd) + 10px); z-index: 4; display: flex; flex-direction: column; align-items: center; gap: var(--space-1); }
 .score-row { position: relative; display: flex; align-items: center; justify-content: center; gap: var(--space-3); }
 .score .num { font-size: 48px; line-height: 1.05; font-weight: 700; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
-.mult-hint { font-size: 12px; color: var(--text-subdued); }
 /* Multiplier (app rule: a vote pays 10 x multiplier, and every 10 votes adds 0.1x) */
 .mult { display: inline-block; min-width: 3.6em; text-align: center; overflow: hidden; font-size: 16px; line-height: 1.5; font-weight: 700; font-variant-numeric: tabular-nums; padding: 2px var(--space-3); border-radius: var(--radius-pill); background: var(--bg-highlight); color: var(--text-base); }
 .gain { position: absolute; left: 100%; top: 50%; margin-left: var(--space-3); font-size: 20px; font-weight: 700; color: var(--text-base); opacity: 0; pointer-events: none; white-space: nowrap; font-variant-numeric: tabular-nums; }
@@ -192,7 +197,7 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 .g-end { display: none; flex-direction: column; align-items: center; gap: var(--space-4); margin-top: var(--space-6); width: 100%; max-width: 720px; }
 .g-end h2 { font-size: 32px; line-height: 1.2; font-weight: 700; letter-spacing: -.01em; }
 .g-end > .btn-text { margin-top: calc(-1 * var(--space-1)); }
-.hero.done .hero-copy, .hero.done .pair, .hero.done .queue, .hero.done .score { display: none; }
+.hero.done .hero-copy, .hero.done .deck, .hero.done .score { display: none; }
 .hero.done .g-end { display: flex; }
 
 /* Shared join form: end-of-demo (always Player) and the finale (Player/Developer switch).
@@ -324,8 +329,8 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 @keyframes wallUp { from { transform: translateY(0); } to { transform: translateY(calc(-50% - 4px)); } }
 .wall-col .art { flex: none; }
 .finale::before { content: ""; position: absolute; inset: 0; z-index: 1; background: radial-gradient(ellipse at center, rgba(7, 9, 15, .94) 0%, rgba(7, 9, 15, .84) 45%, rgba(7, 9, 15, .68) 100%); }
-.finale .copy-c { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: var(--space-4); max-width: 640px; }
-.finale h2 { font-size: clamp(36px, 5vw, 56px); line-height: 1.05; font-weight: 700; letter-spacing: -.02em; text-wrap: balance; }
+.finale .copy-c { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: var(--space-4); max-width: 760px; }
+.finale h2 { font-size: clamp(28px, 3.6vw, 44px); line-height: 1.2; font-weight: 700; letter-spacing: -.02em; text-wrap: balance; }
 
 footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px; line-height: 1.5; color: var(--text-muted); display: flex; flex-direction: column; gap: var(--space-2); max-width: 90ch; }
 
@@ -333,12 +338,9 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
   .band { grid-template-columns: 1fr; padding: var(--space-4); }
   .copy h2 { font-size: 32px; }
   .statement { padding: var(--space-4); }
-  .pair { grid-template-columns: minmax(0, min(92vw, 560px)); }
+  .hero { --hd: calc((100vw - 108px) * .2866 + 24px); min-height: 440px; }
+  .match { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: var(--space-2); }
   .vs { text-align: center; }
-  /* The queue adds ~200px of height, which is exactly what pushes the hero past one phone
-     screen — conflicts with the earlier "capsules visible on load, no scroll" fix. Desktop has
-     the room (verified), a phone doesn't, so the queue is desktop-only. */
-  .queue { display: none; }
   .wall-col:nth-child(n+4) { display: none; }
   .dev-grid { gap: var(--space-2); }
   .topbar .links { display: none; }   /* phones: the logo and the waitlist button are what matter here */
@@ -384,30 +386,6 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
     <feComposite in="soft" in2="grain" operator="in"/>
   </filter>
   <symbol id="i-next" viewBox="0 0 24 24"><path d="M9.3 5.3 8 6.7l5.3 5.3L8 17.3l1.3 1.4L16 12z"/></symbol>
-  <!-- Electric Border filter (design system, Sep 27): Balint Ferenczy, codepen.io/BalintFerenczy/pen/KwdoyEN.
-       Flow comes from animating feOffset dx/dy on a fixed turbulence field, not the seed, so it glides. -->
-  <filter id="electric-turbulent-displace" color-interpolation-filters="sRGB" x="-20%" y="-20%" width="140%" height="140%">
-    <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="10" result="noise1" seed="1" />
-    <feOffset in="noise1" dx="0" dy="0" result="offsetNoise1">
-      <animate attributeName="dy" values="700; 0" dur="6.1s" repeatCount="indefinite" calcMode="linear" />
-    </feOffset>
-    <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="10" result="noise2" seed="1" />
-    <feOffset in="noise2" dx="0" dy="0" result="offsetNoise2">
-      <animate attributeName="dy" values="0; -700" dur="5.7s" repeatCount="indefinite" calcMode="linear" />
-    </feOffset>
-    <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="10" result="noise3" seed="2" />
-    <feOffset in="noise3" dx="0" dy="0" result="offsetNoise3">
-      <animate attributeName="dx" values="490; 0" dur="6.5s" repeatCount="indefinite" calcMode="linear" />
-    </feOffset>
-    <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="10" result="noise4" seed="2" />
-    <feOffset in="noise4" dx="0" dy="0" result="offsetNoise4">
-      <animate attributeName="dx" values="0; -490" dur="5.9s" repeatCount="indefinite" calcMode="linear" />
-    </feOffset>
-    <feComposite in="offsetNoise1" in2="offsetNoise2" result="part1" />
-    <feComposite in="offsetNoise3" in2="offsetNoise4" result="part2" />
-    <feBlend in="part1" in2="part2" mode="color-dodge" result="combinedNoise" />
-    <feDisplacementMap in="SourceGraphic" in2="combinedNoise" scale="30" xChannelSelector="R" yChannelSelector="B" />
-  </filter>
 </svg>
 
 <div class="page">
@@ -422,39 +400,24 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
       <a class="btn btn-lg btn-primary tx tx-light" href="#wall" data-join>Join the waitlist</a>
     </header>
 
-    <div class="hero" id="hero">
-      <div class="hero-copy">
-        <h1><span class="line"><span class="inner">Vote and get paid</span></span></h1>
+    <div class="hero" id="hero" data-copy="a">
+      <!-- Text layer: sits behind the cards. "Vote and get paid" opens the page, "Keep voting" rises for a moment when the multiplier steps up. -->
+      <div class="hero-copy" id="heroCopy">
+        <h1 class="copy-line copy-a"><span class="line"><span class="inner">Vote and get paid</span></span></h1>
+        <h1 class="copy-line copy-b" aria-live="polite"><span class="line"><span class="inner">Keep voting</span></span></h1>
       </div>
 
-      <div class="pair" id="pair">
-        <div class="slot">
-          <button type="button" class="g-card" id="c0" aria-label="Pick the left capsule"><span class="cap-art"><img class="art" id="a0" alt="" src="art/main_2771630.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i></span></button></div>
-        <span class="vs-clash" aria-hidden="true"><svg viewBox="0 0 44 200" preserveAspectRatio="none"><path class="vs-bolt glow" d="M24 0 L6 82 L22 88 L2 168 L38 108 L20 100 L40 40 L20 46 Z"/><path class="vs-bolt crisp" d="M24 0 L6 82 L22 88 L2 168 L38 108 L20 100 L40 40 L20 46 Z"/><path class="vs-bolt glow" d="M20 200 L38 118 L22 112 L42 32 L6 92 L24 100 L4 160 L24 154 Z"/><path class="vs-bolt crisp" d="M20 200 L38 118 L22 112 L42 32 L6 92 L24 100 L4 160 L24 154 Z"/></svg><span class="vs-label">VS</span></span>
-        <div class="slot">
-          <button type="button" class="g-card" id="c1" aria-label="Pick the right capsule"><span class="cap-art"><img class="art" id="a1" alt="" src="art/main_3593620.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i></span></button></div>
-      </div>
-
-      <!-- Queue: the next two matches, shown full and shrinking — not peeking behind the current
-           cards. No border, no glow: same no-edits rule as the current match, just smaller. -->
-      <div class="queue" id="queue">
-        <div class="queue-row">
-          <img class="art queue-art" id="q1a" alt="" src="art/main_1001520.jpg">
-          <span class="queue-vs">vs</span>
-          <img class="art queue-art" id="q1b" alt="" src="art/main_4062790.jpg">
-        </div>
-        <div class="queue-row queue-row-2">
-          <img class="art queue-art" id="q2a" alt="" src="art/main_3338240.jpg">
-          <span class="queue-vs">vs</span>
-          <img class="art queue-art" id="q2b" alt="" src="art/main_581150.jpg">
-        </div>
+      <!-- Deck: three matches in one box. The live one is in focus; the next two wait below the score, clear of it. Only the live one can be clicked. -->
+      <div class="deck" id="deck">
+        <div class="match first" data-d="0"><div class="slot"><button type="button" class="g-card" aria-label="Pick the left capsule"><span class="cap-art"><img class="art" alt="" src="art/main_2771630.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i></span></button></div><span class="vs-clash" aria-hidden="true"><svg viewBox="0 0 44 200" preserveAspectRatio="none"><path class="vs-bolt glow" d="M24 0 L6 82 L22 88 L2 168 L38 108 L20 100 L40 40 L20 46 Z"/><path class="vs-bolt" d="M24 0 L6 82 L22 88 L2 168 L38 108 L20 100 L40 40 L20 46 Z"/><path class="vs-bolt glow" d="M20 200 L38 118 L22 112 L42 32 L6 92 L24 100 L4 160 L24 154 Z"/><path class="vs-bolt" d="M20 200 L38 118 L22 112 L42 32 L6 92 L24 100 L4 160 L24 154 Z"/></svg><span class="vs-label">VS</span></span><div class="slot"><button type="button" class="g-card" aria-label="Pick the right capsule"><span class="cap-art"><img class="art" alt="" src="art/main_3593620.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i></span></button></div></div>
+        <div class="match" data-d="1" inert><div class="slot"><button type="button" class="g-card" aria-label="Pick the left capsule"><span class="cap-art"><img class="art" alt="" src="art/main_1001520.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i></span></button></div><span class="vs-clash" aria-hidden="true"><svg viewBox="0 0 44 200" preserveAspectRatio="none"><path class="vs-bolt glow" d="M24 0 L6 82 L22 88 L2 168 L38 108 L20 100 L40 40 L20 46 Z"/><path class="vs-bolt" d="M24 0 L6 82 L22 88 L2 168 L38 108 L20 100 L40 40 L20 46 Z"/><path class="vs-bolt glow" d="M20 200 L38 118 L22 112 L42 32 L6 92 L24 100 L4 160 L24 154 Z"/><path class="vs-bolt" d="M20 200 L38 118 L22 112 L42 32 L6 92 L24 100 L4 160 L24 154 Z"/></svg><span class="vs-label">VS</span></span><div class="slot"><button type="button" class="g-card" aria-label="Pick the right capsule"><span class="cap-art"><img class="art" alt="" src="art/main_4062790.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i></span></button></div></div>
+        <div class="match" data-d="2" inert><div class="slot"><button type="button" class="g-card" aria-label="Pick the left capsule"><span class="cap-art"><img class="art" alt="" src="art/main_3338240.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i></span></button></div><span class="vs-clash" aria-hidden="true"><svg viewBox="0 0 44 200" preserveAspectRatio="none"><path class="vs-bolt glow" d="M24 0 L6 82 L22 88 L2 168 L38 108 L20 100 L40 40 L20 46 Z"/><path class="vs-bolt" d="M24 0 L6 82 L22 88 L2 168 L38 108 L20 100 L40 40 L20 46 Z"/><path class="vs-bolt glow" d="M20 200 L38 118 L22 112 L42 32 L6 92 L24 100 L4 160 L24 154 Z"/><path class="vs-bolt" d="M20 200 L38 118 L22 112 L42 32 L6 92 L24 100 L4 160 L24 154 Z"/></svg><span class="vs-label">VS</span></span><div class="slot"><button type="button" class="g-card" aria-label="Pick the right capsule"><span class="cap-art"><img class="art" alt="" src="art/main_581150.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i></span></button></div></div>
       </div>
 
       <div class="score">
         <span class="mult-pop" id="multPop" aria-hidden="true"><b></b><i>Multiplier up</i></span>
         <div class="score-row"><span class="num" id="score">105</span><span class="mult" id="mult" title="Multiplier">x1.0</span></div>
         <span class="eyebrow">Points</span>
-        <p class="mult-hint">Keep voting to raise your multiplier.</p>
       </div>
 
       <!-- Match 5: prompt to join the waitlist. Steam linking and the email-verify bonus exist in
@@ -486,7 +449,7 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
             </div></div>
           </div>
           <p class="form-msg" aria-live="polite"></p>
-          <p class="join-note">We'll email you the moment your spot opens — no spam.</p>
+          <p class="join-note">We'll let you know the moment your spot opens. It's free, no spam.</p>
         </form>
       </div>
     </div>
@@ -531,7 +494,7 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
   <section class="finale" id="wall">
     <div class="wall-cols" id="wallCols" aria-hidden="true"></div>
     <div class="copy-c">
-      <h2>Get in before the first vote.</h2>
+      <h2>Like the game? Join the waitlist and we'll let you know the moment your spot opens. It's free, no spam.</h2>
       <form class="join-form" id="finaleForm" data-side="player" novalidate>
         <div class="join-shell">
           <button type="button" class="btn btn-lg btn-primary tx tx-light join-trigger" aria-expanded="false" aria-controls="finaleReveal">Join the waitlist</button>
@@ -556,7 +519,6 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
           </div></div>
         </div>
         <p class="form-msg" aria-live="polite"></p>
-        <p class="join-note">We'll email you the moment your spot opens — no spam.</p>
       </form>
     </div>
   </section>
@@ -592,13 +554,9 @@ function buildCols(host, cols, per, seed, base) {
    The player never sees how many matches there are: no dots, no counter. */
 (function () {
   var MAX = 5;
-  var pair = document.getElementById('pair'), hero = document.getElementById('hero');
-  var cards = [document.getElementById('c0'), document.getElementById('c1')];
-  var imgs = [document.getElementById('a0'), document.getElementById('a1')];
-  var queueImgs = [
-    [document.getElementById('q1a'), document.getElementById('q1b')],
-    [document.getElementById('q2a'), document.getElementById('q2b')]
-  ];
+  var hero = document.getElementById('hero');
+  // The deck is three fixed elements. `order` says who is live, next and after; data-d on each one is what CSS reads.
+  var order = [].slice.call(document.querySelectorAll('.deck .match'));
   var scoreEl = document.getElementById('score');
   var score = parseInt(scoreEl.textContent, 10), n = 0, busy = false;
   // Multiplier, same rule as db.py: a vote pays round(10 x multiplier), and every 10 votes adds 0.1x.
@@ -636,36 +594,56 @@ function buildCols(host, cols, per, seed, base) {
       .to(popEl, { opacity: 0, y: -40, duration: 1.1, ease: 'power2.in' }, 1.2);
   }
   function at(m, side) { return HERO[((m % 5) * 2 + side) % HERO.length]; }
-  function paint() {
-    for (var s = 0; s < 2; s++) {
-      imgs[s].src = artUrl(at(n, s));
-      if (n > 0) { cards[s].classList.add('enter'); cards[s].addEventListener('animationend', function () { this.classList.remove('enter'); }, { once: true }); }
-      queueImgs[0][s].src = artUrl(at(n + 1, s));
-      queueImgs[1][s].src = artUrl(at(n + 2, s));
-    }
+  function cardsOf(m) { return m.querySelectorAll('.g-card'); }
+  function paint(m, idx) {
+    var im = m.querySelectorAll('img.art');
+    for (var s = 0; s < 2; s++) im[s].src = artUrl(at(idx, s));
+    Array.prototype.forEach.call(cardsOf(m), function (c) { c.classList.remove('win', 'lose', 'picked'); c.removeAttribute('aria-pressed'); });
   }
-  paint();
+  order.forEach(function (m, k) { paint(m, k); });
+
+  // Text layer. It stays behind the cards and rises only when it has something to say, for no longer than 1.5s in total (0.45s up, hold, 0.4s down).
+  var copyTimer;
+  function say(which, hold) {
+    clearTimeout(copyTimer);
+    hero.dataset.copy = which;
+    if (hold) copyTimer = setTimeout(function () { hero.dataset.copy = 'none'; }, hold);
+  }
+  copyTimer = setTimeout(function () { if (hero.dataset.copy === 'a') hero.dataset.copy = 'none'; }, 3000);
+
+  function advance() {
+    var out = order.shift();
+    out.dataset.d = 'out'; out.setAttribute('inert', '');
+    order[0].classList.remove('first');
+    order[0].dataset.d = '0'; order[0].removeAttribute('inert');
+    order[1].dataset.d = '1';
+    // Once the old match has faded, it is repainted out of sight, dropped behind the queue with no transition, and eased up to its place at the back.
+    setTimeout(function () {
+      out.classList.add('no-t'); paint(out, n + 2); out.dataset.d = '3';
+      void out.offsetWidth;
+      out.classList.remove('no-t'); out.dataset.d = '2';
+      order.push(out);
+    }, 380);
+    setTimeout(function () { busy = false; }, 820);
+  }
   function vote(i) {
     if (busy) return; busy = true;
+    var live = order[0], cs = cardsOf(live);
     var before = multFor(votes), gain = Math.round(BASE * before);
     votes += 1; score += gain;
     showScore(score); showGain(gain);
-    var after = multFor(votes); if (after > before) tierUp(after);
-    cards[i].classList.add('win', 'picked'); cards[i].setAttribute('aria-pressed', 'true'); cards[1 - i].classList.add('lose');
+    var after = multFor(votes);
+    if (after > before) { tierUp(after); say('b', 1050); }
+    else if (hero.dataset.copy === 'a') say('none');
+    cs[i].classList.add('win', 'picked'); cs[i].setAttribute('aria-pressed', 'true'); cs[1 - i].classList.add('lose');
     n += 1;
     if (n >= MAX) {
       setTimeout(function () { hero.classList.add('done'); }, 650);
       return;
     }
-    setTimeout(function () {
-      pair.classList.add('swap');
-      setTimeout(function () {
-        cards.forEach(function (c) { c.classList.remove('win', 'lose', 'picked'); c.removeAttribute('aria-pressed'); });
-        paint(); pair.classList.remove('swap'); busy = false;
-      }, 260);
-    }, 520);
+    setTimeout(advance, 520);
   }
-  cards.forEach(function (c, i) { c.addEventListener('click', function () { vote(i); }); });
+  order.forEach(function (m) { Array.prototype.forEach.call(cardsOf(m), function (c, i) { c.addEventListener('click', function () { if (m === order[0]) vote(i); }); }); });
 })();
 
 /* Players: gift-card carousel. Mechanics as /player/join: auto-advance, arrows, dots jump to a card.
@@ -731,41 +709,6 @@ function buildCols(host, cols, per, seed, base) {
 
 /* Closing section: the wall as decoration under a dark overlay, the copy is the focus. */
 buildCols(document.getElementById('wallCols'), 6, 8, 0, 56);
-
-/* Hero intro: "Vote and get paid" holds alone for 3s, then retreats — shrinking, blurring and
-   rising away — while the capsule matchup, queue and score rise together so the CURRENT MATCH ends
-   up the focal point, vertically centered in the VIEWPORT, not just "wherever it lands once the
-   headline's height is subtracted." Those aren't the same thing: (1) once the queue rows exist,
-   pair+queue+score together are shorter than the original headline+pair+queue+score block, so
-   lifting by only the headline's height leaves the group's top pinned to where the block USED to
-   start, stranding the leftover space below the score instead of splitting it evenly; and (2) with
-   the queue rows added, .hero's own box can now be taller than the viewport itself, so even
-   centering "within .hero" doesn't mean centering on screen. Centering against window.innerHeight
-   directly is what actually achieves "focus point in the middle of the viewport," assuming the page
-   is still scrolled to top when this runs (true here — it's the load intro, before any scroll).
-   Auto-plays once on load, not tied to scroll. Measured at the 3s mark, not up front, so a
-   late-loading webfont can't throw it off. Cards get a slight staggered scale-pop on landing so the
-   choreography reads as one deliberate move rather than a flat translate. */
-(function () {
-  if (typeof gsap === 'undefined') return;
-  gsap.matchMedia().add('(prefers-reduced-motion: no-preference)', function () {
-    gsap.delayedCall(3, function () {
-      var heroCopy = document.querySelector('.hero-copy');
-      var pair = document.querySelector('.pair');
-      var queue = document.querySelector('.queue');
-      var score = document.querySelector('.score');
-      var cards = document.querySelectorAll('.g-card');
-      if (!heroCopy || !pair || !score) return;
-      var groupTop = pair.getBoundingClientRect().top;
-      var groupBottom = score.getBoundingClientRect().bottom;
-      var lift = groupTop - (window.innerHeight - (groupBottom - groupTop)) / 2;
-      gsap.timeline()
-        .to(heroCopy, { y: -24, scale: 0.86, opacity: 0, filter: 'blur(10px)', duration: 0.6, ease: 'power3.in' }, 0)
-        .to([pair, queue, score], { y: -lift, duration: 0.9, ease: 'expo.out' }, 0.08)
-        .fromTo(cards, { scale: 1 }, { scale: 1.04, duration: 0.5, ease: 'back.out(2.2)', stagger: 0.08, yoyo: true, repeat: 1 }, 0.22);
-    });
-  });
-})();
 
 /* GSAP markers (pin distances, "in view" triggers) are computed from the page's layout at the moment each
    ScrollTrigger is created. Figtree loads async from Google Fonts and can still reflow heights afterward,
@@ -960,7 +903,7 @@ function symbolPath(p) { var s = symbolParts(p); return s.ringOuter + ' ' + s.ri
       var dev = form.querySelector('input[name="side"]:checked').value === 'developer';
       form.dataset.side = dev ? 'developer' : 'player';
       emailField.placeholder = dev ? 'you@yourstudio.com' : 'you@example.com';
-      if (noteField) noteField.textContent = dev ? "We'll email you when onboarding opens for your studio." : "We'll email you the moment your spot opens — no spam.";
+      if (noteField) noteField.textContent = dev ? "We'll email you when onboarding opens for your studio." : "We'll let you know the moment your spot opens. It's free, no spam.";
     }
     sideInputs.forEach(function (r) { r.addEventListener('change', syncSide); });
   });
