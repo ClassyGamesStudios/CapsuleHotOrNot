@@ -253,6 +253,10 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 .form-msg { min-height: 1.4em; margin: 0; font-size: 14px; }
 .form-msg[data-state="error"] { color: var(--negative); }
 .form-msg[data-state="success"] { color: var(--win); }
+/* Copy sourced verbatim from the live app's own waitlist fine print (templates/player_join.html,
+   developer_join.html) — not invented, and swapped per role by the same toggle that already
+   updates the email placeholder. States what happens next; no points, no Steam, no rewards. */
+.join-note { margin: 0; font-size: 12px; color: var(--text-muted); }
 
 /* Sections: 70vh. Copy sits directly on the panel, no card behind it. */
 .band { min-height: 70vh; min-height: 70svh; padding: var(--space-8); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-8) 64px; align-items: center; }
@@ -478,6 +482,7 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
             </div></div>
           </div>
           <p class="form-msg" aria-live="polite"></p>
+          <p class="join-note">We'll email you the moment your spot opens — no spam.</p>
         </form>
       </div>
     </div>
@@ -547,6 +552,7 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
           </div></div>
         </div>
         <p class="form-msg" aria-live="polite"></p>
+        <p class="join-note">We'll email you the moment your spot opens — no spam.</p>
       </form>
     </div>
   </section>
@@ -929,15 +935,19 @@ function symbolPath(p) { var s = symbolParts(p); return s.ringOuter + ' ' + s.ri
     });
   });
 
-  // Player/Developer swaps the email placeholder on every form that has the switch, not just finale.
+  // Player/Developer swaps the email placeholder and the fine-print note on every form that has
+  // the switch, not just finale. Note text matches templates/player_join.html and
+  // templates/developer_join.html exactly — the app's own established copy, not new marketing copy.
   document.querySelectorAll('.join-form').forEach(function (form) {
     var sideInputs = form.querySelectorAll('input[name="side"]');
     if (!sideInputs.length) return;
     var emailField = form.querySelector('input[name="email"]');
+    var noteField = form.querySelector('.join-note');
     function syncSide() {
       var dev = form.querySelector('input[name="side"]:checked').value === 'developer';
       form.dataset.side = dev ? 'developer' : 'player';
       emailField.placeholder = dev ? 'you@yourstudio.com' : 'you@example.com';
+      if (noteField) noteField.textContent = dev ? "We'll email you when onboarding opens for your studio." : "We'll email you the moment your spot opens — no spam.";
     }
     sideInputs.forEach(function (r) { r.addEventListener('change', syncSide); });
   });
