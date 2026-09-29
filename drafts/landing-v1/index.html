@@ -195,7 +195,8 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 
 /* Match 5: waitlist prompt with the 3 steps. Text only, no card fills. */
 .g-end { display: none; flex-direction: column; align-items: center; gap: var(--space-4); margin-top: var(--space-6); width: 100%; max-width: 720px; }
-.g-end h2 { font-size: 32px; line-height: 1.2; font-weight: 700; letter-spacing: -.01em; }
+.g-end h2 { max-width: 760px; font-size: clamp(28px, 3.6vw, 44px); line-height: 1.2; font-weight: 700; letter-spacing: -.01em; }
+.g-end-sub { margin: calc(-1 * var(--space-2)) 0 0; font-size: 16px; color: var(--text-subdued); }
 .g-end > .btn-text { margin-top: calc(-1 * var(--space-1)); }
 .hero.done .hero-copy, .hero.done .deck, .hero.done .score { display: none; }
 .hero.done .g-end { display: flex; }
@@ -405,12 +406,7 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
       <div class="hero-copy" id="heroCopy">
         <h1 class="copy-line copy-a"><span class="line"><span class="inner">Vote and get paid</span></span></h1>
         <h1 class="copy-line copy-b" aria-live="polite"><span class="line"><span class="inner">Keep voting</span></span></h1>
-      
-      <div class="end-copy">
-        <h2>Like the game? Join the waitlist and we'll let you know the moment your spot opens.</h2>
-        <p>It's free, no spam.</p>
       </div>
-</div>
 
       <!-- Deck: three matches in one box. The live one is in focus; the next two wait below the score, clear of it. Only the live one can be clicked. -->
       <div class="deck" id="deck">
@@ -429,7 +425,8 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
            the app (db.py: SIGNUP_BONUS +300, EMAIL_BONUS +200) but aren't live yet, so the only ask
            here is the waitlist email — nothing about rewards we can't actually give out yet. -->
       <div class="g-end" id="gend">
-        <h2>Join the waitlist</h2>
+        <h2>Like the game? Join the waitlist and we'll let you know the moment your spot opens.</h2>
+        <p class="g-end-sub">It's free, no spam.</p>
         <form class="join-form" id="demoForm" data-side="player" novalidate>
           <div class="join-shell">
             <button type="button" class="btn btn-lg btn-primary tx tx-light join-trigger" aria-expanded="false" aria-controls="demoReveal">Join the waitlist</button>
@@ -454,7 +451,6 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
             </div></div>
           </div>
           <p class="form-msg" aria-live="polite"></p>
-          <p class="join-note">We'll let you know the moment your spot opens. It's free, no spam.</p>
         </form>
       </div>
     </div>
