@@ -188,10 +188,6 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 .g-end { display: none; flex-direction: column; align-items: center; gap: var(--space-4); margin-top: var(--space-6); width: 100%; max-width: 720px; }
 .g-end h2 { font-size: 32px; line-height: 1.2; font-weight: 700; letter-spacing: -.01em; }
 .g-end > .btn-text { margin-top: calc(-1 * var(--space-1)); }
-.steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-8); width: 100%; margin: var(--space-4) 0; text-align: left; }
-.step b { display: block; font-size: 32px; line-height: 1; margin-bottom: var(--space-2); }
-.step span { display: block; font-size: 14px; font-weight: 700; line-height: 1.3; color: var(--text-base); }
-.step small { display: block; margin-top: var(--space-1); font-size: 12px; line-height: 1.4; color: var(--text-subdued); }
 .hero.done .hero-copy, .hero.done .pair, .hero.done .queue, .hero.done .score { display: none; }
 .hero.done .g-end { display: flex; }
 
@@ -330,7 +326,6 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
      screen — conflicts with the earlier "capsules visible on load, no scroll" fix. Desktop has
      the room (verified), a phone doesn't, so the queue is desktop-only. */
   .queue { display: none; }
-  .steps { grid-template-columns: 1fr; gap: var(--space-4); }
   .wall-col:nth-child(n+4) { display: none; }
   .dev-grid { gap: var(--space-2); }
   .topbar .links { display: none; }   /* phones: the logo and the waitlist button are what matter here */
@@ -449,15 +444,11 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
         <p class="mult-hint">Keep voting to raise your multiplier.</p>
       </div>
 
-      <!-- Match 5: prompt to join the waitlist. The steps and points come from the app: joining the waitlist pays nothing,
-           linking Steam pays SIGNUP_BONUS (+300) and verifying the email pays EMAIL_BONUS (+200), 500 in total (db.py). -->
+      <!-- Match 5: prompt to join the waitlist. Steam linking and the email-verify bonus exist in
+           the app (db.py: SIGNUP_BONUS +300, EMAIL_BONUS +200) but aren't live yet, so the only ask
+           here is the waitlist email — nothing about rewards we can't actually give out yet. -->
       <div class="g-end" id="gend">
-        <h2>Get 500 points to start</h2>
-        <div class="steps">
-          <div class="step"><b>1</b><span>Join the waitlist</span></div>
-          <div class="step"><b>2</b><span>Link your Steam account</span><small>+300 points</small></div>
-          <div class="step"><b>3</b><span>Verify your email</span><small>+200 points</small></div>
-        </div>
+        <h2>Join the waitlist</h2>
         <form class="join-form" id="demoForm" data-side="player" novalidate>
           <label class="field">
             <span class="field-label">Email</span>
