@@ -330,8 +330,7 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 .wall-col .art { flex: none; }
 .finale::before { content: ""; position: absolute; inset: 0; z-index: 1; background: radial-gradient(ellipse at center, rgba(7, 9, 15, .94) 0%, rgba(7, 9, 15, .84) 45%, rgba(7, 9, 15, .68) 100%); }
 .finale .copy-c { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: var(--space-4); max-width: 760px; }
-.finale h2 { font-size: clamp(28px, 3.6vw, 44px); line-height: 1.2; margin-bottom: var(--space-4); }
-.finale .join-note { font-size: 14px; color: var(--text-subdued); margin-bottom: var(--space-6); } font-weight: 700; letter-spacing: -.02em; text-wrap: balance; }
+.finale h2 { font-size: clamp(28px, 3.6vw, 44px); line-height: 1.2; font-weight: 700; letter-spacing: -.02em; text-wrap: balance; }
 
 footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px; line-height: 1.5; color: var(--text-muted); display: flex; flex-direction: column; gap: var(--space-2); max-width: 90ch; }
 
@@ -495,8 +494,7 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
   <section class="finale" id="wall">
     <div class="wall-cols" id="wallCols" aria-hidden="true"></div>
     <div class="copy-c">
-      <h2>Like the game? Join the waitlist and we'll let you know the moment your spot opens.</h2>
-      <p class="join-note">It's free, no spam.</p>
+      <h2>Like the game? Join the waitlist and we'll let you know the moment your spot opens. It's free, no spam.</h2>
       <form class="join-form" id="finaleForm" data-side="player" novalidate>
         <div class="join-shell">
           <button type="button" class="btn btn-lg btn-primary tx tx-light join-trigger" aria-expanded="false" aria-controls="finaleReveal">Join the waitlist</button>
