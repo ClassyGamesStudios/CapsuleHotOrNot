@@ -247,7 +247,6 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 .form-msg { min-height: 1.4em; margin: 0; font-size: 14px; }
 .form-msg[data-state="error"] { color: var(--negative); }
 .form-msg[data-state="success"] { color: var(--win); }
-.small-print { margin: 0; font-size: 12px; color: var(--text-muted); }
 
 /* Sections: 70vh. Copy sits directly on the panel, no card behind it. */
 .band { min-height: 70vh; min-height: 70svh; padding: var(--space-8); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-8) 64px; align-items: center; }
@@ -450,14 +449,30 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
       <div class="g-end" id="gend">
         <h2>Join the waitlist</h2>
         <form class="join-form" id="demoForm" data-side="player" novalidate>
-          <label class="field">
-            <span class="field-label">Email</span>
-            <span class="field-input tx tx-dark"><input type="email" name="email" placeholder="you@example.com" autocomplete="email" required></span>
-          </label>
-          <button type="submit" class="btn btn-lg btn-primary tx tx-light">Join the waitlist</button>
+          <div class="join-shell">
+            <button type="button" class="btn btn-lg btn-primary tx tx-light join-trigger" aria-expanded="false" aria-controls="demoReveal">Join the waitlist</button>
+            <div class="join-reveal" id="demoReveal"><div class="join-reveal-inner">
+              <div class="join-card">
+                <fieldset class="switch">
+                  <legend class="switch-label">I'm joining as a</legend>
+                  <div class="switch-options">
+                    <label class="switch-opt"><input type="radio" name="side" value="player" checked><span>Player</span></label>
+                    <label class="switch-opt"><input type="radio" name="side" value="developer"><span>Developer</span></label>
+                  </div>
+                </fieldset>
+                <label class="field">
+                  <span class="field-label">Email</span>
+                  <span class="field-input tx tx-dark"><input type="email" name="email" placeholder="you@example.com" autocomplete="email" required></span>
+                </label>
+                <button type="submit" class="btn btn-lg btn-primary tx tx-light join-submit">
+                  <span class="btn-label">Join the waitlist</span>
+                  <svg class="join-submit-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+              </div>
+            </div></div>
+          </div>
           <p class="form-msg" aria-live="polite"></p>
         </form>
-        <a class="btn btn-text" href="#wall" data-join="developer">Got a game? Join as a developer</a>
       </div>
     </div>
   </section>
@@ -526,7 +541,6 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
           </div></div>
         </div>
         <p class="form-msg" aria-live="polite"></p>
-        <p class="small-print">Free to join. We'll email you when voting opens.</p>
       </form>
     </div>
   </section>
@@ -836,47 +850,56 @@ function symbolPath(p) { var s = symbolParts(p); return s.ringOuter + ' ' + s.ri
   );
 })();
 
-/* Join flow: the finale form is the one place that submits (Player/Developer switch); every other
-   "Join…" CTA either sets that switch and scrolls to it, or — the end-of-demo panel — submits its
-   own always-Player copy of the same form inline, right where the visitor already is. */
+/* Join flow: every .join-form (the finale form and the end-of-demo panel) is the same component —
+   collapsible trigger, Player/Developer switch, email field, icon submit — wired up identically so
+   there's exactly one CTA design on the page, not a full one here and a stripped-down one there. */
 (function () {
   var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   var finale = document.getElementById('finaleForm');
-  var finaleTrigger = finale && finale.querySelector('.join-trigger');
-  var finaleShell = finale && finale.querySelector('.join-shell');
 
   // Desktop horizontal collapse: the shell's collapsed width is set to the trigger's own natural
   // width, via a CSS variable, so the width transition has a real number to animate from instead
   // of "auto" (which CSS can't tween). The trigger itself is pinned edge-to-edge (inset:0) once
   // desktop CSS applies, so it can't be measured directly — a detached clone, freed from that
   // positioning via inline styles, sizes to its own content instead.
-  function measureCollapsedWidth() {
-    if (!finaleShell || finale.dataset.open === 'true') return;
-    var clone = finaleTrigger.cloneNode(true);
-    clone.style.cssText = 'position:absolute; visibility:hidden; pointer-events:none; left:-9999px; top:-9999px; right:auto; bottom:auto; inset:auto; width:auto; opacity:1;';
-    document.body.appendChild(clone);
-    var w = clone.offsetWidth;
-    document.body.removeChild(clone);
-    if (w) finaleShell.style.setProperty('--join-collapsed-w', w + 'px');
-  }
-  measureCollapsedWidth();
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(measureCollapsedWidth);
-  var resizeTimer;
-  window.addEventListener('resize', function () { clearTimeout(resizeTimer); resizeTimer = setTimeout(measureCollapsedWidth, 150); });
+  function setupCollapsible(form) {
+    var trigger = form.querySelector('.join-trigger');
+    var shell = form.querySelector('.join-shell');
+    if (!trigger || !shell) return function () {};
 
-  function openFinale(focusEmail) {
-    if (!finale || finale.dataset.open === 'true') return;
-    finale.dataset.open = 'true';
-    if (finaleTrigger) finaleTrigger.setAttribute('aria-expanded', 'true');
-    if (focusEmail) {
-      var reveal = finale.querySelector('.join-reveal');
-      reveal.addEventListener('transitionend', function once() {
-        reveal.removeEventListener('transitionend', once);
-        finale.querySelector('input[name="email"]').focus();
-      });
+    function measureCollapsedWidth() {
+      if (form.dataset.open === 'true') return;
+      var clone = trigger.cloneNode(true);
+      clone.style.cssText = 'position:absolute; visibility:hidden; pointer-events:none; left:-9999px; top:-9999px; right:auto; bottom:auto; inset:auto; width:auto; opacity:1;';
+      document.body.appendChild(clone);
+      var w = clone.offsetWidth;
+      document.body.removeChild(clone);
+      if (w) shell.style.setProperty('--join-collapsed-w', w + 'px');
     }
+    measureCollapsedWidth();
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(measureCollapsedWidth);
+    var resizeTimer;
+    window.addEventListener('resize', function () { clearTimeout(resizeTimer); resizeTimer = setTimeout(measureCollapsedWidth, 150); });
+
+    function open(focusEmail) {
+      if (form.dataset.open === 'true') return;
+      form.dataset.open = 'true';
+      trigger.setAttribute('aria-expanded', 'true');
+      if (focusEmail) {
+        var reveal = form.querySelector('.join-reveal');
+        reveal.addEventListener('transitionend', function once() {
+          reveal.removeEventListener('transitionend', once);
+          form.querySelector('input[name="email"]').focus();
+        });
+      }
+    }
+    trigger.addEventListener('click', function () { open(true); });
+    return open;
   }
-  if (finaleTrigger) finaleTrigger.addEventListener('click', function () { openFinale(true); });
+
+  var openFinale = finale ? setupCollapsible(finale) : function () {};
+  var demo = document.getElementById('demoForm');
+  if (demo) setupCollapsible(demo);
 
   document.querySelectorAll('[data-join]').forEach(function (el) {
     el.addEventListener('click', function (e) {
@@ -891,17 +914,18 @@ function symbolPath(p) { var s = symbolParts(p); return s.ringOuter + ' ' + s.ri
     });
   });
 
-  if (finale) {
-    var emailField = finale.querySelector('input[name="email"]');
-    var smallPrint = finale.querySelector('.small-print');
+  // Player/Developer swaps the email placeholder on every form that has the switch, not just finale.
+  document.querySelectorAll('.join-form').forEach(function (form) {
+    var sideInputs = form.querySelectorAll('input[name="side"]');
+    if (!sideInputs.length) return;
+    var emailField = form.querySelector('input[name="email"]');
     function syncSide() {
-      var dev = finale.querySelector('input[name="side"]:checked').value === 'developer';
-      finale.dataset.side = dev ? 'developer' : 'player';
+      var dev = form.querySelector('input[name="side"]:checked').value === 'developer';
+      form.dataset.side = dev ? 'developer' : 'player';
       emailField.placeholder = dev ? 'you@yourstudio.com' : 'you@example.com';
-      smallPrint.textContent = dev ? "Free to join. We'll email you when studio onboarding opens." : "Free to join. We'll email you when voting opens.";
     }
-    finale.querySelectorAll('input[name="side"]').forEach(function (r) { r.addEventListener('change', syncSide); });
-  }
+    sideInputs.forEach(function (r) { r.addEventListener('change', syncSide); });
+  });
 
   document.querySelectorAll('.join-form').forEach(function (form) {
     var emailField = form.querySelector('input[name="email"]');
@@ -917,7 +941,8 @@ function symbolPath(p) { var s = symbolParts(p); return s.ringOuter + ' ' + s.ri
       setTimeout(function () {
         setMsg("You're on the waitlist. We'll email " + email + (dev ? ' when studio onboarding opens.' : ' when voting opens.'), 'success');
         form.reset();
-        if (finale) { var d = finale.querySelector('input[name="side"]:checked'); if (d) d.dispatchEvent(new Event('change', { bubbles: true })); }
+        var d = form.querySelector('input[name="side"]:checked');
+        if (d) d.dispatchEvent(new Event('change', { bubbles: true }));
       }, 500);
     });
   });
