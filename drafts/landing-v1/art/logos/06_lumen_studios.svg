@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="260" height="120" viewBox="0 0 260 120" role="img" aria-label="Lumen Studios">
+  <rect x="22" y="42" width="36" height="36" rx="9" fill="#2a7a45"/><circle cx="40" cy="60" r="8" fill="#faf7f1"/>
+  <text x="74" y="58" font-family="Figtree, system-ui, sans-serif" font-size="22" font-weight="800" fill="#221c17" letter-spacing="-.5">Lumen</text>
+  <text x="74" y="80" font-family="Figtree, system-ui, sans-serif" font-size="12" font-weight="700" fill="#5a4f44" letter-spacing="2">STUDIOS</text>
+</svg>

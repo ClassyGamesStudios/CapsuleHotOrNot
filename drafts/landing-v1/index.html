@@ -12,16 +12,17 @@
    Hero is 100vh, every other section 70vh. Artwork is real Steam main capsules (616x353, pulled by collect_capsules.py).
    Artwork never has a frame, border or stroke. Text sits straight on the panel. No label of ours is ever placed on artwork. */
 :root {
-  color-scheme: dark;
-  --bg-base: #07090f; --bg-elevated: #0f172a; --bg-highlight: #1e2937; --bg-press: #334155; --bg-tinted: #475569;
-  --text-base: #e2e8f0; --text-subdued: #94a3b8; --text-muted: #6c7a97;
-  --accent: #22d3ee; --on-accent: #07090f; --accent-deep: #00b4d8;
-  --inverted: #ffffff; --on-inverted: #07090f;
-  --promo-cyan: #0891b2; --promo-violet: #6d28d9; --promo-pink: #db2777;
-  --win: #16a34a; --negative: #f87171;
+  color-scheme: light;
+  /* Linen page, warm ink, leaf green as the one accent: buttons, links, capsule glow, OR, XP, developer data. Red stays for errors and losses only. */
+  --bg-base: #ebe4d8; --bg-elevated: #f1ebe1; --bg-highlight: #f7f3ec; --bg-press: #ddd5c7; --bg-tinted: #c9bfae; --paper: #faf7f1;
+  --text-base: #221c17; --text-subdued: #5a4f44; --text-muted: #7d7064;
+  --accent: #2a7a45; --on-accent: #faf7f1; --accent-deep: #1f6a3a;   /* leaf green, warm-leaning to share the linen's undertone; -deep is the same green dark enough for small text */
+  --inverted: #221c17; --on-inverted: #faf7f1;
+  --win: #3f7d3a; --negative: #a8352a;
   --font-sans: "Figtree", system-ui, -apple-system, "Segoe UI", "Helvetica Neue", arial, sans-serif;
   --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px; --space-6: 24px; --space-8: 32px;
-  --radius-sm: 4px; --radius-md: 8px; --radius-lg: 16px; --radius-pill: 9999px; --radius-circle: 50%;
+  --radius-sm: 4px; --radius-md: 8px; --radius-lg: 16px; --radius-circle: 50%;
+  --fs-h2: clamp(24px, 2.4vw, 32px);   /* one headline size below the hero */
   --control-lg: 48px;
   /* texture contrast by state (design system v1.1) */
   --c-rest: 0.2; --c-view: 0.55; --c-active: 1;
@@ -34,14 +35,16 @@ body { margin: 0; background: var(--bg-base); color: var(--text-base); font: 400
 a { color: inherit; text-decoration: none; }
 h1, h2, h3, p { margin: 0; }
 .page { max-width: 1400px; margin: 0 auto; padding: var(--space-2); }
-.page > * + * { margin-top: var(--space-2); }   /* block layout, not flex: a flex-item pin target breaks GSAP's spacer sizing */
+.page > * + * { margin-top: 64px; }
+.rule { border: 0; height: 1px; width: min(100%, 1120px); margin: 40px auto 0; background: color-mix(in srgb, var(--accent) 28%, transparent); }   /* a whisper of a rule between sections */
+.page > .rule + * { margin-top: 40px; }   /* block layout, not flex: a flex-item pin target breaks GSAP's spacer sizing */
 .panel { background: var(--bg-elevated); border-radius: var(--radius-md); }
-.eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--text-subdued); }
+.eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--accent-deep); }
 
 /* Artwork: Steam main capsule 616x353, cover-fit at radius-sm */
 .art { display: block; width: 100%; aspect-ratio: 616 / 353; object-fit: cover; border-radius: var(--radius-sm); background: var(--bg-highlight); }
 
-/* Texture: one hue per surface. A tonal base, one soft blurred patch in a nearby shade, and coarse grain. */
+/* Texture: one hue per surface. A tonal base, one soft blurred patch in a nearby shade, and coarse grain. tx-accent is the primary button, tx-paper a raised light surface. */
 .tx {
   --c: var(--c-rest);          /* GSAP changes this as the state changes */
   position: relative; isolation: isolate; overflow: hidden;
@@ -63,33 +66,27 @@ h1, h2, h3, p { margin: 0; }
   mix-blend-mode: var(--grain-blend);
   opacity: calc(.07 + var(--c) * .4);
 }
-.tx-accent {
-  background: linear-gradient(160deg, var(--accent), color-mix(in srgb, var(--accent) 80%, white));
-  color: var(--on-accent);
-  --blob: var(--promo-cyan); --mx: .7; --bx: 25%; --by: -35%;
-}
-.tx-light {
-  background: linear-gradient(160deg, #fff, color-mix(in srgb, var(--accent) 14%, white));
+.tx-accent, .btn.tx-accent {   /* the primary button */
+  background: linear-gradient(160deg, var(--accent), color-mix(in srgb, var(--accent) 78%, var(--text-base)));
   color: var(--on-inverted);
-  --blob: color-mix(in srgb, var(--accent) 45%, white);
-  --grain-blend: multiply; --mx: .85; --bx: 35%; --by: -30%;
+  --blob: color-mix(in srgb, var(--accent) 55%, white); --grain-blend: soft-light; --mx: .7; --bx: 35%; --by: -30%;
 }
-.tx-dark {
-  background: linear-gradient(160deg, var(--bg-highlight), color-mix(in srgb, var(--bg-press) 55%, var(--bg-highlight)));
+.tx-paper {
+  background: linear-gradient(160deg, var(--paper), color-mix(in srgb, var(--bg-press) 35%, var(--paper)));
   color: var(--text-base);
-  --blob: var(--bg-tinted); --mx: .6; --blur: 18px; --bx: 30%; --by: -40%;
+  --blob: var(--bg-tinted); --grain-blend: multiply; --mx: .6; --blur: 18px; --bx: 30%; --by: -40%;
 }
 /* Without GSAP the hover and focus states still work, they just switch instead of easing. */
 html.no-gsap .tx { transition: --c 300ms ease, transform 33ms; }
 html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-within, html.no-gsap .tx[aria-pressed="true"] { --c: var(--c-active); }
 
 /* Buttons */
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); border: 0; border-radius: var(--radius-pill); font: 700 16px/1 var(--font-sans); cursor: pointer; white-space: nowrap; transition: transform 33ms, color 33ms; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); border: 0; border-radius: var(--radius-md); font: 700 16px/1 var(--font-sans); cursor: pointer; white-space: nowrap; transition: transform 33ms, color 33ms; }
 .btn:hover { transform: scale(1.04); } .btn:active { transform: scale(1); opacity: .7; }
 .btn:focus-visible, .g-card:focus-visible, .icon-btn:focus-visible { outline: 3px solid var(--text-base); outline-offset: 2px; }
 .btn-lg { min-height: var(--control-lg); padding: var(--space-2) var(--space-8); }
 .btn-primary { background: var(--inverted); color: var(--on-inverted); }
-.btn-text { background: transparent; color: var(--text-subdued); padding: var(--space-2) var(--space-3); font-size: 14px; }
+.btn-text { background: transparent; color: var(--accent-deep); padding: var(--space-2) var(--space-3); font-size: 14px; }
 .btn-text:hover { color: var(--text-base); transform: none; }
 .icon-btn { width: var(--control-lg); height: var(--control-lg); border-radius: var(--radius-circle); border: 0; background: var(--bg-highlight); color: var(--text-subdued); display: inline-grid; place-items: center; cursor: pointer; flex: none; transition: background-color 100ms, transform 33ms; }
 .icon-btn:hover { background: var(--bg-press); color: var(--text-base); transform: scale(1.04); }
@@ -99,8 +96,8 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 .fold { position: relative; isolation: isolate; min-height: calc(100vh - 16px); min-height: calc(100svh - 16px); display: flex; flex-direction: column; gap: var(--space-2); }
 /* Top light: one hue, no grain. */
 .fold-bg { position: absolute; z-index: -1; top: calc(-1 * var(--space-2)); bottom: 0; left: calc(50% - 50vw); width: 100vw; pointer-events: none; overflow: hidden;
-  background: linear-gradient(180deg, #0e7490 0%, #083d4f 34%, var(--bg-base) 80%); }
-.topbar { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-1) var(--space-2); }
+  background: radial-gradient(ellipse 60% 52% at 50% 42%, color-mix(in srgb, var(--paper) 60%, transparent), transparent 70%), var(--bg-base); }
+.topbar { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-1) var(--space-2); width: 100%; max-width: 1120px; margin-inline: auto; }   /* a fixed-width bar centred over the full-bleed hero, as on robostreamer.com */
 /* Logo: the symbol alone at rest. The name opens out to the right on hover or focus. */
 .logo { --h: 40px; position: relative; display: inline-block; flex: none; height: var(--h); width: calc(var(--h) * 1.3375); color: var(--inverted); text-decoration: none; }
 .logo svg { position: absolute; left: 0; top: 0; height: 100%; width: calc(var(--h) * 4.2115); overflow: visible; fill: currentColor; pointer-events: none; }
@@ -108,38 +105,28 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 /* Touch screens show the full logo all the time, so keep the room it needs. Leave space to its right on wide screens: the name opens over it. */
 @media (hover: none) { .logo { width: calc(var(--h) * 4.2115); } }
 .topbar .logo { margin-left: var(--space-2); }
-.topbar .btn-text { color: rgba(226, 232, 240, .82); } .topbar .btn-text:hover { color: var(--text-base); }
+.topbar .btn-text { color: var(--accent-deep); } .topbar .btn-text:hover { color: var(--text-base); }
 .topbar .grow { flex: 1; }
-/* Hero stage. Nothing overlaps except the headline tucked behind the live match's top edge. Top to bottom: headline, live match (the focus point), score,
-   next match, the one after. Every match is absolutely positioned in the same box and moved with transform only, so nothing reflows when one changes.
-   --hd is the height of the live match; queue offsets are derived from it (plus the score's height and two gaps), so the stack never touches at any width. */
-.hero { --hd: 280px; --sc: 78px; --gap: 12px; --tp: calc(clamp(56px, 11vw, 168px) * .92 - 48px); --stack: calc(var(--hd) * 1.9 + var(--sc) + 34px); --ease-io: cubic-bezier(.65, 0, .35, 1); position: relative; flex: 1; min-height: 810px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: var(--space-8) var(--space-4); }
-.hero-copy { position: absolute; left: 0; right: 0; bottom: calc(50% - (var(--tp) - var(--stack)) / 2 - 48px); z-index: 0; pointer-events: none; display: flex; justify-content: center; }
-.hero h1 {
-  font-size: clamp(56px, 11vw, 168px); line-height: .92; letter-spacing: -.035em; font-weight: 700;
-  color: color-mix(in srgb, var(--text-base) 42%, transparent);   /* a quiet layer: it must never compete with the live match */
-  filter: drop-shadow(0 6px 24px rgba(7, 9, 15, .35));
-}
-.hero h1 .line { display: block; overflow: hidden; padding-bottom: .1em; margin-bottom: -.1em; }
-.hero h1 .inner { display: block; }
-/* Text layer: at rest it waits below the cards, out of sight. To speak it rises into the space above them, then drops back behind. */
-.copy-line { transition: transform .45s var(--ease-io), opacity .45s var(--ease-io); transform: translateY(72px); opacity: 0; }
-.copy-b { position: absolute; left: 0; right: 0; bottom: 0; }
-.hero[data-copy="a"] .copy-a, .hero[data-copy="b"] .copy-b { transform: none; opacity: 1; }
-.hero:not([data-copy="a"]) .copy-a { transition-duration: .6s; }
+/* Hero stage: a deck. The live match is the front card; the next two sit behind it, each 10% smaller than the one in front (each card scales about its own centre, so both
+   its edges stay hidden) and tucked up so only a --peek strip shows above the one in front, tinted toward the page and blurred so they read as "coming up" without giving the games away. The score lives in the topbar.
+   Every match is absolutely positioned in the same box and moved with transform only, so nothing reflows when one changes. --hd is the live
+   match's height: about 1.4x the old 280px, capped by the deck width (--w) and by the viewport height. */
+.hero { --w: min(100vw - 32px, 1560px); --hd: min(393px, calc((var(--w) - 148px) * .268 + 22px), calc(100svh - 384px)); --peek: 36px; --deck-top: calc(44% - var(--hd) / 2 + var(--peek)); --ease-io: cubic-bezier(.65, 0, .35, 1); position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: var(--space-4); }
 
-.deck { position: absolute; left: 0; right: 0; top: calc(50% + (var(--tp) - var(--stack)) / 2); height: var(--hd); z-index: 2; }
+.hero-title { position: absolute; left: 0; right: 0; bottom: calc(100% - var(--deck-top) + var(--peek) * 3); margin: 0; text-align: center; font-size: var(--fs-h2); line-height: 1.25; font-weight: 700; letter-spacing: -.015em; }   /* one --peek above the back of the stack */
+.deck { position: absolute; left: calc(50% - var(--w) / 2); width: var(--w); top: var(--deck-top); height: var(--hd); z-index: 2; }
 /* One match = two capsules and the clash between them. Its place in the queue is a single attribute, data-d (0 live, 1 next, 2 after, 3 waiting to enter, out leaving);
    JS only rotates that number and CSS eases between the states, so a card always travels from behind to the focus point on the same in-out curve. */
-.match { --y: 0%; --s: 1; --b: 1; --bl: 0px; position: absolute; inset: 0; display: grid; grid-template-columns: minmax(0, calc((var(--hd) - 24px) * 1.745 + 24px)) auto minmax(0, calc((var(--hd) - 24px) * 1.745 + 24px)); gap: var(--space-6); align-items: center; justify-content: center;
-  transform: translateY(var(--y)) scale(var(--s)); filter: brightness(var(--b)) blur(var(--bl));
+.match { --y: 0%; --s: 1; --sat: 1; --bl: 0px; --fade: 0; position: absolute; inset: 0; display: grid; grid-template-columns: minmax(0, calc((var(--hd) - 24px) * 1.745 + 24px)) auto minmax(0, calc((var(--hd) - 24px) * 1.745 + 24px)); gap: var(--space-6); align-items: center; justify-content: center;
+  transform: translateY(var(--y)); filter: saturate(var(--sat)) blur(var(--bl));
   transition: transform .8s var(--ease-io), filter .8s var(--ease-io), opacity .8s var(--ease-io); will-change: transform; }
-.match[data-d="0"] { --y: 0%; --s: 1; --b: 1; --bl: 0px; z-index: 3; }
-.match[data-d="1"] { --y: calc(var(--hd) * .75 + var(--sc) + var(--gap) + 10px); --s: .5; --b: .55; --bl: 1.5px; z-index: 2; }
-.match[data-d="2"] { --y: calc(var(--hd) * 1.2 + var(--sc) + var(--gap) * 2 + 10px); --s: .4; --b: .38; --bl: 3px; z-index: 1; }
-.match[data-d="3"] { --y: calc(var(--hd) * 1.2 + var(--sc) + var(--gap) * 2 + 10px); --s: .34; --b: .3; --bl: 4px; z-index: 0; opacity: 0; }
-.match[data-d="out"] { --y: calc(var(--hd) * -.1); --s: 1.04; z-index: 3; opacity: 0; transition-duration: .36s; transition-timing-function: cubic-bezier(.5, 0, 1, 1); }
-.match.no-t { transition: none; }
+.match[data-d="0"] { --y: 0%; --s: 1; --sat: 1; --bl: 0px; --fade: 0; z-index: 3; }
+.match[data-d="1"] { --y: calc(-1 * (var(--peek) + var(--hd) * .05)); --s: .9; --sat: .5; --bl: 2px; --fade: .45; z-index: 2; }
+.match[data-d="2"] { --y: calc(-1 * (var(--peek) * 2 + var(--hd) * .095)); --s: .81; --sat: .4; --bl: 3px; --fade: .62; z-index: 1; }
+.match[data-d="3"] { --y: calc(-1 * (var(--peek) * 2.6 + var(--hd) * .135)); --s: .73; --sat: .3; --bl: 4px; --fade: .7; z-index: 0; opacity: 0; }
+.match[data-d="out"] { --y: calc(var(--hd) * .06); --s: 1.06; z-index: 3; opacity: 0; transition-duration: .36s; transition-timing-function: cubic-bezier(.5, 0, 1, 1); }
+.match .slot { transform: scale(var(--s)); transition: transform .8s var(--ease-io); }
+.match.no-t, .match.no-t .slot { transition: none; }
 .match[inert] .g-card { pointer-events: none; }
 .vs { color: var(--text-subdued); font-weight: 700; font-size: 14px; }
 .slot { position: relative; }
@@ -148,57 +135,67 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
    developers. Only a glow ring outside the artwork's edge and an ambient blur behind it respond to state;
    one --electric variable sets the contrast, subtle at rest and full on hover, keyboard focus, or once voted. */
 .g-card { position: relative; z-index: 2; display: block; width: 100%; appearance: none; border: 0; padding: var(--space-3); background: none; border-radius: var(--radius-md); cursor: pointer; color: inherit; font: inherit; transition: transform .4s cubic-bezier(.16, 1, .3, 1), opacity .3s ease-out; }
-.g-card.picked { animation: bump .32s ease-out; }
-.g-card.win[aria-pressed="true"] { transform: scale(1.05) translateX(6px); }   /* the winner shoves forward */
-.match:has(.g-card.win[aria-pressed="true"]) .g-card.lose { transform: translateX(-16px) rotate(-3deg) scale(.92); }   /* the loser gets bumped back */
+/* The vote: both capsules wind up, slam into each other at the VS, then the loser is knocked back and the winner holds its ground.
+   --dir points each card at the centre, so one pair of keyframes serves both sides. The VS flashes and the deck jolts on impact. */
+.slot:nth-child(1) { --dir: 1; } .slot:nth-child(3) { --dir: -1; }
+.g-card.win { z-index: 3; animation: clash-win .6s cubic-bezier(.3, 0, .2, 1) both; }
+.g-card.lose { animation: clash-lose .6s cubic-bezier(.3, 0, .2, 1) both; }
+@keyframes clash-win { 0% { transform: none; } 20% { transform: translateX(calc(var(--dir) * -5%)) rotate(calc(var(--dir) * -2deg)); } 45% { transform: translateX(calc(var(--dir) * 11%)) scale(1.03); } 70% { transform: translateX(calc(var(--dir) * 3%)) scale(1.08); } 100% { transform: translateX(calc(var(--dir) * 4%)) scale(1.06); } }
+@keyframes clash-lose { 0% { transform: none; opacity: 1; } 20% { transform: translateX(calc(var(--dir) * -4%)); } 45% { transform: translateX(calc(var(--dir) * 9%)); opacity: 1; } 100% { transform: translateX(calc(var(--dir) * -22%)) rotate(calc(var(--dir) * -8deg)) scale(.84); opacity: .25; } }
+.match.hit .vs-label { animation: vs-hit .5s .24s both; }
+@keyframes vs-hit { 0%, 100% { transform: none; } 30% { transform: scale(1.7); background: var(--paper); color: var(--accent); } }
+.deck.hit { animation: shake .35s .24s both; }
+@keyframes shake { 0%, 100% { transform: none; } 25% { transform: translate(4px, -3px); } 50% { transform: translate(-4px, 3px); } 75% { transform: translate(2px, -1px); } }
 .g-card .cap-art { position: relative; display: block; isolation: isolate; aspect-ratio: 616 / 353; border-radius: var(--radius-sm); overflow: visible; }
 .g-card .cap-art .art { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: auto; }
+.g-card .cap-art::after { content: ""; position: absolute; inset: 0; z-index: 1; border-radius: inherit; background: var(--bg-base); opacity: var(--fade, 0); transition: opacity .8s var(--ease-io); pointer-events: none; }   /* linen tint: how far back in the deck this card sits */
 .g-card .cap-glow, .g-card .cap-bg-glow { transition: opacity .25s ease-out; }
 .g-card { --electric: .22; }
 .g-card:hover, .g-card:focus-visible, .g-card[aria-pressed="true"] { --electric: 1; }
+.match[data-d="0"] .g-card:hover, .match[data-d="0"] .g-card:focus-visible { transform: rotate(calc(var(--dir) * 1.5deg)) scale(1.02); }   /* the card under the pointer leans in a touch */
 .g-card .cap-glow { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; border: 2px solid var(--accent); }
 .g-card .cap-glow-1 { opacity: calc(var(--electric) * .6); filter: blur(1px); }
 .g-card .cap-glow-2 { opacity: var(--electric); filter: blur(4px); }
 .g-card .cap-bg-glow { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: -1; transform: scale(1.1); filter: blur(32px); background: linear-gradient(-30deg, var(--accent), transparent, var(--accent)); opacity: calc(var(--electric) * .3); }
 /* Lightning clash in place of the plain "vs": two plain bolts, each with a soft glow behind it. No displacement filter. */
-.vs-clash { align-self: stretch; justify-self: center; width: 44px; position: relative; display: flex; align-items: center; justify-content: center; }
-.vs-clash svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-.vs-bolt { fill: var(--accent); }
-.vs-bolt.glow { filter: blur(5px); opacity: .8; }
-.vs-label { position: relative; z-index: 1; color: var(--text-base); font-weight: 700; font-size: 12px; letter-spacing: .05em; background: var(--bg-base); padding: 3px 7px; border-radius: var(--radius-pill); }
+.match:not([data-d="0"]) .vs-label { opacity: 0; }   /* only the front pair shows its VS */
+.vs-clash { align-self: stretch; justify-self: center; width: 44px; position: relative; z-index: 4; display: flex; align-items: center; justify-content: center; }
+.vs-label { position: relative; z-index: 1; transition: opacity .4s var(--ease-io); font-weight: 700; font-size: 14px; letter-spacing: .05em; background: var(--accent); color: var(--on-inverted); padding: 4px 9px; border-radius: var(--radius-md); }
 @keyframes deal { from { transform: translateY(16px) scale(.94); opacity: .6; } to { transform: none; opacity: 1; } }   /* the card behind steps forward */
-@keyframes lineUp { from { transform: translateY(105%); } to { transform: none; } }
 @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 @keyframes ghostIn { from { opacity: 0; } }
 .g-card.enter { animation: deal .42s cubic-bezier(.16, 1, .3, 1); }
 @media (prefers-reduced-motion: no-preference) {
-  /* Arrival, authored once: headline lines rise out of a mask, then the capsules are dealt in, then the score. Default state stays visible. */
-  .hero h1 .inner { animation: lineUp .9s cubic-bezier(.16, 1, .3, 1) both; }
+  /* Arrival, authored once: the capsules are dealt in, then the score. Default state stays visible. */
   .match.first .slot:nth-child(1) { animation: deal .8s cubic-bezier(.16, 1, .3, 1) .3s both; }
   .match.first .slot:nth-child(3) { animation: deal .8s cubic-bezier(.16, 1, .3, 1) .43s both; }
   .vs, .score { animation: fadeUp .6s cubic-bezier(.16, 1, .3, 1) .65s both; }
   .ghost { animation: ghostIn .5s ease-out both; }
   .g-end { animation: fadeUp .55s cubic-bezier(.16, 1, .3, 1) both; }
 }
-@keyframes bump { 0% { transform: scale(1); } 40% { transform: scale(1.06); } 100% { transform: scale(1); } }
 .g-card.lose { opacity: .3; }
 
-.score { position: absolute; left: 50%; margin-left: -110px; width: 220px; top: calc(50% + (var(--tp) - var(--stack)) / 2 + var(--hd) + 10px); z-index: 4; display: flex; flex-direction: column; align-items: center; gap: var(--space-1); }
-.score-row { position: relative; display: flex; align-items: center; justify-content: center; gap: var(--space-3); }
-.score .num { font-size: 48px; line-height: 1.05; font-weight: 700; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+/* Score: XP under the live match. A vote's +XP flies from the picked capsule into the number, which punches up, flashes brass and rolls. */
+.score { position: absolute; left: 0; right: 0; top: calc(var(--deck-top) + var(--hd) + 28px); z-index: 4; display: flex; flex-direction: column; align-items: center; gap: var(--space-2); }
+.score-row { position: relative; display: flex; align-items: baseline; }
+.score-row .eyebrow { position: absolute; left: 100%; bottom: .3em; margin-left: var(--space-2); }   /* hangs off the number so the number itself is what's centred */
+.score .num { display: inline-block; font-size: 64px; line-height: 1; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.score-row::after { content: ""; position: absolute; inset: -10px -20px; border-radius: 50%; border: 3px solid var(--accent); opacity: 0; pointer-events: none; }
+.score-row.pop::after { animation: burst .6s ease-out; }
+@keyframes burst { from { transform: scale(.6); opacity: .8; } to { transform: scale(1.7); opacity: 0; } }
 /* Multiplier (app rule: a vote pays 10 x multiplier, and every 10 votes adds 0.1x) */
-.mult { display: inline-block; min-width: 3.6em; text-align: center; overflow: hidden; font-size: 16px; line-height: 1.5; font-weight: 700; font-variant-numeric: tabular-nums; padding: 2px var(--space-3); border-radius: var(--radius-pill); background: var(--bg-highlight); color: var(--text-base); }
-.gain { position: absolute; left: 100%; top: 50%; margin-left: var(--space-3); font-size: 20px; font-weight: 700; color: var(--text-base); opacity: 0; pointer-events: none; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.mult-pop { position: absolute; left: 50%; bottom: 100%; transform: translateX(-50%); text-align: center; white-space: nowrap; opacity: 0; pointer-events: none; z-index: 6; }
+.mult { display: inline-block; min-width: 3.6em; text-align: center; overflow: hidden; font-size: 16px; line-height: 1.5; font-weight: 700; font-variant-numeric: tabular-nums; padding: 2px var(--space-3); border-radius: var(--radius-md); background: var(--accent); color: var(--on-inverted); }
+.gain { position: absolute; left: 0; top: 0; z-index: 6; font-size: 36px; font-weight: 700; color: var(--accent); text-shadow: 0 0 6px var(--paper), 0 0 14px var(--paper), 0 0 24px var(--paper); opacity: 0; pointer-events: none; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.mult-pop { position: absolute; left: 50%; top: 100%; transform: translateX(-50%); text-align: center; white-space: nowrap; opacity: 0; pointer-events: none; z-index: 6; }
 .mult-pop b { display: block; font-size: 32px; line-height: 1.1; font-weight: 700; letter-spacing: -.02em; }
-.mult-pop i { display: block; font-style: normal; font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
+.mult-pop i { display: block; font-style: normal; font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--accent-deep); }
 
 /* Match 5: waitlist prompt with the 3 steps. Text only, no card fills. */
 .g-end { display: none; flex-direction: column; align-items: center; gap: var(--space-4); margin-top: var(--space-6); width: 100%; max-width: 720px; }
-.g-end h2 { max-width: 760px; font-size: clamp(28px, 3.6vw, 44px); line-height: 1.2; font-weight: 700; letter-spacing: -.01em; }
+.g-end h2 { max-width: 760px; font-size: var(--fs-h2); line-height: 1.25; font-weight: 700; letter-spacing: -.01em; }
 .g-end-sub { margin: calc(-1 * var(--space-2)) 0 0; font-size: 16px; color: var(--text-subdued); }
 .g-end > .btn-text { margin-top: calc(-1 * var(--space-1)); }
-.hero.done .hero-copy, .hero.done .deck, .hero.done .score { display: none; }
+.hero.done .deck, .hero.done .hero-title, .hero.done .score { display: none; }
 .hero.done .g-end { display: flex; }
 
 /* Shared join form: end-of-demo (always Player) and the finale (Player/Developer switch).
@@ -225,8 +222,8 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 .switch { margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: var(--space-2); width: 100%; }
 /* Visible copy: sr-only. The pills say Player/Developer and the field says you@example.com — a label above each would only repeat it. */
 .switch-label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-.switch-options { display: flex; height: var(--control-lg); padding: var(--space-1); border-radius: var(--radius-pill); background: var(--bg-highlight); }
-.switch-opt { flex: 1; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-pill); font-size: 14px; font-weight: 700; color: var(--text-subdued); cursor: pointer; transition: background-color .15s ease-out, color .15s ease-out; }
+.switch-options { display: flex; height: var(--control-lg); padding: var(--space-1); border-radius: var(--radius-md); background: var(--bg-highlight); }
+.switch-opt { flex: 1; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-md); font-size: 14px; font-weight: 700; color: var(--text-subdued); cursor: pointer; transition: background-color .15s ease-out, color .15s ease-out; }
 .switch-opt:hover { color: var(--text-base); }
 .switch-opt:has(input:checked) { background: var(--accent); color: var(--on-accent); }
 .switch-opt:has(input:focus-visible) { outline: 3px solid var(--text-base); outline-offset: 2px; }
@@ -234,7 +231,7 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 .field { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-1); width: 100%; text-align: left; }
 .field-label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 /* Field: the same pill-and-grain surface as .search, just without the icon. */
-.field-input { display: block; width: 100%; height: var(--control-lg); border-radius: var(--radius-pill); }
+.field-input { display: block; width: 100%; height: var(--control-lg); border-radius: var(--radius-md); }
 .field-input:has(input:focus-visible) { outline: 3px solid var(--text-base); outline-offset: 2px; }
 .field input { width: 100%; height: 100%; padding: 0 var(--space-5); border: 0; border-radius: inherit; background: transparent; color: var(--text-base); font: 400 16px/1 var(--font-sans); outline: none; }
 .field input::placeholder { color: var(--text-subdued); }
@@ -246,14 +243,14 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
    what the live site does. */
 @media (min-width: 901px) {
   .join-form:has(.join-shell) { max-width: 92vw; }
-  .join-shell { height: calc(var(--control-lg) + var(--space-2)); width: var(--join-collapsed-w, 240px); max-width: 92vw; border-radius: var(--radius-pill); transition: width .3s cubic-bezier(.3, 0, 0, 1); }
+  .join-shell { height: calc(var(--control-lg) + var(--space-2)); width: var(--join-collapsed-w, 240px); max-width: 92vw; border-radius: var(--radius-md); transition: width .3s cubic-bezier(.3, 0, 0, 1); }
   .join-form[data-open="true"] .join-shell { width: min(720px, 92vw); }
   .join-trigger { position: absolute; inset: 0; }
   .join-form[data-open="true"] .join-trigger { opacity: 0; pointer-events: none; }
   .join-reveal, .join-reveal.is-showing { display: flex; position: absolute; inset: 0; pointer-events: none; }
   .join-form[data-open="true"] .join-reveal { pointer-events: auto; }
   .join-reveal-inner { display: flex; flex-direction: row; align-items: center; height: 100%; width: 100%; padding: var(--space-1); }
-  .join-card { flex-direction: row; align-items: center; gap: var(--space-2); border-radius: var(--radius-pill); }
+  .join-card { flex-direction: row; align-items: center; gap: var(--space-2); border-radius: var(--radius-md); }
   .join-card .switch { width: auto; flex: none; }
   .join-card .switch-options { width: 180px; }
   .join-card .field { flex: 1; min-width: 0; width: auto; }
@@ -269,16 +266,16 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 .join-note { margin: 0; font-size: 12px; color: var(--text-muted); }
 
 /* Sections: 70vh. Copy sits directly on the panel, no card behind it. */
-.band { min-height: 70vh; min-height: 70svh; padding: var(--space-8); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-8) 64px; align-items: center; }
+.band { padding: 48px var(--space-8); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-8) 64px; align-items: center; }
 .copy { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-3); }
-.copy h2 { font-size: 40px; line-height: 1.15; font-weight: 700; letter-spacing: -.015em; text-wrap: balance; }
+.copy h2 { font-size: var(--fs-h2); line-height: 1.2; font-weight: 700; letter-spacing: -.015em; text-wrap: balance; }
 .copy p:not(.eyebrow) { color: var(--text-subdued); max-width: 46ch; }
 .copy .btn-text { padding-left: 0; font-size: 16px; color: var(--text-base); margin-top: var(--space-2); }
+.facts { list-style: none; margin: var(--space-2) 0 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3) var(--space-5); font-size: 18px; font-weight: 700; line-height: 1.25; letter-spacing: -.01em; }   /* the four things we tell a developer, as headlines */
+.facts li { position: relative; padding-left: 22px; }
+.facts li::before { content: ""; position: absolute; left: 0; top: .42em; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
 
 /* Statement: one big line of copy carrying the whole section, right after the hero. */
-.statement { min-height: 100vh; min-height: 100svh; padding: var(--space-8); display: flex; flex-direction: column; align-items: flex-start; justify-content: center; }
-.statement-eyebrow { font-size: 14px; font-weight: 400; color: var(--text-subdued); margin: 0 0 var(--space-3); }
-.statement-text { max-width: 1100px; margin: 0; font-size: clamp(28px, 4.2vw, 56px); line-height: 1.35; font-weight: 500; letter-spacing: -.01em; color: var(--text-base); text-wrap: balance; }
 
 /* Players: gift-card carousel. Same mechanics as /player/join (auto-advance, arrows, dots jump to a card),
    drawn with the design system's neutral reward card: value and points first, brand as plain text. */
@@ -287,70 +284,73 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 .viewport { flex: 1; min-width: 0; overflow: hidden; border-radius: var(--radius-md); }
 .track { display: flex; transition: transform .45s cubic-bezier(.4, 0, .2, 1); }
 .slide { min-width: 100%; display: flex; justify-content: center; }
-.gift { width: min(100%, 360px); aspect-ratio: 5 / 3; background: var(--bg-highlight); border-radius: var(--radius-md); padding: var(--space-6); display: flex; flex-direction: column; justify-content: space-between; }
-.gift .val { font-size: 64px; line-height: 1; font-weight: 700; letter-spacing: -.02em; }
+.gift { width: min(100%, 480px); background: var(--bg-highlight); border-radius: var(--radius-md); padding: var(--space-5) var(--space-5) var(--space-5) var(--space-6); display: grid; grid-template-columns: 1fr auto; gap: var(--space-5); align-items: center; }
+.gift-copy { align-self: stretch; display: flex; flex-direction: column; }
+.gift-copy > div { margin: auto 0; }   /* the value sits centred in the space under the label */
+.gift-img { width: 232px; height: auto; border-radius: 12px; box-shadow: 0 10px 24px -12px rgba(34, 28, 23, .45); }
+.gift .val { font-size: 56px; line-height: 1; font-weight: 700; letter-spacing: -.02em; }
 .gift .name { font-size: 14px; color: var(--text-subdued); margin-top: var(--space-1); }
 .dots { display: flex; gap: var(--space-2); }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--bg-tinted); border: 0; padding: 0; cursor: pointer; }
 .dot.on { background: var(--text-base); }
 
-/* Developers: built from the Paper design "developers / devStage" (628 x 500). Oversized capsules are clipped by the frame,
-   the best one sits in the middle at full brightness, and three small stat cards float above. Everything scales with the
-   column width through --u, like Figma's scale tool: sizes, text, gaps and corners shrink together, nothing reflows. */
 .dev-col { min-width: 0; }
-.dev-stage { position: relative; container-type: inline-size; min-width: 0; }
-.dev-art, .dev-cards { --u: calc(100cqi / 628); }
-.dev-art { position: relative; aspect-ratio: 628 / 500; overflow: hidden; border-radius: var(--radius-md); }
-.dt { position: absolute; left: calc(var(--u) * var(--x)); top: calc(var(--u) * var(--y)); width: calc(var(--u) * 288.88); height: calc(var(--u) * 165.54); border-radius: calc(var(--u) * 4); overflow: hidden; }
-.dt img { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: auto; object-fit: cover; opacity: .6; border-radius: 0; }
-.dt::after { content: ""; position: absolute; inset: 0; background: rgba(7, 9, 15, .55); }
-.dt.best { left: calc(var(--u) * 177); top: calc(var(--u) * 171.5); width: calc(var(--u) * 274); height: calc(var(--u) * 157.01); overflow: visible; z-index: 2; }
-.dt.best::after { display: none; }
-.dt.best img { opacity: 1; border-radius: calc(var(--u) * 2.8); z-index: 1; }   /* above the glow, always */
-.glow { position: absolute; z-index: 0; opacity: .85; inset: calc(var(--u) * -9); border-radius: calc(var(--u) * 14); pointer-events: none; filter: url(#grainGlow);
-  background: linear-gradient(160deg, var(--accent-deep), color-mix(in srgb, var(--accent) 55%, var(--bg-elevated))); }   /* one hue, stays within about 12px of the capsule */
-.dev-cards { position: absolute; inset: 0; pointer-events: none; }
-.stat { position: absolute; z-index: 5; display: flex; flex-direction: column; border-radius: calc(var(--u) * 8); padding: calc(var(--u) * 12) calc(var(--u) * 16); white-space: nowrap; }   /* scaled like a picture: nothing reflows */
-.stat-ctr { left: calc(var(--u) * 119); top: calc(var(--u) * 32); width: calc(var(--u) * 192.23); }
-.stat-nums { left: calc(var(--u) * 347); top: calc(var(--u) * 337); width: calc(var(--u) * 163.02); display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: calc(var(--u) * 47); gap: calc(var(--u) * 8) calc(var(--u) * 24); align-content: start; }
-.stat-heat { left: calc(var(--u) * 107); top: calc(var(--u) * 339); width: calc(var(--u) * 185.27); }
+/* Developers: one capsule stood out. The three other versions sit small and muted in a row behind; the winner is large in front with the
+   green outline, and the metric tiles overlap it. Sizes scale with the stage width through --u, like a picture. */
+.dev-stage { position: relative; container-type: inline-size; min-width: 0; max-width: 560px; margin-left: auto; aspect-ratio: 560 / 470; --u: calc(100cqi / 560); }
+.dv { position: absolute; margin: 0; }
+.dv img { display: block; width: 100%; aspect-ratio: 616 / 353; object-fit: cover; border-radius: var(--radius-md); }
+.dv-back { width: calc(var(--u) * 200); top: 0; z-index: 1; filter: saturate(.5) blur(1px); }
+.dv-back::after { content: ""; position: absolute; inset: 0; border-radius: var(--radius-md); background: color-mix(in srgb, var(--bg-base) 55%, transparent); }
+.dv-back:nth-child(1) { left: 0; } .dv-back:nth-child(2) { left: calc(var(--u) * 180); } .dv-back:nth-child(3) { left: calc(var(--u) * 360); }
+.dv-win { width: calc(var(--u) * 400); left: calc(var(--u) * 80); top: calc(var(--u) * 92); z-index: 2; }
+.dv-win img { outline: 3px solid var(--accent); outline-offset: 3px; }
+.dv-win .tag { position: absolute; left: calc(var(--u) * 14); top: calc(var(--u) * 14); z-index: 1; }
+.tag { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; background: var(--accent); color: var(--on-accent); padding: 3px 9px; border-radius: var(--radius-sm); }
+.stat { position: absolute; z-index: 3; display: flex; flex-direction: column; border-radius: calc(var(--u) * 8); padding: calc(var(--u) * 12) calc(var(--u) * 16); white-space: nowrap; }
+.stat-ctr { right: 0; top: calc(var(--u) * 56); }          /* which version wins, and how sure */
+.stat-speed { left: 0; top: calc(var(--u) * 190); }         /* how fast it gets picked */
+.stat-seg { left: 0; bottom: 0; }                           /* who it wins with */
+.stat-genre { right: 0; bottom: calc(var(--u) * 8); }       /* where it ranks in the genre */
 .stat .k { font-size: calc(var(--u) * 12); line-height: 1.5; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text-subdued); }
-.stat .big { font-size: calc(var(--u) * 32); line-height: 1.1; font-weight: 700; letter-spacing: -.01em; margin-top: calc(var(--u) * 4); }
+.stat .big { font-size: calc(var(--u) * 32); line-height: 1.1; font-weight: 700; letter-spacing: -.01em; margin-top: calc(var(--u) * 4); color: var(--accent-deep); }
 .stat .sub { font-size: calc(var(--u) * 12); line-height: 1.5; color: var(--text-subdued); }
-.stat-nums b { display: block; font-size: calc(var(--u) * 20); line-height: 1.15; font-weight: 700; } .stat-nums span { display: block; font-size: calc(var(--u) * 12); line-height: 1.5; color: var(--text-subdued); }
-.heat { display: grid; grid-template-columns: repeat(6, calc(var(--u) * 16)); gap: calc(var(--u) * 3); margin-top: calc(var(--u) * 8); }
-.heat i { height: calc(var(--u) * 16); border-radius: calc(var(--u) * 2); background: var(--accent-deep); }
-.heat i.hot { background: var(--accent); }
+.bars { display: grid; gap: calc(var(--u) * 6); margin-top: calc(var(--u) * 8); }
+.bar { display: grid; grid-template-columns: calc(var(--u) * 64) calc(var(--u) * 110) calc(var(--u) * 32); align-items: center; gap: calc(var(--u) * 8); font-size: calc(var(--u) * 12); color: var(--text-subdued); }
+.bar .track { height: calc(var(--u) * 8); border-radius: calc(var(--u) * 4); background: var(--bg-press); overflow: hidden; }
+.bar .track i { display: block; height: 100%; width: var(--w); background: var(--accent); }
+.bar b { color: var(--text-base); font-variant-numeric: tabular-nums; text-align: right; }
 @media (min-width: 901px) { #developers { grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); } }   /* give the art side more room */
 
-/* Finale: 70vh. The wall is only a background. A dark overlay sits over it and the copy is the focus. */
+/* Finale: 70vh, the one big block of colour on the page. The wall is only a background. A dark overlay sits over it and the copy is the focus. */
 .finale { position: relative; min-height: 70vh; min-height: 70svh; overflow: hidden; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; text-align: center; padding: var(--space-8) var(--space-4); }
-.wall-cols { position: absolute; inset: 0; display: flex; gap: var(--space-2); }
-.wall-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--space-2); animation: wallUp var(--dur, 60s) linear var(--delay, 0s) infinite; }
-@keyframes wallUp { from { transform: translateY(0); } to { transform: translateY(calc(-50% - 4px)); } }
-.wall-col .art { flex: none; }
-.finale::before { content: ""; position: absolute; inset: 0; z-index: 1; background: radial-gradient(ellipse at center, rgba(7, 9, 15, .94) 0%, rgba(7, 9, 15, .84) 45%, rgba(7, 9, 15, .68) 100%); }
+.wall-bg { position: absolute; inset: 0; }
+.wall-flow { position: absolute; left: 0; right: 0; top: 100%; will-change: transform; }   /* origin at the bottom edge; JS slides it up */
+.wall-flow .art { position: absolute; aspect-ratio: auto; }   /* JS sets left/top/width/height per block */
+.finale::before { content: ""; position: absolute; inset: 0; z-index: 1; background: radial-gradient(ellipse at center, color-mix(in srgb, var(--bg-base) 74%, transparent) 0%, color-mix(in srgb, var(--bg-base) 60%, transparent) 45%, color-mix(in srgb, var(--bg-base) 38%, transparent) 100%); }
 .finale .copy-c { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: var(--space-4); max-width: 760px; }
-.finale h2 { font-size: clamp(28px, 3.6vw, 44px); line-height: 1.2; font-weight: 700; letter-spacing: -.02em; text-wrap: balance; }
+.finale h2 { font-size: var(--fs-h2); line-height: 1.25; font-weight: 700; letter-spacing: -.02em; text-wrap: balance; }
 
+.studios { padding: 48px var(--space-8); display: flex; flex-direction: column; align-items: center; gap: var(--space-3); text-align: center; }
+.studios h2 { margin: 0; font-size: var(--fs-h2); line-height: 1.2; font-weight: 700; letter-spacing: -.015em; }
+.logos { width: 100%; max-width: 1120px; margin-top: var(--space-5); display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--space-4) var(--space-6); }
+.logos img { display: block; width: 100%; max-width: 200px; height: auto; margin: 0 auto; opacity: .85; }
+@media (max-width: 900px) { .logos { grid-template-columns: repeat(3, 1fr); } }
 footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px; line-height: 1.5; color: var(--text-muted); display: flex; flex-direction: column; gap: var(--space-2); max-width: 90ch; }
 
 @media (max-width: 900px) {
   .band { grid-template-columns: 1fr; padding: var(--space-4); }
   .copy h2 { font-size: 32px; }
-  .statement { padding: var(--space-4); }
-  .hero { --hd: calc((100vw - 108px) * .2866 + 24px); min-height: 440px; }
+  .hero { --w: calc(100vw - 16px); --hd: calc((100vw - 108px) * .2866 + 24px); min-height: 440px; }
   .match { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: var(--space-2); }
   .vs { text-align: center; }
-  .wall-col:nth-child(n+4) { display: none; }
-  .dev-grid { gap: var(--space-2); }
   .topbar .links { display: none; }   /* phones: the logo and the waitlist button are what matter here */
   .car-stage .icon-btn { display: none; }   /* phones: swipe or use the dots */
   .viewport { touch-action: pan-y; }
 }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  * { transition: none !important; animation: none !important; } .wall-col { animation: none; } .track { transition: none; } .g-card.picked { animation: none; }
+  * { transition: none !important; animation: none !important; } .track { transition: none; }
   .btn:hover, .icon-btn:hover { transform: none; }
 }
 </style>
@@ -398,28 +398,24 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
       <a class="logo" href="#" aria-label="CapsuleHotOrNot" style="--h: 32px"><svg viewBox="0 0 1264.19 300.17" aria-hidden="true" focusable="false"><path class="lg-sym" fill-rule="evenodd" d="M17.56 75.57 L228.09 1.44 A26.33 26.33 0 0 1 261.67 17.53 L306.85 145.80 A26.33 26.33 0 0 1 290.76 179.39 L80.23 253.52 A26.33 26.33 0 0 1 46.65 237.43 L1.47 109.16 A26.33 26.33 0 0 1 17.56 75.57Z M19.47 80.98 L229.99 6.84 A20.6 20.6 0 0 1 256.27 19.43 L301.44 147.71 A20.6 20.6 0 0 1 288.85 173.98 L78.33 248.12 A20.6 20.6 0 0 1 52.05 235.53 L6.88 107.25 A20.6 20.6 0 0 1 19.47 80.98Z M178.94 54.88 L388.07 132.87 A20.6 20.6 0 0 1 400.18 159.36 L352.66 286.79 A20.6 20.6 0 0 1 326.16 298.90 L117.03 220.91 A20.6 20.6 0 0 1 104.92 194.42 L152.44 66.99 A20.6 20.6 0 0 1 178.94 54.88Z"/><clipPath id="lg-clip-live"><rect class="lg-clip" x="410" y="0" width="860" height="300.17"/></clipPath><g clip-path="url(#lg-clip-live)"><rect x="410" y="0" width="860" height="300.17" fill="none" pointer-events="all"/><use class="lg-l1" href="#lg-line1"/><use class="lg-l2" href="#lg-line2"/></g></svg></a>
       <span class="grow"></span>
       <span class="links"><a class="btn btn-text" href="#players">Players</a><a class="btn btn-text" href="#developers">Developers</a></span>
-      <a class="btn btn-lg btn-primary tx tx-light" href="#wall" data-join>Join the waitlist</a>
+      <a class="btn btn-lg btn-primary tx tx-accent" href="#wall" data-join>Join the waitlist</a>
     </header>
 
-    <div class="hero" id="hero" data-copy="a">
-      <!-- Text layer: sits behind the cards. "Vote and get paid" opens the page, "Keep voting" rises for a moment when the multiplier steps up. -->
-      <div class="hero-copy" id="heroCopy">
-        <h1 class="copy-line copy-a"><span class="line"><span class="inner">Vote and get paid</span></span></h1>
-        <h1 class="copy-line copy-b" aria-live="polite"><span class="line"><span class="inner">Keep voting</span></span></h1>
-      </div>
-
+    <div class="hero" id="hero">
+      <h1 class="hero-title">Pick the capsule that grabs you</h1>
       <!-- Deck: three matches in one box. The live one is in focus; the next two wait below the score, clear of it. Only the live one can be clicked. -->
       <div class="deck" id="deck">
-        <div class="match first" data-d="0"><div class="slot"><button type="button" class="g-card" aria-label="Pick the left capsule"><span class="cap-art"><img class="art" alt="" src="art/main_2771630.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i></span></button></div><span class="vs-clash" aria-hidden="true"><svg viewBox="0 0 44 200" preserveAspectRatio="none"><path class="vs-bolt glow" d="M24 0 L6 82 L22 88 L2 168 L38 108 L20 100 L40 40 L20 46 Z"/><path class="vs-bolt" d="M24 0 L6 82 L22 88 L2 168 L38 108 L20 100 L40 40 L20 46 Z"/><path class="vs-bolt glow" d="M20 200 L38 118 L22 112 L42 32 L6 92 L24 100 L4 160 L24 154 Z"/><path class="vs-bolt" d="M20 200 L38 118 L22 112 L42 32 L6 92 L24 100 L4 160 L24 154 Z"/></svg><span class="vs-label">VS</span></span><div class="slot"><button type="button" class="g-card" aria-label="Pick the right capsule"><span class="cap-art"><img class="art" alt="" src="art/main_3593620.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i></span></button></div></div>
-        <div class="match" data-d="1" inert><div class="slot"><button type="button" class="g-card" aria-label="Pick the left capsule"><span class="cap-art"><img class="art" alt="" src="art/main_1001520.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i></span></button></div><span class="vs-clash" aria-hidden="true"><svg viewBox="0 0 44 200" preserveAspectRatio="none"><path class="vs-bolt glow" d="M24 0 L6 82 L22 88 L2 168 L38 108 L20 100 L40 40 L20 46 Z"/><path class="vs-bolt" d="M24 0 L6 82 L22 88 L2 168 L38 108 L20 100 L40 40 L20 46 Z"/><path class="vs-bolt glow" d="M20 200 L38 118 L22 112 L42 32 L6 92 L24 100 L4 160 L24 154 Z"/><path class="vs-bolt" d="M20 200 L38 118 L22 112 L42 32 L6 92 L24 100 L4 160 L24 154 Z"/></svg><span class="vs-label">VS</span></span><div class="slot"><button type="button" class="g-card" aria-label="Pick the right capsule"><span class="cap-art"><img class="art" alt="" src="art/main_4062790.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i></span></button></div></div>
-        <div class="match" data-d="2" inert><div class="slot"><button type="button" class="g-card" aria-label="Pick the left capsule"><span class="cap-art"><img class="art" alt="" src="art/main_3338240.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i></span></button></div><span class="vs-clash" aria-hidden="true"><svg viewBox="0 0 44 200" preserveAspectRatio="none"><path class="vs-bolt glow" d="M24 0 L6 82 L22 88 L2 168 L38 108 L20 100 L40 40 L20 46 Z"/><path class="vs-bolt" d="M24 0 L6 82 L22 88 L2 168 L38 108 L20 100 L40 40 L20 46 Z"/><path class="vs-bolt glow" d="M20 200 L38 118 L22 112 L42 32 L6 92 L24 100 L4 160 L24 154 Z"/><path class="vs-bolt" d="M20 200 L38 118 L22 112 L42 32 L6 92 L24 100 L4 160 L24 154 Z"/></svg><span class="vs-label">VS</span></span><div class="slot"><button type="button" class="g-card" aria-label="Pick the right capsule"><span class="cap-art"><img class="art" alt="" src="art/main_581150.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i></span></button></div></div>
+        <div class="match first" data-d="0"><div class="slot"><button type="button" class="g-card" aria-label="Pick the left capsule"><span class="cap-art"><img class="art" alt="" src="art/main_2771630.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i></span></button></div><span class="vs-clash" aria-hidden="true"><span class="vs-label">OR</span></span><div class="slot"><button type="button" class="g-card" aria-label="Pick the right capsule"><span class="cap-art"><img class="art" alt="" src="art/main_3593620.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i></span></button></div></div>
+        <div class="match" data-d="1" inert><div class="slot"><button type="button" class="g-card" aria-label="Pick the left capsule"><span class="cap-art"><img class="art" alt="" src="art/main_1001520.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i></span></button></div><span class="vs-clash" aria-hidden="true"><span class="vs-label">OR</span></span><div class="slot"><button type="button" class="g-card" aria-label="Pick the right capsule"><span class="cap-art"><img class="art" alt="" src="art/main_4062790.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i></span></button></div></div>
+        <div class="match" data-d="2" inert><div class="slot"><button type="button" class="g-card" aria-label="Pick the left capsule"><span class="cap-art"><img class="art" alt="" src="art/main_3338240.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i></span></button></div><span class="vs-clash" aria-hidden="true"><span class="vs-label">OR</span></span><div class="slot"><button type="button" class="g-card" aria-label="Pick the right capsule"><span class="cap-art"><img class="art" alt="" src="art/main_581150.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i></span></button></div></div>
       </div>
 
       <div class="score">
+        <div class="score-row"><span class="num" id="score">105</span><span class="eyebrow">XP</span></div>
+        <span class="mult" id="mult" aria-label="Multiplier">x1.0</span>
         <span class="mult-pop" id="multPop" aria-hidden="true"><b></b><i>Multiplier up</i></span>
-        <div class="score-row"><span class="num" id="score">105</span><span class="mult" id="mult" title="Multiplier">x1.0</span></div>
-        <span class="eyebrow">Points</span>
       </div>
+
 
       <!-- Match 5: prompt to join the waitlist. Steam linking and the email-verify bonus exist in
            the app (db.py: SIGNUP_BONUS +300, EMAIL_BONUS +200) but aren't live yet, so the only ask
@@ -429,7 +425,7 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
         <p class="g-end-sub">It's free, no spam.</p>
         <form class="join-form" id="demoForm" data-side="player" novalidate>
           <div class="join-shell">
-            <button type="button" class="btn btn-lg btn-primary tx tx-light join-trigger" aria-expanded="false" aria-controls="demoReveal">Join the waitlist</button>
+            <button type="button" class="btn btn-lg btn-primary tx tx-accent join-trigger" aria-expanded="false" aria-controls="demoReveal">Join the waitlist</button>
             <div class="join-reveal" id="demoReveal"><div class="join-reveal-inner">
               <div class="join-card">
                 <fieldset class="switch">
@@ -441,9 +437,9 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
                 </fieldset>
                 <label class="field">
                   <span class="field-label">Email</span>
-                  <span class="field-input tx tx-dark"><input type="email" name="email" placeholder="you@example.com" autocomplete="email" required></span>
+                  <span class="field-input tx tx-paper"><input type="email" name="email" placeholder="you@example.com" autocomplete="email" required></span>
                 </label>
-                <button type="submit" class="btn btn-lg btn-primary tx tx-light join-submit">
+                <button type="submit" class="btn btn-lg btn-primary tx tx-accent join-submit">
                   <span class="btn-label">Join the waitlist</span>
                   <svg class="join-submit-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </button>
@@ -456,13 +452,9 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
     </div>
   </section>
 
-  <!-- STATEMENT: what the site is for, in one line. 100vh, centered vertically, left-aligned. -->
-  <section class="statement">
-    <p class="statement-eyebrow">Why Capsule HotOrNot</p>
-    <p class="statement-text">Vote on the capsule that grabs you and earn points toward gift cards. Developers get genre-matched win rates before launch, from verified Steam players, not a generic panel.</p>
-  </section>
+  <hr class="rule">
 
-  <!-- PLAYERS: carousel left, copy right. 70vh -->
+  <!-- PLAYERS: carousel left, copy right. -->
   <section class="panel band" id="players">
     <div class="carousel" id="car">
       <div class="car-stage">
@@ -475,30 +467,21 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
     <div class="copy">
       <p class="eyebrow">For players</p>
       <h2>Vote on new games and earn gift cards</h2>
-      <p>It's free to join. Every vote earns points, and you choose which gift card to spend them on.</p>
+      <p>It's free to join. Every vote earns XP, and you choose which gift card to spend it on.</p>
       <a class="btn btn-text" href="#wall" data-join="player">Join as a player &rarr;</a>
     </div>
   </section>
 
-  <!-- DEVELOPERS: copy left, capsule set right. 70vh -->
-  <section class="panel band" id="developers">
-    <div class="copy">
-      <p class="eyebrow">For developers and studios</p>
-      <h2>Know which capsule wins before you spend on marketing.</h2>
-      <p>Upload versions of your capsule art and see which one players in your genre pick, head to head. You get the results before launch, while you can still change the art.</p>
-      <a class="btn btn-text" href="#wall" data-join="developer">Join as a developer &rarr;</a>
-    </div>
-    <div class="dev-col"><div class="dev-stage" id="devStage" aria-hidden="true"></div></div>
-  </section>
+  <hr class="rule">
 
-  <!-- FINALE: wall as a dimmed background, copy on top. 70vh -->
+  <!-- FINALE: wall as a dimmed background, copy on top. -->
   <section class="finale" id="wall">
-    <div class="wall-cols" id="wallCols" aria-hidden="true"></div>
+    <div class="wall-bg" id="wallBg" aria-hidden="true"></div>
     <div class="copy-c">
       <h2>Like the game? Join the waitlist and we'll let you know the moment your spot opens. It's free, no spam.</h2>
       <form class="join-form" id="finaleForm" data-side="player" novalidate>
         <div class="join-shell">
-          <button type="button" class="btn btn-lg btn-primary tx tx-light join-trigger" aria-expanded="false" aria-controls="finaleReveal">Join the waitlist</button>
+          <button type="button" class="btn btn-lg btn-primary tx tx-accent join-trigger" aria-expanded="false" aria-controls="finaleReveal">Join the waitlist</button>
           <div class="join-reveal" id="finaleReveal"><div class="join-reveal-inner">
             <div class="join-card">
               <fieldset class="switch">
@@ -510,9 +493,9 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
               </fieldset>
               <label class="field">
                 <span class="field-label">Email</span>
-                <span class="field-input tx tx-dark"><input type="email" name="email" placeholder="you@example.com" autocomplete="email" required></span>
+                <span class="field-input tx tx-paper"><input type="email" name="email" placeholder="you@example.com" autocomplete="email" required></span>
               </label>
-              <button type="submit" class="btn btn-lg btn-primary tx tx-light join-submit">
+              <button type="submit" class="btn btn-lg btn-primary tx tx-accent join-submit">
                 <span class="btn-label">Join the waitlist</span>
                 <svg class="join-submit-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
               </button>
@@ -521,6 +504,50 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
         </div>
         <p class="form-msg" aria-live="polite"></p>
       </form>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <!-- DEVELOPERS: copy left, four versions right. -->
+  <section class="panel band" id="developers">
+    <div class="copy">
+      <p class="eyebrow">For developers and studios</p>
+      <h2>Know which capsule wins before you spend on marketing.</h2>
+      <p>Upload your capsule versions. Players in your genre pick, head to head. You get the answer before launch.</p>
+      <ul class="facts">
+        <li>Which version wins</li>
+        <li>Who it wins with</li>
+        <li>Where it ranks in your genre</li>
+        <li>How fast it gets picked</li>
+      </ul>
+      <a class="btn btn-text" href="#wall" data-join="developer">Join as a developer &rarr;</a>
+    </div>
+    <div class="dev-col"><div class="dev-stage" id="devStage" aria-hidden="true"></div></div>
+  </section>
+
+  <hr class="rule">
+
+  <!-- STUDIOS: who is already here. A static grid, everything visible at once. -->
+  <section class="panel studios" id="studios">
+    <p class="eyebrow">Already on the platform</p>
+    <h2>Studios testing their capsules with us</h2>
+    <div class="logos">
+      <img src="art/logos/01_nebula_interactive.svg" alt="Nebula Interactive">
+      <img src="art/logos/02_pixel_forge.svg" alt="Pixel Forge">
+      <img src="art/logos/03_ironwood_games.svg" alt="Ironwood Games">
+      <img src="art/logos/04_blue_harbor.svg" alt="Blue Harbor">
+      <img src="art/logos/05_kaiju_works.svg" alt="Kaiju Works">
+      <img src="art/logos/06_lumen_studios.svg" alt="Lumen Studios">
+      <img src="art/logos/07_pale_moon_games.svg" alt="Pale Moon Games">
+      <img src="art/logos/08_redshift_ltd.svg" alt="Redshift Ltd">
+      <img src="art/logos/09_volt_collective.svg" alt="Volt Collective">
+      <img src="art/logos/10_northwind_soft.svg" alt="Northwind Soft">
+      <img src="art/logos/11_hollow_pine.svg" alt="Hollow Pine">
+      <img src="art/logos/12_arcadia_publishing.svg" alt="Arcadia Publishing">
+      <img src="art/logos/13_tidebreak.svg" alt="Tidebreak">
+      <img src="art/logos/14_six_sided_studio.svg" alt="Six Sided Studio">
+      <img src="art/logos/15_glasshouse_games.svg" alt="Glasshouse Games">
     </div>
   </section>
 
@@ -536,26 +563,14 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
 /* Real capsules (developer art pulled from Steam by collect_capsules.py): static/uploads/main_<appid>.jpg, copied to ./art. All src values go through artUrl(). */
 function artUrl(n) { return 'art/' + n; }
 var HERO = ["main_2771630.jpg", "main_3593620.jpg", "main_1001520.jpg", "main_4062790.jpg", "main_3338240.jpg", "main_581150.jpg", "main_2398100.jpg", "main_4600800.jpg", "main_3298140.jpg", "main_4692380.jpg"];   // 2 per match, 5 matches
-var DEV  = ["main_3174440.jpg", "main_1730600.jpg", "main_2217040.jpg", "main_4598970.jpg", "main_4690740.jpg"];   // [0] = best result, the rest sit behind it
+var DEV  = ["main_3174440.jpg", "main_1730600.jpg", "main_2217040.jpg", "main_4598970.jpg"];   // the four "versions"; [0] = the winner
 var WALL = ["main_1001520.jpg", "main_1730600.jpg", "main_2195450.jpg", "main_2217040.jpg", "main_2326200.jpg", "main_2398100.jpg", "main_2771630.jpg", "main_3120770.jpg", "main_3174440.jpg", "main_3298140.jpg", "main_3338240.jpg", "main_3474620.jpg", "main_3593620.jpg", "main_4062790.jpg", "main_4240600.jpg", "main_4598970.jpg", "main_4600800.jpg", "main_4647110.jpg", "main_4690740.jpg", "main_4692380.jpg", "main_4697010.jpg", "main_4698730.jpg", "main_4825820.jpg", "main_4958620.jpg", "main_5070330.jpg", "main_5079330.jpg", "main_5086800.jpg", "main_5222780.jpg", "main_581150.jpg", "main_746530.jpg", "main_876240.jpg", "main_3664750.jpg", "main_1111150.jpg", "main_2826260.jpg"];
-
-/* Wall of art used as decoration behind the developer stats and the closing call to action.
-   Every column drifts upward with CSS, each set duplicated once for a seamless loop. */
-function buildCols(host, cols, per, seed, base) {
-  var html = '';
-  for (var c = 0; c < cols; c++) {
-    var tiles = '';
-    for (var k = 0; k < per; k++) tiles += '<img class="art" alt="" loading="lazy" src="' + artUrl(WALL[(c * 7 + k * 5 + seed) % WALL.length]) + '">';
-    html += '<div class="wall-col" style="--dur:' + (base + c * 8) + 's;--delay:-' + (c * 11) + 's">' + tiles + tiles + '</div>';
-  }
-  host.innerHTML = html;
-}
 
 /* Hero mini-game. Pick a capsule, score bumps, the next matches step up from behind, match 5 asks for the waitlist.
    The player never sees how many matches there are: no dots, no counter. */
 (function () {
   var MAX = 5;
-  var hero = document.getElementById('hero');
+  var hero = document.getElementById('hero'), deck = document.getElementById('deck');
   // The deck is three fixed elements. `order` says who is live, next and after; data-d on each one is what CSS reads.
   var order = [].slice.call(document.querySelectorAll('.deck .match'));
   var scoreEl = document.getElementById('score');
@@ -565,6 +580,7 @@ function buildCols(host, cols, per, seed, base) {
   var BASE = 10, votes = 8;
   function multFor(v) { return Math.round((1 + Math.floor(v / 10) * 0.1) * 10) / 10; }
   var multEl = document.getElementById('mult'), popEl = document.getElementById('multPop'), row = document.querySelector('.score-row');
+  var css = getComputedStyle(document.documentElement), tone = function (v) { return css.getPropertyValue(v).trim(); };
   var G = typeof gsap !== 'undefined', still = matchMedia('(prefers-reduced-motion: reduce)').matches, MOVE = G && !still;
   var counter = { v: score };
   multEl.textContent = 'x' + multFor(votes).toFixed(1);
@@ -572,14 +588,19 @@ function buildCols(host, cols, per, seed, base) {
   function showScore(to) {
     if (!MOVE) { scoreEl.textContent = to; return; }
     gsap.to(counter, { v: to, duration: 0.6, ease: 'power3.out', overwrite: true, onUpdate: function () { scoreEl.textContent = Math.round(counter.v); } });
-    gsap.fromTo(scoreEl, { scale: 1.1 }, { scale: 1, duration: 0.4, ease: 'power3.out', overwrite: 'auto' });
+    gsap.fromTo(scoreEl, { scale: 1.45, color: tone('--accent') }, { scale: 1, color: tone('--text-base'), duration: 0.9, ease: 'elastic.out(1, .45)', overwrite: 'auto' });
+    row.classList.remove('pop'); void row.offsetWidth; row.classList.add('pop');
   }
-  function showGain(points) {
-    if (!MOVE) return;
-    var el = document.createElement('span'); el.className = 'gain'; el.textContent = '+' + points; row.appendChild(el);
-    gsap.timeline({ onComplete: function () { el.remove(); } })
-      .fromTo(el, { opacity: 0, y: '-30%' }, { opacity: 1, y: '-60%', duration: 0.25, ease: 'power3.out' })
-      .to(el, { opacity: 0, y: '-140%', duration: 0.7, ease: 'power2.in' }, 0.35);
+  // +XP pops up just under the picked capsule (never over its art), then flies into the number; the number reacts when it lands.
+  function showGain(points, fromEl, then) {
+    if (!MOVE) { then(); return; }
+    var h = hero.getBoundingClientRect(), a = fromEl.getBoundingClientRect(), b = scoreEl.getBoundingClientRect();
+    var el = document.createElement('span'); el.className = 'gain'; el.textContent = '+' + points; hero.appendChild(el);
+    gsap.set(el, { left: a.left + a.width / 2 - h.left, top: a.bottom + 20 - h.top, xPercent: -50, yPercent: -50 });
+    gsap.timeline({ onComplete: function () { el.remove(); then(); } })
+      .fromTo(el, { opacity: 0, scale: .6 }, { opacity: 1, scale: 1.4, duration: 0.25, ease: 'back.out(2)' })   // pop, then hold so it registers
+      .to(el, { x: (b.left + b.width / 2) - (a.left + a.width / 2), y: (b.top + b.height / 2) - (a.bottom + 20), scale: .8, duration: 0.7, ease: 'power2.inOut' }, 0.85)
+      .to(el, { opacity: 0, duration: 0.15 }, '>-0.12');
   }
   function tierUp(m) {
     var label = 'x' + m.toFixed(1);
@@ -588,34 +609,26 @@ function buildCols(host, cols, per, seed, base) {
     gsap.timeline()
       .to(multEl, { yPercent: -110, opacity: 0, duration: 0.16, ease: 'power2.in', onComplete: function () { multEl.textContent = label; } })
       .fromTo(multEl, { yPercent: 110, opacity: 0 }, { yPercent: 0, opacity: 1, duration: 0.34, ease: 'power3.out' })
-      .fromTo(multEl, { backgroundColor: '#22d3ee', color: '#07090f' }, { backgroundColor: '#1e2937', color: '#e2e8f0', duration: 0.9, ease: 'power2.out' }, '<');
+      .fromTo(multEl, { backgroundColor: tone('--paper'), color: tone('--accent') }, { backgroundColor: tone('--accent'), color: tone('--on-inverted'), duration: 0.9, ease: 'power2.out' }, '<');
     popEl.querySelector('b').textContent = label;
     gsap.timeline()
-      .fromTo(popEl, { opacity: 0, y: 8, scale: 0.92 }, { opacity: 1, y: -6, scale: 1, duration: 0.45, ease: 'power3.out' })
-      .to(popEl, { opacity: 0, y: -40, duration: 1.1, ease: 'power2.in' }, 1.2);
+      .fromTo(popEl, { opacity: 0, y: -8, scale: 0.92 }, { opacity: 1, y: 6, scale: 1, duration: 0.45, ease: 'power3.out' })
+      .to(popEl, { opacity: 0, y: 40, duration: 1.1, ease: 'power2.in' }, 1.2);
   }
   function at(m, side) { return HERO[((m % 5) * 2 + side) % HERO.length]; }
   function cardsOf(m) { return m.querySelectorAll('.g-card'); }
   function paint(m, idx) {
     var im = m.querySelectorAll('img.art');
     for (var s = 0; s < 2; s++) im[s].src = artUrl(at(idx, s));
-    Array.prototype.forEach.call(cardsOf(m), function (c) { c.classList.remove('win', 'lose', 'picked'); c.removeAttribute('aria-pressed'); });
+    m.classList.remove('hit');
+    Array.prototype.forEach.call(cardsOf(m), function (c) { c.classList.remove('win', 'lose'); c.removeAttribute('aria-pressed'); });
   }
   order.forEach(function (m, k) { paint(m, k); });
-
-  // Text layer. It stays behind the cards and rises only when it has something to say, for no longer than 1.5s in total (0.45s up, hold, 0.4s down).
-  var copyTimer;
-  function say(which, hold) {
-    clearTimeout(copyTimer);
-    hero.dataset.copy = which;
-    if (hold) copyTimer = setTimeout(function () { hero.dataset.copy = 'none'; }, hold);
-  }
-  copyTimer = setTimeout(function () { if (hero.dataset.copy === 'a') hero.dataset.copy = 'none'; }, 3000);
 
   function advance() {
     var out = order.shift();
     out.dataset.d = 'out'; out.setAttribute('inert', '');
-    order[0].classList.remove('first');
+    out.classList.remove('first');   // its deal-in animation would otherwise pin the slot transform for good
     order[0].dataset.d = '0'; order[0].removeAttribute('inert');
     order[1].dataset.d = '1';
     // Once the old match has faded, it is repainted out of sight, dropped behind the queue with no transition, and eased up to its place at the back.
@@ -632,17 +645,17 @@ function buildCols(host, cols, per, seed, base) {
     var live = order[0], cs = cardsOf(live);
     var before = multFor(votes), gain = Math.round(BASE * before);
     votes += 1; score += gain;
-    showScore(score); showGain(gain);
+    showGain(gain, cs[i], function () { showScore(score); });
     var after = multFor(votes);
-    if (after > before) { tierUp(after); say('b', 1050); }
-    else if (hero.dataset.copy === 'a') say('none');
-    cs[i].classList.add('win', 'picked'); cs[i].setAttribute('aria-pressed', 'true'); cs[1 - i].classList.add('lose');
+    if (after > before) tierUp(after);
+    cs[i].classList.add('win'); cs[i].setAttribute('aria-pressed', 'true'); cs[1 - i].classList.add('lose');
+    live.classList.add('hit'); deck.classList.remove('hit'); void deck.offsetWidth; deck.classList.add('hit');
     n += 1;
     if (n >= MAX) {
-      setTimeout(function () { hero.classList.add('done'); }, 650);
+      setTimeout(function () { hero.classList.add('done'); }, 800);
       return;
     }
-    setTimeout(advance, 520);
+    setTimeout(advance, 700);
   }
   order.forEach(function (m) { Array.prototype.forEach.call(cardsOf(m), function (c, i) { c.addEventListener('click', function () { if (m === order[0]) vote(i); }); }); });
 })();
@@ -650,14 +663,14 @@ function buildCols(host, cols, per, seed, base) {
 /* Players: gift-card carousel. Mechanics as /player/join: auto-advance, arrows, dots jump to a card.
    Cards follow the reward template. Points and names come from the REWARDS catalogue in app.py (display only). */
 (function () {
-  var GIFTS = [
-    ['9,500', '$10', 'Steam gift card'], ['10,000', '$10', 'Amazon gift card'], ['11,000', '$10', 'PayPal cash'],
-    ['24,000', '$25', 'Visa prepaid'], ['8,000', '1 month', 'Discord Nitro'], ['9,000', '1 month', 'Xbox Game Pass'],
-    ['18,000', '$20', 'Steam gift card'], ['10,500', '$10', 'Humble Bundle credit']
+  var GIFTS = [   // [value, name, card image in art/gift (copied from static/gift_cards)]
+    ['$10', 'Steam gift card', '01_steam-wallet-10.svg'], ['$25', 'Amazon gift card', '02_amazon-25.svg'], ['$20', 'PlayStation Store', '03_playstation-store-20.svg'],
+    ['1 month', 'Xbox Game Pass', '04_xbox-game-pass.svg'], ['$15', 'Nintendo eShop', '05_nintendo-eshop-15.svg'], ['$10', 'Epic Games', '06_epic-games-10.svg'],
+    ['1 month', 'Discord Nitro', '07_discord-nitro.svg'], ['$10', 'PayPal cash', '08_paypal-cash-10.svg']
   ];
   var track = document.getElementById('cardTrack'), dots = document.getElementById('dots'), car = document.getElementById('car');
   track.innerHTML = GIFTS.map(function (g) {
-    return '<div class="slide"><div class="gift"><span class="eyebrow">' + g[0] + ' pts</span><div><div class="val">' + g[1] + '</div><div class="name">' + g[2] + '</div></div></div></div>';
+    return '<div class="slide"><div class="gift"><div class="gift-copy"><span class="eyebrow">Exchange XP for</span><div><div class="val">' + g[0] + '</div><div class="name">' + g[1] + '</div></div></div><img class="gift-img" alt="" src="art/gift/' + g[2] + '"></div></div>';
   }).join('');
   var i = 0, timer, hold = false, calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
   GIFTS.forEach(function (_, n) {
@@ -689,27 +702,69 @@ function buildCols(host, cols, per, seed, base) {
    In this app a click on a capsule is the vote, so CTR = picked when shown = win rate.
    The heatmap (win rate by player genre segment) is on the roadmap, not in the build yet. All numbers are sample data. */
 (function () {
-  // Same tile size as the Paper design (288.88 x 165.54), now on a clean 3x3 grid with one consistent 16px gap in both
-  // directions, still bled past the frame edges by the same amount on every side so it clips the same way.
-  var TILES = [[-135.3, -14.3, "main_1730600.jpg"], [169.6, -14.3, "main_2217040.jpg"], [474.4, -14.3, "main_876240.jpg"], [-135.3, 167.2, "main_4062790.jpg"], [474.4, 167.2, "main_4958620.jpg"], [-135.3, 348.8, "main_4598970.jpg"], [169.6, 348.8, "main_4690740.jpg"], [474.4, 348.8, "main_4240600.jpg"]];
-  var tiles = TILES.map(function (t) {
-    return '<div class="dt" style="--x:' + t[0] + ';--y:' + t[1] + '"><img class="art" alt="" src="' + artUrl(t[2]) + '"></div>';
-  }).join('');
-  var HEAT = [.4, .51, .47, .66, .44, .55,  .47, .63, .59, .93, .51, .47,  .44, .47, .7, .77, .47, .4];   // rows = capsules, columns = player segments (values from the Paper design)
-  var cells = HEAT.map(function (v) { return '<i' + (v > .9 ? ' class="hot"' : '') + ' style="opacity:' + v + '"></i>'; }).join('');
+  // One winner in front of its group, and one tile per thing we tell the developer. Placeholder art: four different games stand in for four versions.
+  var SEG = [['Roguelike', 71], ['Strategy', 58], ['RPG', 44]];
+  var bars = SEG.map(function (g) { return '<div class="bar"><span>' + g[0] + '</span><span class="track"><i style="--w:' + g[1] + '%"></i></span><b>' + g[1] + '%</b></div>'; }).join('');
   document.getElementById('devStage').innerHTML =
-    '<div class="dev-art" aria-hidden="true">' + tiles +
-    '<div class="dt best"><div class="glow"></div><img class="art" alt="" src="' + artUrl(DEV[0]) + '"></div></div>' +
-    '<div class="dev-cards">' +
-    '<div class="stat stat-ctr tx tx-dark"><div class="k">CTR</div><div class="big">65%</div><div class="sub">picked when shown &middot; avg 52%</div></div>' +
-    '<div class="stat stat-nums tx tx-dark"><div><b>240</b><span>Matchups</span></div><div><b>92nd</b><span>Percentile</span></div>' +
-    '<div><b>156</b><span>Wins</span></div><div><b>84</b><span>Losses</span></div></div>' +
-    '<div class="stat stat-heat tx tx-dark"><div class="k">Win rate by segment</div><div class="heat">' + cells + '</div></div>' +
-    '</div>';
+    DEV.slice(1).map(function (f) { return '<figure class="dv dv-back"><img class="art" alt="" src="' + artUrl(f) + '"></figure>'; }).join('') +
+    '<figure class="dv dv-win"><span class="tag">Winner</span><img class="art" alt="" src="' + artUrl(DEV[0]) + '"></figure>' +
+    '<div class="stat stat-ctr tx tx-paper"><div class="k">Which version wins</div><div class="big">65% CTR</div><div class="sub">92% sure after 240 matchups</div></div>' +
+    '<div class="stat stat-speed tx tx-paper"><div class="k">Decision speed</div><div class="big">1.4s</div><div class="sub">fastest of your four</div></div>' +
+    '<div class="stat stat-seg tx tx-paper"><div class="k">Who it wins with</div><div class="bars">' + bars + '</div></div>' +
+    '<div class="stat stat-genre tx tx-paper"><div class="k">In your genre</div><div class="big">Top 32%</div><div class="sub">beats 68% of capsules tested</div></div>';
 })();
 
-/* Closing section: the wall as decoration under a dark overlay, the copy is the focus. */
-buildCols(document.getElementById('wallCols'), 6, 8, 0, 56);
+/* Closing section: a wall of capsules behind the copy, under the dark overlay. The wall is a grid of cells; a block is one cell or a 2x2.
+   It drifts up for ever: blocks that leave the top are dropped and each column is topped up at the bottom edge, lowest column first
+   (a 2x2 only goes where two neighbouring columns are level, and never touching another 2x2, not even at a corner), so the bottom edge
+   stays solid and nothing ever resets. */
+(function () {
+  var host = document.getElementById('wallBg'), flow = document.createElement('div'); flow.className = 'wall-flow'; host.appendChild(flow);
+  var GAP = 8, SPEED = 14, BIG = .2, still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var cols, cw, ch, pitch, h, blocks, offset, bag = [], bigCells;   // bigCells: "col,row" of every cell under a 2x2
+  function pick() {   // every capsule once before any repeats
+    if (!bag.length) { bag = WALL.slice(); for (var i = bag.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = bag[i]; bag[i] = bag[j]; bag[j] = t; } }
+    return bag.pop();
+  }
+  function bigOk(c, row) { for (var i = c - 1; i <= c + 2; i++) for (var j = row - 1; j <= row + 2; j++) if (bigCells[i + ',' + j]) return false; return true; }
+  function place() {
+    var lo = Math.min.apply(null, h), cands = [];
+    for (var i = 0; i < cols; i++) if (h[i] === lo) cands.push(i);
+    var c = cands[Math.floor(Math.random() * cands.length)], size = 1;
+    if (Math.random() < BIG) {   // any pair of level columns at the low mark that keeps clear of other 2x2s
+      var pairs = []; for (i = 0; i + 1 < cols; i++) if (h[i] === lo && h[i + 1] === lo && bigOk(i, lo)) pairs.push(i);
+      if (pairs.length) { c = pairs[Math.floor(Math.random() * pairs.length)]; size = 2; }
+    }
+    var img = document.createElement('img'); img.className = 'art'; img.alt = ''; img.decoding = 'async'; img.src = artUrl(pick());
+    img.style.left = c * (cw + GAP) + 'px'; img.style.top = lo * pitch + 'px';
+    img.style.width = size * cw + (size - 1) * GAP + 'px'; img.style.height = size * ch + (size - 1) * GAP + 'px';
+    var cells = [];
+    for (var k = 0; k < size; k++) { h[c + k] = lo + size; if (size === 2) for (var j = lo; j < lo + 2; j++) { bigCells[c + k + ',' + j] = 1; cells.push(c + k + ',' + j); } }
+    flow.appendChild(img); blocks.push({ el: img, end: (lo + size) * pitch, cells: cells });
+  }
+  function fill() { while (Math.min.apply(null, h) * pitch < offset + pitch) place(); }
+  function build() {
+    var W = host.clientWidth, H = host.clientHeight;
+    cols = Math.max(3, Math.min(6, Math.floor(W / 180))); cw = (W - GAP * (cols - 1)) / cols; ch = cw * 353 / 616; pitch = ch + GAP;
+    h = []; for (var i = 0; i < cols; i++) h.push(0);
+    blocks = []; bigCells = {}; flow.innerHTML = ''; offset = H; fill(); flow.style.transform = 'translateY(' + -offset + 'px)';
+  }
+  var on = false, last = 0, resizeT;
+  function tick(now) {
+    if (!on) return;
+    offset += SPEED * (now - last) / 1000; last = now;
+    flow.style.transform = 'translateY(' + -offset + 'px)';
+    fill();
+    var gone = offset - host.clientHeight;
+    while (blocks.length && blocks[0].end < gone) { var b = blocks.shift(); b.el.remove(); b.cells.forEach(function (key) { delete bigCells[key]; }); }
+    requestAnimationFrame(tick);
+  }
+  build();
+  if (!still) {
+    new IntersectionObserver(function (e) { on = e[0].isIntersecting; if (on) { last = performance.now(); requestAnimationFrame(tick); } }).observe(host);
+    addEventListener('resize', function () { clearTimeout(resizeT); resizeT = setTimeout(build, 150); });
+  }
+})();
 
 /* GSAP markers (pin distances, "in view" triggers) are computed from the page's layout at the moment each
    ScrollTrigger is created. Figtree loads async from Google Fonts and can still reflow heights afterward,
