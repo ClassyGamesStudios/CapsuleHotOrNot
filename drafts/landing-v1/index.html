@@ -16,7 +16,7 @@
   /* Linen page, warm ink, leaf green as the one accent: buttons, links, capsule glow, OR, XP, developer data. Red stays for errors and losses only. */
   --bg-base: #ebe4d8; --bg-elevated: #f1ebe1; --bg-highlight: #f7f3ec; --bg-press: #ddd5c7; --bg-tinted: #c9bfae; --paper: #faf7f1;
   --text-base: #221c17; --text-subdued: #5a4f44; --text-muted: #7d7064;
-  --accent: #2a7a45; --on-accent: #faf7f1; --accent-deep: #1f6a3a;   /* leaf green, warm-leaning to share the linen's undertone; -deep is the same green dark enough for small text */
+  --accent: #2b52a8; --on-accent: #faf7f1; --accent-deep: #1f4290;   /* leaf green, warm-leaning to share the linen's undertone; -deep is the same green dark enough for small text */
   --inverted: #221c17; --on-inverted: #faf7f1;
   --win: #3f7d3a; --negative: #a8352a;
   --font-sans: "Figtree", system-ui, -apple-system, "Segoe UI", "Helvetica Neue", arial, sans-serif;
@@ -36,9 +36,10 @@ a { color: inherit; text-decoration: none; }
 h1, h2, h3, p { margin: 0; }
 .page { max-width: 1400px; margin: 0 auto; padding: var(--space-2); }
 .page > * + * { margin-top: 64px; }
-.rule { border: 0; height: 1px; width: min(100%, 1120px); margin: 40px auto 0; background: color-mix(in srgb, var(--accent) 28%, transparent); }   /* a whisper of a rule between sections */
-.page > .rule + * { margin-top: 40px; }   /* block layout, not flex: a flex-item pin target breaks GSAP's spacer sizing */
-.panel { background: var(--bg-elevated); border-radius: var(--radius-md); }
+.rule { border: 0; height: 2px; width: min(100%, 1120px); margin: 56px auto 0; background: color-mix(in srgb, var(--accent) 64%, transparent); }   /* a thin cobalt rule between sections */
+.page > .rule + * { margin-top: 56px; }   /* block layout, not flex: a flex-item pin target breaks GSAP's spacer sizing */
+.end-space { height: 1px; }   /* gives the closing rule the same gap below it as the others */
+.panel { background: var(--bg-elevated); border-radius: var(--radius-md); border: 1px solid color-mix(in srgb, var(--accent) 64%, transparent); box-shadow: 0 0 8px 1px color-mix(in srgb, var(--accent) 55%, transparent); }   /* same cobalt line as the rules, with the soft glow of a hovered capsule */
 .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--accent-deep); }
 
 /* Artwork: Steam main capsule 616x353, cover-fit at radius-sm */
@@ -89,7 +90,7 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 .btn-text { background: transparent; color: var(--accent-deep); padding: var(--space-2) var(--space-3); font-size: 14px; }
 .btn-text:hover { color: var(--text-base); transform: none; }
 .icon-btn { width: var(--control-lg); height: var(--control-lg); border-radius: var(--radius-circle); border: 0; background: var(--bg-highlight); color: var(--text-subdued); display: inline-grid; place-items: center; cursor: pointer; flex: none; transition: background-color 100ms, transform 33ms; }
-.icon-btn:hover { background: var(--bg-press); color: var(--text-base); transform: scale(1.04); }
+.icon-btn:hover { background: var(--accent); color: var(--on-accent); transform: scale(1.04); }
 .icon-btn svg { width: 24px; height: 24px; fill: currentColor; }
 
 /* First screen: nav + hero = 100vh */
@@ -98,22 +99,24 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 .fold-bg { position: absolute; z-index: -1; top: calc(-1 * var(--space-2)); bottom: 0; left: calc(50% - 50vw); width: 100vw; pointer-events: none; overflow: hidden;
   background: radial-gradient(ellipse 60% 52% at 50% 42%, color-mix(in srgb, var(--paper) 60%, transparent), transparent 70%), var(--bg-base); }
 .topbar { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-1) var(--space-2); width: 100%; max-width: 1120px; margin-inline: auto; }   /* a fixed-width bar centred over the full-bleed hero, as on robostreamer.com */
-/* Logo: the symbol alone at rest. The name opens out to the right on hover or focus. */
-.logo { --h: 40px; position: relative; display: inline-block; flex: none; height: var(--h); width: calc(var(--h) * 1.3375); color: var(--inverted); text-decoration: none; }
+/* Logo: the full logo, always shown. */
+.logo { --h: 40px; position: relative; display: inline-block; flex: none; height: var(--h); width: calc(var(--h) * 4.2115); color: var(--inverted); text-decoration: none; }
 .logo svg { position: absolute; left: 0; top: 0; height: 100%; width: calc(var(--h) * 4.2115); overflow: visible; fill: currentColor; pointer-events: none; }
 .logo:focus-visible { outline: 3px solid var(--text-base); outline-offset: 4px; border-radius: var(--radius-sm); }
-/* Touch screens show the full logo all the time, so keep the room it needs. Leave space to its right on wide screens: the name opens over it. */
-@media (hover: none) { .logo { width: calc(var(--h) * 4.2115); } }
 .topbar .logo { margin-left: var(--space-2); }
 .topbar .btn-text { color: var(--accent-deep); } .topbar .btn-text:hover { color: var(--text-base); }
 .topbar .grow { flex: 1; }
+.float-join { position: fixed; right: var(--space-6); bottom: var(--space-6); z-index: 50; box-shadow: 0 10px 28px -10px rgba(34, 28, 23, .5);
+  opacity: 0; visibility: hidden; transform: translateY(12px); transition: opacity .25s ease-out, transform .25s ease-out, visibility 0s .25s; }
+.float-join.on { opacity: 1; visibility: visible; transform: none; transition: opacity .25s ease-out, transform .25s ease-out, visibility 0s; }
+@media (max-width: 900px) { .float-join { right: var(--space-4); bottom: var(--space-4); } }
 /* Hero stage: a deck. The live match is the front card; the next two sit behind it, each 10% smaller than the one in front (each card scales about its own centre, so both
    its edges stay hidden) and tucked up so only a --peek strip shows above the one in front, tinted toward the page and blurred so they read as "coming up" without giving the games away. The score lives in the topbar.
    Every match is absolutely positioned in the same box and moved with transform only, so nothing reflows when one changes. --hd is the live
    match's height: about 1.4x the old 280px, capped by the deck width (--w) and by the viewport height. */
 .hero { --w: min(100vw - 32px, 1560px); --hd: min(393px, calc((var(--w) - 148px) * .268 + 22px), calc(100svh - 384px)); --peek: 36px; --deck-top: calc(44% - var(--hd) / 2 + var(--peek)); --ease-io: cubic-bezier(.65, 0, .35, 1); position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: var(--space-4); }
 
-.hero-title { position: absolute; left: 0; right: 0; bottom: calc(100% - var(--deck-top) + var(--peek) * 3); margin: 0; text-align: center; font-size: var(--fs-h2); line-height: 1.25; font-weight: 700; letter-spacing: -.015em; }   /* one --peek above the back of the stack */
+.hero-title { position: absolute; left: 0; right: 0; bottom: calc(100% - var(--deck-top) + var(--peek) * 3); margin: 0; text-align: center; font-size: var(--fs-h2); line-height: 1.25; font-weight: 700; letter-spacing: -.015em; color: var(--accent); }   /* one --peek above the back of the stack */
 .deck { position: absolute; left: calc(50% - var(--w) / 2); width: var(--w); top: var(--deck-top); height: var(--hd); z-index: 2; }
 /* One match = two capsules and the clash between them. Its place in the queue is a single attribute, data-d (0 live, 1 next, 2 after, 3 waiting to enter, out leaving);
    JS only rotates that number and CSS eases between the states, so a card always travels from behind to the focus point on the same in-out curve. */
@@ -133,7 +136,7 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 /* Play — the vote screen. Bare at rest: no frame, no mat, no plate, and the capsule artwork itself is never
    edited — client constraint, since any visual change to the artwork breaks the A/B-testing claim made to
    developers. Only a glow ring outside the artwork's edge and an ambient blur behind it respond to state;
-   one --electric variable sets the contrast, subtle at rest and full on hover, keyboard focus, or once voted. */
+   one --electric variable sets the contrast, off at rest and full on hover, keyboard focus, or once voted. */
 .g-card { position: relative; z-index: 2; display: block; width: 100%; appearance: none; border: 0; padding: var(--space-3); background: none; border-radius: var(--radius-md); cursor: pointer; color: inherit; font: inherit; transition: transform .4s cubic-bezier(.16, 1, .3, 1), opacity .3s ease-out; }
 /* The vote: both capsules wind up, slam into each other at the VS, then the loser is knocked back and the winner holds its ground.
    --dir points each card at the centre, so one pair of keyframes serves both sides. The VS flashes and the deck jolts on impact. */
@@ -146,15 +149,15 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 @keyframes vs-hit { 0%, 100% { transform: none; } 30% { transform: scale(1.7); background: var(--paper); color: var(--accent); } }
 .deck.hit { animation: shake .35s .24s both; }
 @keyframes shake { 0%, 100% { transform: none; } 25% { transform: translate(4px, -3px); } 50% { transform: translate(-4px, 3px); } 75% { transform: translate(2px, -1px); } }
-.g-card .cap-art { position: relative; display: block; isolation: isolate; aspect-ratio: 616 / 353; border-radius: var(--radius-sm); overflow: visible; }
-.g-card .cap-art .art { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: auto; }
+.g-card .cap-art { position: relative; display: block; isolation: isolate; aspect-ratio: 616 / 353; border-radius: var(--radius-md); overflow: visible; }   /* same corners as the panels */
+.g-card .cap-art .art { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: auto; border-radius: inherit; }
 .g-card .cap-art::after { content: ""; position: absolute; inset: 0; z-index: 1; border-radius: inherit; background: var(--bg-base); opacity: var(--fade, 0); transition: opacity .8s var(--ease-io); pointer-events: none; }   /* linen tint: how far back in the deck this card sits */
 .g-card .cap-glow, .g-card .cap-bg-glow { transition: opacity .25s ease-out; }
-.g-card { --electric: .22; }
+.g-card { --electric: 0; }   /* nothing round the art at rest */
 .g-card:hover, .g-card:focus-visible, .g-card[aria-pressed="true"] { --electric: 1; }
 .match[data-d="0"] .g-card:hover, .match[data-d="0"] .g-card:focus-visible { transform: rotate(calc(var(--dir) * 1.5deg)) scale(1.02); }   /* the card under the pointer leans in a touch */
-.g-card .cap-glow { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; border: 2px solid var(--accent); }
-.g-card .cap-glow-1 { opacity: calc(var(--electric) * .6); filter: blur(1px); }
+.g-card .cap-glow { content: ""; position: absolute; inset: -3px; border-radius: calc(var(--radius-md) + 3px); pointer-events: none; border: 2px solid var(--accent); }   /* outside the art, so it reads the same over dark or light artwork */
+.g-card .cap-glow-1 { opacity: var(--electric); border-color: color-mix(in srgb, var(--accent) 64%, transparent); }   /* the crisp ring: on hover it matches the section lines exactly */
 .g-card .cap-glow-2 { opacity: var(--electric); filter: blur(4px); }
 .g-card .cap-bg-glow { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: -1; transform: scale(1.1); filter: blur(32px); background: linear-gradient(-30deg, var(--accent), transparent, var(--accent)); opacity: calc(var(--electric) * .3); }
 /* Lightning clash in place of the plain "vs": two plain bolts, each with a soft glow behind it. No displacement filter. */
@@ -281,62 +284,106 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
    drawn with the design system's neutral reward card: value and points first, brand as plain text. */
 .carousel { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); min-width: 0; }
 .car-stage { display: flex; align-items: center; gap: var(--space-3); width: 100%; }
-.viewport { flex: 1; min-width: 0; overflow: hidden; border-radius: var(--radius-md); }
+.viewport { flex: 1; min-width: 0; overflow: hidden; border-radius: var(--radius-md); margin-block: -12px; }   /* the slides pad 12px for the glow; pull it back so the card itself sets the panel spacing */
 .track { display: flex; transition: transform .45s cubic-bezier(.4, 0, .2, 1); }
-.slide { min-width: 100%; display: flex; justify-content: center; }
-.gift { width: min(100%, 480px); background: var(--bg-highlight); border-radius: var(--radius-md); padding: var(--space-5) var(--space-5) var(--space-5) var(--space-6); display: grid; grid-template-columns: 1fr auto; gap: var(--space-5); align-items: center; }
+.slide { min-width: 100%; display: flex; justify-content: center; padding: 12px; }   /* room inside the viewport for the gift card's glow */
+.gift { width: min(100%, 480px); background: var(--bg-highlight); border-radius: var(--radius-md); border: 1px solid color-mix(in srgb, var(--accent) 64%, transparent); box-shadow: 0 0 8px 1px color-mix(in srgb, var(--accent) 55%, transparent); padding: 40px var(--space-5) 40px var(--space-6); display: grid; grid-template-columns: min-content minmax(0, 267px); gap: var(--space-5); align-items: center; justify-content: space-between; }   /* the card image gives way on narrow screens; the value never wraps */
 .gift-copy { align-self: stretch; display: flex; flex-direction: column; }
+.gift-copy .eyebrow { white-space: nowrap; }   /* the text column is as narrow as its widest unbreakable line, so the name wraps and the card image keeps its room */
 .gift-copy > div { margin: auto 0; }   /* the value sits centred in the space under the label */
-.gift-img { width: 232px; height: auto; border-radius: 12px; box-shadow: 0 10px 24px -12px rgba(34, 28, 23, .45); }
-.gift .val { font-size: 56px; line-height: 1; font-weight: 700; letter-spacing: -.02em; }
+.gift-img { width: 100%; height: auto; border-radius: 12px; box-shadow: 0 10px 24px -12px rgba(34, 28, 23, .45); }
+.gift .val { font-size: 56px; line-height: 1; font-weight: 700; letter-spacing: -.02em; white-space: nowrap; }   /* the value always stays on one line */
+.gift .val.long { font-size: 40px; }   /* wordy values like "1 month" step down so they still fit */
 .gift .name { font-size: 14px; color: var(--text-subdued); margin-top: var(--space-1); }
 .dots { display: flex; gap: var(--space-2); }
+.car-foot { display: flex; align-items: center; }
+/* Wide screens: the card and the copy share the first row and centre on each other; the dots-and-note row sits under the card.
+   So the panel keeps the same 48px top and bottom padding as the others. */
+@media (min-width: 901px) {
+  #players { row-gap: var(--space-4); }
+  #players .carousel { display: contents; }
+  #players .car-stage { grid-column: 1; grid-row: 1; }
+  #players .car-foot { grid-column: 1; grid-row: 2; justify-self: center; }
+  #players .car-stage, #players .car-foot { translate: 32px 0; }   /* nudge the whole carousel towards the copy */
+  #players .copy { grid-column: 2; grid-row: 1; }
+}
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--bg-tinted); border: 0; padding: 0; cursor: pointer; }
 .dot.on { background: var(--text-base); }
 
 .dev-col { min-width: 0; }
-/* Developers: one capsule stood out. The three other versions sit small and muted in a row behind; the winner is large in front with the
-   green outline, and the metric tiles overlap it. Sizes scale with the stage width through --u, like a picture. */
-.dev-stage { position: relative; container-type: inline-size; min-width: 0; max-width: 560px; margin-left: auto; aspect-ratio: 560 / 470; --u: calc(100cqi / 560); }
-.dv { position: absolute; margin: 0; }
-.dv img { display: block; width: 100%; aspect-ratio: 616 / 353; object-fit: cover; border-radius: var(--radius-md); }
-.dv-back { width: calc(var(--u) * 200); top: 0; z-index: 1; filter: saturate(.5) blur(1px); }
-.dv-back::after { content: ""; position: absolute; inset: 0; border-radius: var(--radius-md); background: color-mix(in srgb, var(--bg-base) 55%, transparent); }
-.dv-back:nth-child(1) { left: 0; } .dv-back:nth-child(2) { left: calc(var(--u) * 180); } .dv-back:nth-child(3) { left: calc(var(--u) * 360); }
-.dv-win { width: calc(var(--u) * 400); left: calc(var(--u) * 80); top: calc(var(--u) * 92); z-index: 2; }
-.dv-win img { outline: 3px solid var(--accent); outline-offset: 3px; }
-.dv-win .tag { position: absolute; left: calc(var(--u) * 14); top: calc(var(--u) * 14); z-index: 1; }
-.tag { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; background: var(--accent); color: var(--on-accent); padding: 3px 9px; border-radius: var(--radius-sm); }
-.stat { position: absolute; z-index: 3; display: flex; flex-direction: column; border-radius: calc(var(--u) * 8); padding: calc(var(--u) * 12) calc(var(--u) * 16); white-space: nowrap; }
-.stat-ctr { right: 0; top: calc(var(--u) * 56); }          /* which version wins, and how sure */
-.stat-speed { left: 0; top: calc(var(--u) * 190); }         /* how fast it gets picked */
-.stat-seg { left: 0; bottom: 0; }                           /* who it wins with */
-.stat-genre { right: 0; bottom: calc(var(--u) * 8); }       /* where it ranks in the genre */
-.stat .k { font-size: calc(var(--u) * 12); line-height: 1.5; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text-subdued); }
-.stat .big { font-size: calc(var(--u) * 32); line-height: 1.1; font-weight: 700; letter-spacing: -.01em; margin-top: calc(var(--u) * 4); color: var(--accent-deep); }
-.stat .sub { font-size: calc(var(--u) * 12); line-height: 1.5; color: var(--text-subdued); }
-.bars { display: grid; gap: calc(var(--u) * 6); margin-top: calc(var(--u) * 8); }
-.bar { display: grid; grid-template-columns: calc(var(--u) * 64) calc(var(--u) * 110) calc(var(--u) * 32); align-items: center; gap: calc(var(--u) * 8); font-size: calc(var(--u) * 12); color: var(--text-subdued); }
-.bar .track { height: calc(var(--u) * 8); border-radius: calc(var(--u) * 4); background: var(--bg-press); overflow: hidden; }
+/* Developers: the four capsules Jamie tested for Silly Suspects. Composed in Figma (Capsule Arts, Frame 25, 555 x 305) and locked
+   to that frame: everything is sized in --u, one unit of the 555-wide frame, so the whole stage scales like a single image.
+   The winner sits in the middle, the other three in a row below under a linen wash, and the results stand flat either side of the
+   winner. Each result is the full-size tile scaled by --s, with its insides in em. No surface behind the results: the text sits
+   on the panel. Static, no motion. */
+.dev-stage { position: relative; container-type: inline-size; width: 100%; aspect-ratio: 555 / 305; --u: calc(100cqi / 555); }
+.dv { position: absolute; margin: 0; top: calc(var(--u) * 206); width: calc(var(--u) * 173); }
+.dv img { display: block; width: 100%; aspect-ratio: 173 / 99; object-fit: cover; border-radius: calc(var(--u) * 7.86); }
+.dv-suburb { left: calc(var(--u) * 2); }
+.dv-police { left: calc(var(--u) * 180); }
+.dv-circus { left: calc(var(--u) * 358); }
+.dv.win { left: calc(var(--u) * 130); top: calc(var(--u) * 32); width: calc(var(--u) * 274); z-index: 2; }
+.dv.win img { aspect-ratio: 274 / 158; border-radius: calc(var(--u) * 9.06); box-shadow: 0 calc(var(--u) * 29.97) calc(var(--u) * 31.01) calc(var(--u) * 2.26) color-mix(in srgb, var(--accent) 45%, transparent), 0 calc(var(--u) * 59.99) calc(var(--u) * 71.76) calc(var(--u) * -22.64) rgba(34, 28, 23, .5); }
+.tag { font-size: 12px; font-weight: 700; background: var(--accent); color: var(--on-accent); padding: 3px 9px; border-radius: var(--radius-sm); }
+/* The three that weren't picked sit under the same linen wash as the games grid in the closing section (its 60% step),
+   so the winner reads as the choice without a label. The art itself is untouched. */
+.dv:not(.win)::after { content: ""; position: absolute; inset: 0; border-radius: calc(var(--u) * 7.86); background: color-mix(in srgb, var(--bg-base) 60%, transparent); pointer-events: none; }
+/* The results stand in two columns either side of the winner. */
+.wall { position: absolute; top: calc(var(--u) * 49); }
+.wall-l { left: 0; width: calc(var(--u) * 123.76); height: calc(var(--u) * 138.6); }
+.wall-r { left: calc(var(--u) * 410); width: calc(var(--u) * 145); height: calc(var(--u) * 140.1); }
+/* Alternative, kept for later: the two columns as walls turned in towards the winner, so the stage reads as a shallow room.
+   Each one hinges on the edge next to the winner, so its outer edge swings forward and looks taller.
+   Off by default. Preview it by adding ?dev=walls to the page URL, or turn it on for good by adding the class dev-walls to #devStage. */
+.dev-walls .wall-l { transform-origin: 100% 50%; transform: perspective(calc(var(--u) * 400)) rotateY(28deg); }
+.dev-walls .wall-r { transform-origin: 0 50%; transform: perspective(calc(var(--u) * 400)) rotateY(-28deg); }
+.tile { position: absolute; font-size: calc(var(--u) * 12 * var(--s)); }
+.wall-l .tile { right: 0; }
+.tile-ctr { top: 0; --s: .648; }                                    /* which version wins */
+.tile-speed { top: calc(var(--u) * 76); --s: .648; }                /* how fast it gets picked */
+.tile-seg { left: 0; top: 0; --s: .567; }                           /* who it wins with */
+.tile-genre { left: calc(var(--u) * 1); top: calc(var(--u) * 76); --s: .648; }   /* where it ranks */
+.stat { display: flex; flex-direction: column; padding: 1em 1.333em; white-space: nowrap; }
+.wall-l .stat { align-items: flex-end; text-align: right; }
+.stat .k { font-size: 1em; line-height: 1.5; font-weight: 700; color: var(--text-subdued); }
+.stat .big { font-size: 2.667em; line-height: 1.094; font-weight: 700; letter-spacing: -.01em; color: var(--accent-deep); }
+.stat .sub { font-size: 1em; line-height: 1.5; color: var(--text-subdued); }
+.bars { display: grid; grid-template-columns: 5.333em 7.35em max-content; align-items: center; gap: .5em .667em; margin-top: .5em; }   /* one grid for all rows, so labels, tracks and numbers line up */
+.bar { display: contents; line-height: 1.333; color: var(--text-subdued); }
+.bar .track { height: .667em; border-radius: .333em; background: var(--bg-press); overflow: hidden; }
 .bar .track i { display: block; height: 100%; width: var(--w); background: var(--accent); }
-.bar b { color: var(--text-base); font-variant-numeric: tabular-nums; text-align: right; }
+.bar b { color: var(--text-base); font-variant-numeric: tabular-nums; }
 @media (min-width: 901px) { #developers { grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); } }   /* give the art side more room */
 
 /* Finale: 70vh, the one big block of colour on the page. The wall is only a background. A dark overlay sits over it and the copy is the focus. */
 .finale { position: relative; min-height: 70vh; min-height: 70svh; overflow: hidden; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; text-align: center; padding: var(--space-8) var(--space-4); }
-.wall-bg { position: absolute; inset: 0; }
-.wall-flow { position: absolute; left: 0; right: 0; top: 100%; will-change: transform; }   /* origin at the bottom edge; JS slides it up */
+.wall-bg { position: absolute; inset: 48px var(--space-8); overflow: hidden; border-radius: var(--radius-md); }   /* inset like .band, so the cream panel frames the wall; corners rounded like the panels */
+.wall-flow { position: absolute; left: 0; right: 0; top: 100%; will-change: transform; backface-visibility: hidden; }   /* own GPU layer, so the slow drift moves in sub-pixel steps instead of 1px hops */   /* origin at the bottom edge; JS slides it up */
 .wall-flow .art { position: absolute; aspect-ratio: auto; }   /* JS sets left/top/width/height per block */
-.finale::before { content: ""; position: absolute; inset: 0; z-index: 1; background: radial-gradient(ellipse at center, color-mix(in srgb, var(--bg-base) 74%, transparent) 0%, color-mix(in srgb, var(--bg-base) 60%, transparent) 45%, color-mix(in srgb, var(--bg-base) 38%, transparent) 100%); }
+.finale::before { content: ""; position: absolute; inset: 0; z-index: 1; background: radial-gradient(ellipse at center, color-mix(in srgb, var(--bg-elevated) 74%, transparent) 0%, color-mix(in srgb, var(--bg-elevated) 60%, transparent) 45%, color-mix(in srgb, var(--bg-elevated) 38%, transparent) 100%); }
 .finale .copy-c { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: var(--space-4); max-width: 760px; }
 .finale h2 { font-size: var(--fs-h2); line-height: 1.25; font-weight: 700; letter-spacing: -.02em; text-wrap: balance; }
 
 .studios { padding: 48px var(--space-8); display: flex; flex-direction: column; align-items: center; gap: var(--space-3); text-align: center; }
 .studios h2 { margin: 0; font-size: var(--fs-h2); line-height: 1.2; font-weight: 700; letter-spacing: -.015em; }
-.logos { width: 100%; max-width: 1120px; margin-top: var(--space-5); display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--space-4) var(--space-6); }
-.logos img { display: block; width: 100%; max-width: 200px; height: auto; margin: 0 auto; opacity: .85; }
-@media (max-width: 900px) { .logos { grid-template-columns: repeat(3, 1fr); } }
-footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px; line-height: 1.5; color: var(--text-muted); display: flex; flex-direction: column; gap: var(--space-2); max-width: 90ch; }
+/* FAQ: two native dropdowns, one per audience. No script. Narrower than the other panels: it sits inside the rules
+   by the same distance the rules sit inside the panels (rule width minus that gap on each side). */
+.faq { width: calc(2 * min(100%, 1120px) - 100%); margin-inline: auto; padding: 48px var(--space-8); display: flex; flex-direction: column; align-items: center; gap: var(--space-5); }
+.faq h2 { font-size: var(--fs-h2); line-height: 1.2; font-weight: 700; letter-spacing: -.015em; }
+.faq details { width: 100%; max-width: 760px; background: var(--bg-highlight); border-radius: var(--radius-md); }
+.faq summary { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding: var(--space-5) var(--space-6); font-size: 20px; font-weight: 700; cursor: pointer; list-style: none; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary svg { width: 24px; height: 24px; fill: var(--accent); transform: rotate(90deg); transition: transform .2s ease-out; flex: none; }
+.faq details[open] summary svg { transform: rotate(-90deg); }
+.faq summary:hover { color: var(--accent); }
+.faq summary:focus-visible { outline: 3px solid var(--text-base); outline-offset: 2px; border-radius: var(--radius-md); }
+.faq dl { margin: 0; padding: 0 var(--space-6) var(--space-6); display: grid; gap: var(--space-4); }
+.faq dt { font-weight: 700; }
+.faq dd { margin: var(--space-1) 0 0; color: var(--text-subdued); }
+@media (max-width: 900px) { .faq { padding: var(--space-4); } .faq summary { padding: var(--space-4); } .faq dl { padding: 0 var(--space-4) var(--space-4); } }
+.logos { width: 100%; max-width: 880px; margin-top: var(--space-5); display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-6); align-items: center; }
+.logos img { display: block; height: 96px; width: auto; max-width: 100%; object-fit: contain; margin: 0 auto; }   /* same height for every logo, whatever its shape */
+@media (max-width: 900px) { .logos { grid-template-columns: repeat(2, 1fr); } }
 
 @media (max-width: 900px) {
   .band { grid-template-columns: 1fr; padding: var(--space-4); }
@@ -402,12 +449,12 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
     </header>
 
     <div class="hero" id="hero">
-      <h1 class="hero-title">Pick the capsule that grabs you</h1>
+      <h1 class="hero-title">Which one catches your eye?</h1>
       <!-- Deck: three matches in one box. The live one is in focus; the next two wait below the score, clear of it. Only the live one can be clicked. -->
       <div class="deck" id="deck">
-        <div class="match first" data-d="0"><div class="slot"><button type="button" class="g-card" aria-label="Pick the left capsule"><span class="cap-art"><img class="art" alt="" src="art/main_2771630.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i></span></button></div><span class="vs-clash" aria-hidden="true"><span class="vs-label">OR</span></span><div class="slot"><button type="button" class="g-card" aria-label="Pick the right capsule"><span class="cap-art"><img class="art" alt="" src="art/main_3593620.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i></span></button></div></div>
-        <div class="match" data-d="1" inert><div class="slot"><button type="button" class="g-card" aria-label="Pick the left capsule"><span class="cap-art"><img class="art" alt="" src="art/main_1001520.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i></span></button></div><span class="vs-clash" aria-hidden="true"><span class="vs-label">OR</span></span><div class="slot"><button type="button" class="g-card" aria-label="Pick the right capsule"><span class="cap-art"><img class="art" alt="" src="art/main_4062790.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i></span></button></div></div>
-        <div class="match" data-d="2" inert><div class="slot"><button type="button" class="g-card" aria-label="Pick the left capsule"><span class="cap-art"><img class="art" alt="" src="art/main_3338240.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i></span></button></div><span class="vs-clash" aria-hidden="true"><span class="vs-label">OR</span></span><div class="slot"><button type="button" class="g-card" aria-label="Pick the right capsule"><span class="cap-art"><img class="art" alt="" src="art/main_581150.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i></span></button></div></div>
+        <div class="match first" data-d="0"><div class="slot"><button type="button" class="g-card" aria-label="Pick the left Key Asset"><span class="cap-art"><img class="art" alt="" src="art/main_2771630.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i></span></button></div><span class="vs-clash" aria-hidden="true"><span class="vs-label">OR</span></span><div class="slot"><button type="button" class="g-card" aria-label="Pick the right Key Asset"><span class="cap-art"><img class="art" alt="" src="art/main_3593620.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i></span></button></div></div>
+        <div class="match" data-d="1" inert><div class="slot"><button type="button" class="g-card" aria-label="Pick the left Key Asset"><span class="cap-art"><img class="art" alt="" src="art/main_1001520.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i></span></button></div><span class="vs-clash" aria-hidden="true"><span class="vs-label">OR</span></span><div class="slot"><button type="button" class="g-card" aria-label="Pick the right Key Asset"><span class="cap-art"><img class="art" alt="" src="art/main_4062790.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i></span></button></div></div>
+        <div class="match" data-d="2" inert><div class="slot"><button type="button" class="g-card" aria-label="Pick the left Key Asset"><span class="cap-art"><img class="art" alt="" src="art/main_3338240.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i></span></button></div><span class="vs-clash" aria-hidden="true"><span class="vs-label">OR</span></span><div class="slot"><button type="button" class="g-card" aria-label="Pick the right Key Asset"><span class="cap-art"><img class="art" alt="" src="art/main_581150.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i></span></button></div></div>
       </div>
 
       <div class="score">
@@ -421,7 +468,7 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
            the app (db.py: SIGNUP_BONUS +300, EMAIL_BONUS +200) but aren't live yet, so the only ask
            here is the waitlist email — nothing about rewards we can't actually give out yet. -->
       <div class="g-end" id="gend">
-        <h2>Like the game? Join the waitlist and we'll let you know the moment your spot opens.</h2>
+        <h2>Want in early?</h2>
         <p class="g-end-sub">It's free, no spam.</p>
         <form class="join-form" id="demoForm" data-side="player" novalidate>
           <div class="join-shell">
@@ -462,7 +509,7 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
         <div class="viewport"><div class="track" id="cardTrack"></div></div>
         <button class="icon-btn" id="next" aria-label="Next gift card"><svg><use href="#i-next"/></svg></button>
       </div>
-      <div class="dots" id="dots"></div>
+      <div class="car-foot"><div class="dots" id="dots"></div></div>
     </div>
     <div class="copy">
       <p class="eyebrow">For players</p>
@@ -475,10 +522,10 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
   <hr class="rule">
 
   <!-- FINALE: wall as a dimmed background, copy on top. -->
-  <section class="finale" id="wall">
+  <section class="panel finale" id="wall">
     <div class="wall-bg" id="wallBg" aria-hidden="true"></div>
     <div class="copy-c">
-      <h2>Like the game? Join the waitlist and we'll let you know the moment your spot opens. It's free, no spam.</h2>
+      <h2>Want in early?</h2>
       <form class="join-form" id="finaleForm" data-side="player" novalidate>
         <div class="join-shell">
           <button type="button" class="btn btn-lg btn-primary tx tx-accent join-trigger" aria-expanded="false" aria-controls="finaleReveal">Join the waitlist</button>
@@ -513,8 +560,8 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
   <section class="panel band" id="developers">
     <div class="copy">
       <p class="eyebrow">For developers and studios</p>
-      <h2>Know which capsule wins before you spend on marketing.</h2>
-      <p>Upload your capsule versions. Players in your genre pick, head to head. You get the answer before launch.</p>
+      <h2>Know which Key Asset wins before you spend on marketing.</h2>
+      <p>Upload your Key Asset versions. Players in your genre pick, head to head. You get the answer before launch.</p>
       <ul class="facts">
         <li>Which version wins</li>
         <li>Who it wins with</li>
@@ -531,31 +578,47 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
   <!-- STUDIOS: who is already here. A static grid, everything visible at once. -->
   <section class="panel studios" id="studios">
     <p class="eyebrow">Already on the platform</p>
-    <h2>Studios testing their capsules with us</h2>
-    <div class="logos">
-      <img src="art/logos/01_nebula_interactive.svg" alt="Nebula Interactive">
-      <img src="art/logos/02_pixel_forge.svg" alt="Pixel Forge">
-      <img src="art/logos/03_ironwood_games.svg" alt="Ironwood Games">
-      <img src="art/logos/04_blue_harbor.svg" alt="Blue Harbor">
-      <img src="art/logos/05_kaiju_works.svg" alt="Kaiju Works">
-      <img src="art/logos/06_lumen_studios.svg" alt="Lumen Studios">
-      <img src="art/logos/07_pale_moon_games.svg" alt="Pale Moon Games">
-      <img src="art/logos/08_redshift_ltd.svg" alt="Redshift Ltd">
-      <img src="art/logos/09_volt_collective.svg" alt="Volt Collective">
-      <img src="art/logos/10_northwind_soft.svg" alt="Northwind Soft">
-      <img src="art/logos/11_hollow_pine.svg" alt="Hollow Pine">
-      <img src="art/logos/12_arcadia_publishing.svg" alt="Arcadia Publishing">
-      <img src="art/logos/13_tidebreak.svg" alt="Tidebreak">
-      <img src="art/logos/14_six_sided_studio.svg" alt="Six Sided Studio">
-      <img src="art/logos/15_glasshouse_games.svg" alt="Glasshouse Games">
+    <h2>Studios already testing their Key Assets with us</h2>
+    <div class="logos">   <!-- real studio logos, kept in art/studios -->
+      <img src="art/studios/classy_games.png" alt="Classy Games">
+      <img src="art/studios/dafluffs_games.png" alt="DaFluffs Games">
+      <img src="art/studios/fitnot_games.png" alt="FitNot Games">
+      <img src="art/studios/sheba_joy.png" alt="Sheba Joy Games">
     </div>
   </section>
 
-  <footer>
-    <p>Steam and the Steam logo are trademarks and/or registered trademarks of Valve Corporation in the U.S. and/or other countries. CapsuleHotOrNot is not affiliated with or endorsed by Valve Corporation.</p>
-    <p>Gift card brands are trademarks of their respective owners and are not sponsors of or affiliated with CapsuleHotOrNot.</p>
-  </footer>
+  <hr class="rule">
+
+  <!-- FAQ: one dropdown for players, one for developers. -->
+  <section class="panel faq" id="faq">
+    <h2>FAQ</h2>
+    <details>
+      <summary>For players<svg aria-hidden="true"><use href="#i-next"/></svg></summary>
+      <dl>
+        <div><dt>Is it free?</dt><dd>Yes. Joining and voting are free, always.</dd></div>
+        <div><dt>How do I earn rewards?</dt><dd>Every vote earns XP, and your multiplier grows the more you vote. Spend XP on gift cards, game keys and beta invites.</dd></div>
+        <div><dt>What do I actually do?</dt><dd>You see two Key Assets for upcoming games and pick the one that catches your eye. That's it.</dd></div>
+        <div><dt>When can I start?</dt><dd>Join the waitlist and we'll email you the moment your spot opens.</dd></div>
+      </dl>
+    </details>
+    <details>
+      <summary>For developers<svg aria-hidden="true"><use href="#i-next"/></svg></summary>
+      <dl>
+        <div><dt>Is this another SaaS subscription?</dt><dd>No, and it never will be. Right now it's 100% free. In the future, testing a Key Asset will cost a small one-off fee. No subscription, ever.</dd></div>
+        <div><dt>How does testing work?</dt><dd>Upload your Key Asset versions. Players who like your genre pick between them, head to head, and you see which one wins.</dd></div>
+        <div><dt>What results do I get?</dt><dd>Click-through rate for each version, how sure we are, how fast players decide, which player groups it wins with, and where it ranks in your genre.</dd></div>
+        <div><dt>Who are the players?</dt><dd>Real players who signed up to vote, matched to your game's genre.</dd></div>
+        <div><dt>Can I offer rewards to players?</dt><dd>Yes. Game keys and beta invites from studios are some of our most popular rewards.</dd></div>
+      </dl>
+    </details>
+  </section>
+
+  <hr class="rule">   <!-- closing rule: a little room to scroll past the last panel -->
+  <div class="end-space" aria-hidden="true"></div>
 </div>
+
+<!-- Floating copy of the topbar's waitlist button: shown only while that one is scrolled out of view. -->
+<a class="btn btn-lg btn-primary tx tx-accent float-join" id="floatJoin" href="#wall" data-join>Join the waitlist</a>
 
 <script src="vendor/gsap.min.js"></script>
 <script src="vendor/ScrollTrigger.min.js"></script>
@@ -563,7 +626,7 @@ footer { padding: var(--space-6) var(--space-4) var(--space-8); font-size: 12px;
 /* Real capsules (developer art pulled from Steam by collect_capsules.py): static/uploads/main_<appid>.jpg, copied to ./art. All src values go through artUrl(). */
 function artUrl(n) { return 'art/' + n; }
 var HERO = ["main_2771630.jpg", "main_3593620.jpg", "main_1001520.jpg", "main_4062790.jpg", "main_3338240.jpg", "main_581150.jpg", "main_2398100.jpg", "main_4600800.jpg", "main_3298140.jpg", "main_4692380.jpg"];   // 2 per match, 5 matches
-var DEV  = ["main_3174440.jpg", "main_1730600.jpg", "main_2217040.jpg", "main_4598970.jpg"];   // the four "versions"; [0] = the winner
+var DEV  = ["silly_suspects_park.jpg", "silly_suspects_circus.jpg", "silly_suspects_suburb.jpg", "silly_suspects_police.jpg"];   // four versions of one game's capsule (Silly Suspects); [0] = the winner
 var WALL = ["main_1001520.jpg", "main_1730600.jpg", "main_2195450.jpg", "main_2217040.jpg", "main_2326200.jpg", "main_2398100.jpg", "main_2771630.jpg", "main_3120770.jpg", "main_3174440.jpg", "main_3298140.jpg", "main_3338240.jpg", "main_3474620.jpg", "main_3593620.jpg", "main_4062790.jpg", "main_4240600.jpg", "main_4598970.jpg", "main_4600800.jpg", "main_4647110.jpg", "main_4690740.jpg", "main_4692380.jpg", "main_4697010.jpg", "main_4698730.jpg", "main_4825820.jpg", "main_4958620.jpg", "main_5070330.jpg", "main_5079330.jpg", "main_5086800.jpg", "main_5222780.jpg", "main_581150.jpg", "main_746530.jpg", "main_876240.jpg", "main_3664750.jpg", "main_1111150.jpg", "main_2826260.jpg"];
 
 /* Hero mini-game. Pick a capsule, score bumps, the next matches step up from behind, match 5 asks for the waitlist.
@@ -663,14 +726,19 @@ var WALL = ["main_1001520.jpg", "main_1730600.jpg", "main_2195450.jpg", "main_22
 /* Players: gift-card carousel. Mechanics as /player/join: auto-advance, arrows, dots jump to a card.
    Cards follow the reward template. Points and names come from the REWARDS catalogue in app.py (display only). */
 (function () {
-  var GIFTS = [   // [value, name, card image in art/gift (copied from static/gift_cards)]
-    ['$10', 'Steam gift card', '01_steam-wallet-10.svg'], ['$25', 'Amazon gift card', '02_amazon-25.svg'], ['$20', 'PlayStation Store', '03_playstation-store-20.svg'],
-    ['1 month', 'Xbox Game Pass', '04_xbox-game-pass.svg'], ['$15', 'Nintendo eShop', '05_nintendo-eshop-15.svg'], ['$10', 'Epic Games', '06_epic-games-10.svg'],
-    ['1 month', 'Discord Nitro', '07_discord-nitro.svg'], ['$10', 'PayPal cash', '08_paypal-cash-10.svg']
+  var GIFTS = [   // [value, name, card image in art/gift]. 01-08 copied from static/gift_cards; 09-20 drawn for the landing page in the same template.
+    ['1 game', 'Key for a game you voted on', '09_game-key.svg'], ['Beta', 'Exclusive beta invite', '10_beta-invite.svg'],
+    ['$50', 'Steam gift card', '01_steam-wallet-50.svg'], ['$50', 'Amazon gift card', '02_amazon-50.svg'], ['$50', 'PlayStation Store', '03_playstation-store-50.svg'],
+    ['3 months', 'Xbox Game Pass', '04_xbox-game-pass-3mo.svg'], ['$50', 'Nintendo eShop', '05_nintendo-eshop-50.svg'], ['$50', 'Epic Games', '06_epic-games-50.svg'],
+    ['3 months', 'Discord Nitro', '07_discord-nitro-3mo.svg'], ['$50', 'PayPal cash', '08_paypal-cash-50.svg'],
+    ['$50', 'Roblox gift card', '11_roblox-50.svg'], ['$50', 'Fortnite V-Bucks', '12_fortnite-vbucks-50.svg'], ['$50', 'Riot Points (Valorant, League)', '13_riot-points-50.svg'],
+    ['$50', 'App Store gift card', '14_app-store-50.svg'], ['$50', 'Google Play gift card', '15_google-play-50.svg'], ['$50', 'GOG gift card', '16_gog-50.svg'],
+    ['$50', 'Humble Bundle credit', '17_humble-50.svg'], ['3 months', 'EA Play', '18_ea-play-3mo.svg'], ['3 months', 'Ubisoft+', '19_ubisoft-plus-3mo.svg'],
+    ['$50', 'Twitch gift card', '20_twitch-50.svg']
   ];
   var track = document.getElementById('cardTrack'), dots = document.getElementById('dots'), car = document.getElementById('car');
   track.innerHTML = GIFTS.map(function (g) {
-    return '<div class="slide"><div class="gift"><div class="gift-copy"><span class="eyebrow">Exchange XP for</span><div><div class="val">' + g[0] + '</div><div class="name">' + g[1] + '</div></div></div><img class="gift-img" alt="" src="art/gift/' + g[2] + '"></div></div>';
+    return '<div class="slide"><div class="gift"><div class="gift-copy"><span class="eyebrow">Exchange XP for</span><div><div class="val' + (g[0].length > 4 ? ' long' : '') + '">' + g[0] + '</div><div class="name">' + g[1] + '</div></div></div><img class="gift-img" alt="" src="art/gift/' + g[2] + '"></div></div>';
   }).join('');
   var i = 0, timer, hold = false, calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
   GIFTS.forEach(function (_, n) {
@@ -696,22 +764,22 @@ var WALL = ["main_1001520.jpg", "main_1730600.jpg", "main_2195450.jpg", "main_22
   go(0);
 })();
 
-/* Developers: DEV[0] is the capsule with the best result, in the middle of an equal 3x3 grid that does not move.
-   Floating cards show what the dashboard measures (templates/game_detail.html): matchups, wins, losses, win rate,
-   percentile, average win rate. The client's two priorities are added: CTR and a segment heatmap.
-   In this app a click on a capsule is the vote, so CTR = picked when shown = win rate.
-   The heatmap (win rate by player genre segment) is on the roadmap, not in the build yet. All numbers are sample data. */
+/* Developers: the four Silly Suspects capsules from Figma Frame 25. DEV[0] (park) is the winner, centred; the other
+   three sit in a row below, washed out. The results stand flat either side (angled walls: ?dev=walls). Static, no motion. The numbers are sample data.
+   The segment bars (win rate by player genre) are on the roadmap, not in the build yet. In this app a click on a capsule is the
+   vote, so CTR = picked when shown = win rate. */
 (function () {
-  // One winner in front of its group, and one tile per thing we tell the developer. Placeholder art: four different games stand in for four versions.
   var SEG = [['Roguelike', 71], ['Strategy', 58], ['RPG', 44]];
   var bars = SEG.map(function (g) { return '<div class="bar"><span>' + g[0] + '</span><span class="track"><i style="--w:' + g[1] + '%"></i></span><b>' + g[1] + '%</b></div>'; }).join('');
-  document.getElementById('devStage').innerHTML =
-    DEV.slice(1).map(function (f) { return '<figure class="dv dv-back"><img class="art" alt="" src="' + artUrl(f) + '"></figure>'; }).join('') +
-    '<figure class="dv dv-win"><span class="tag">Winner</span><img class="art" alt="" src="' + artUrl(DEV[0]) + '"></figure>' +
-    '<div class="stat stat-ctr tx tx-paper"><div class="k">Which version wins</div><div class="big">65% CTR</div><div class="sub">92% sure after 240 matchups</div></div>' +
-    '<div class="stat stat-speed tx tx-paper"><div class="k">Decision speed</div><div class="big">1.4s</div><div class="sub">fastest of your four</div></div>' +
-    '<div class="stat stat-seg tx tx-paper"><div class="k">Who it wins with</div><div class="bars">' + bars + '</div></div>' +
-    '<div class="stat stat-genre tx tx-paper"><div class="k">In your genre</div><div class="big">Top 32%</div><div class="sub">beats 68% of capsules tested</div></div>';
+  var SLOT = ['park', 'circus', 'suburb', 'police'];   // matches the order of DEV
+  function tile(cls, k, big, sub) { return '<div class="tile ' + cls + '"><div class="stat"><div class="k">' + k + '</div><div class="big">' + big + '</div><div class="sub">' + sub + '</div></div></div>'; }
+  var stage = document.getElementById('devStage');
+  if (/[?&]dev=walls\b/.test(location.search)) stage.classList.add('dev-walls');   // the angled-walls alternative, see the CSS
+  stage.innerHTML =
+    DEV.map(function (a, i) { return '<figure class="dv dv-' + SLOT[i] + (i ? '' : ' win') + '"><img class="art" alt="" src="' + artUrl(a) + '"></figure>'; }).join('') +
+    '<div class="wall wall-l">' + tile('tile-ctr', 'Key Asset A', '65% CTR', '92% sure after 240 matchups') + tile('tile-speed', 'Decision speed', '1.4s', 'fastest of your four') + '</div>' +
+    '<div class="wall wall-r"><div class="tile tile-seg"><div class="stat"><div class="k">Who it wins with</div><div class="bars">' + bars + '</div></div></div>' +
+    tile('tile-genre', 'In your genre', 'Top 32%', 'beats 68% of Key Assets tested') + '</div>';
 })();
 
 /* Closing section: a wall of capsules behind the copy, under the dark overlay. The wall is a grid of cells; a block is one cell or a 2x2.
@@ -747,13 +815,13 @@ var WALL = ["main_1001520.jpg", "main_1730600.jpg", "main_2195450.jpg", "main_22
     var W = host.clientWidth, H = host.clientHeight;
     cols = Math.max(3, Math.min(6, Math.floor(W / 180))); cw = (W - GAP * (cols - 1)) / cols; ch = cw * 353 / 616; pitch = ch + GAP;
     h = []; for (var i = 0; i < cols; i++) h.push(0);
-    blocks = []; bigCells = {}; flow.innerHTML = ''; offset = H; fill(); flow.style.transform = 'translateY(' + -offset + 'px)';
+    blocks = []; bigCells = {}; flow.innerHTML = ''; offset = H; fill(); flow.style.transform = 'translate3d(0,' + -offset + 'px,0)';
   }
   var on = false, last = 0, resizeT;
   function tick(now) {
     if (!on) return;
     offset += SPEED * (now - last) / 1000; last = now;
-    flow.style.transform = 'translateY(' + -offset + 'px)';
+    flow.style.transform = 'translate3d(0,' + -offset + 'px,0)';
     fill();
     var gone = offset - host.clientHeight;
     while (blocks.length && blocks[0].end < gone) { var b = blocks.shift(); b.el.remove(); b.cells.forEach(function (key) { delete bigCells[key]; }); }
@@ -804,8 +872,7 @@ var WALL = ["main_1001520.jpg", "main_1730600.jpg", "main_2195450.jpg", "main_22
   });
 })();
 
-/* Logo (design system v1.1): the cards slide together the first time it scrolls into view, the name opens on hover or focus.
-   Touch screens show the full logo. Reduced motion just switches. Without GSAP the full logo stays visible. */
+/* Logo (design system v1.1): the full logo is always shown; the cards slide together the first time it scrolls into view. */
 // The symbol as one evenodd path. p is 0 with the cards apart and 1 with them overlapping.
 var CARD = { w: 264.4, h: 177.2, r: 20.6 }, EDGE = 5.73;
 var BACK = { x: 154.16, y: 127.48, deg: -19.4, from: [-60, -40] };
@@ -827,51 +894,26 @@ function symbolParts(p) {
 }
 function symbolPath(p) { var s = symbolParts(p); return s.ringOuter + ' ' + s.ringInner + ' ' + s.card; }
 (function () {
-  // Without GSAP the full logo just stays visible.
-  if (typeof gsap === 'undefined') return;
+  // The name is always shown. Without GSAP or with reduced motion, the symbol starts in place too.
+  if (typeof gsap === 'undefined' || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  document.querySelectorAll('.logo:not([data-static]) .lg-sym').forEach(function (sym) {
+    // The two cards slide together the first time the logo scrolls into view.
+    var pose = { p: 0 };
+    sym.setAttribute('d', symbolPath(0));
+    ScrollTrigger.create({
+      trigger: sym.closest('.logo'), start: 'top 85%', once: true,
+      onEnter: function () {
+        gsap.to(pose, { p: 1, duration: 1.1, ease: 'power3.inOut', onUpdate: function () { sym.setAttribute('d', symbolPath(pose.p)); } });
+      }
+    });
+  });
+})();
 
-  var logos = document.querySelectorAll('.logo:not([data-static])');
-  gsap.matchMedia().add(
-    { any: 'all', reduce: '(prefers-reduced-motion: reduce)', touch: '(hover: none)' },   // 'all' so this always runs
-    function (ctx) {
-      var reduce = ctx.conditions.reduce, touch = ctx.conditions.touch, undo = [];
-      logos.forEach(function (el) {
-        var clip = el.querySelector('.lg-clip'), lines = el.querySelectorAll('.lg-l1, .lg-l2');
-
-        // The two cards slide together the first time the logo scrolls into view.
-        var sym = el.querySelector('.lg-sym');
-        if (sym && !reduce) {
-          var pose = { p: 0 };
-          sym.setAttribute('d', symbolPath(0));
-          ScrollTrigger.create({
-            trigger: el, start: 'top 85%', once: true,
-            onEnter: function () {
-              gsap.to(pose, { p: 1, duration: 1.1, ease: 'power3.inOut', onUpdate: function () { sym.setAttribute('d', symbolPath(pose.p)); } });
-            }
-          });
-        }
-        // The name slides out from behind the symbol while the mask opens to the right.
-        var tl = gsap.timeline({ paused: true, defaults: { ease: 'power3.out' } });
-        tl.fromTo(clip, { attr: { width: 0 } }, { attr: { width: 860 }, duration: 0.55 }, 0)
-          .fromTo(lines, { x: -140, opacity: 0 }, { x: 0, opacity: 1, duration: 0.5, stagger: 0.06 }, 0);
-        tl.progress(touch ? 1 : 0);   // touch screens have no hover, so show the full logo
-        if (touch) { undo.push(function () { tl.kill(); }); return; }
-
-        function open()  { if (reduce) { tl.progress(1); } else { tl.timeScale(1).play(); } }
-        function close() { if (reduce) { tl.progress(0); } else { tl.timeScale(1.5).reverse(); } }
-        el.addEventListener('pointerenter', open);
-        el.addEventListener('pointerleave', close);
-        el.addEventListener('focusin', open);
-        el.addEventListener('focusout', close);
-        undo.push(function () {
-          el.removeEventListener('pointerenter', open); el.removeEventListener('pointerleave', close);
-          el.removeEventListener('focusin', open); el.removeEventListener('focusout', close);
-          tl.kill();
-        });
-      });
-      return function () { undo.forEach(function (fn) { fn(); }); };
-    }
-  );
+/* Floating waitlist button: on while the topbar's button is out of view. */
+(function () {
+  var top = document.querySelector('.topbar [data-join]'), fl = document.getElementById('floatJoin');
+  if (!top || !fl || !('IntersectionObserver' in window)) return;
+  new IntersectionObserver(function (e) { fl.classList.toggle('on', !e[0].isIntersecting); }).observe(top);
 })();
 
 /* Join flow: every .join-form (the finale form and the end-of-demo panel) is the same component —
