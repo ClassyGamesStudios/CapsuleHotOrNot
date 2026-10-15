@@ -4,9 +4,7 @@ Werkzeug==3.0.3
 requests==2.33.1
 PyMySQL==1.1.1
 Pillow==12.3.0
-numpy==2.5.1
+numpy==2.2.6
 scikit-learn==1.5.1
-# scikit-learn 1.5.1 pulls scipy, which warns on numpy >= 2.3. Harmless here
-# (we only use KMeans-free sklearn metrics + TSNE), but pin it so the warning
-# doesn't change shape between machines.
+# scikit-learn 1.5.1 pulls scipy; scipy 1.14.1 requires numpy < 2.3, hence the numpy pin above.
 scipy==1.14.1

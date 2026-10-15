@@ -6,7 +6,7 @@
 <title>CapsuleHotOrNot — landing v1</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400..800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@800&family=Figtree:wght@400..800&display=swap" rel="stylesheet">
 <style>
 /* Landing v1. Tokens from docs/brand-design-system.html (v1, approved 2026-09-25).
    Hero is 100vh, every other section 70vh. Artwork is real Steam main capsules (616x353, pulled by collect_capsules.py).
@@ -19,15 +19,17 @@
   --accent: #2b52a8; --on-accent: #faf7f1; --accent-deep: #1f4290;   /* leaf green, warm-leaning to share the linen's undertone; -deep is the same green dark enough for small text */
   --inverted: #221c17; --on-inverted: #faf7f1;
   --win: #3f7d3a; --negative: #a8352a;
+  --font-display: "Archivo", "Figtree", system-ui, sans-serif;   /* headers only: hero title and the player/developer group titles */
+  --fs-display: clamp(30px, 3.4vw, 46px);
   --font-sans: "Figtree", system-ui, -apple-system, "Segoe UI", "Helvetica Neue", arial, sans-serif;
   --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px; --space-6: 24px; --space-8: 32px;
   --radius-sm: 4px; --radius-md: 8px; --radius-lg: 16px; --radius-circle: 50%;
   --fs-h2: clamp(24px, 2.4vw, 32px);   /* one headline size below the hero */
   --control-lg: 48px;
   /* texture contrast by state (design system v1.1) */
-  --c-rest: 0.2; --c-view: 0.55; --c-active: 1;
+  --c-rest: 0.55; --c-active: 1;   /* rest is the old in-view level, so every button looks like the studios one wherever it sits */
 }
-@property --c { syntax: "<number>"; inherits: true; initial-value: 0.2; }
+@property --c { syntax: "<number>"; inherits: true; initial-value: 0.55; }
 
 * { box-sizing: border-box; }
 html { background: var(--bg-base); scroll-behavior: smooth; }
@@ -36,8 +38,11 @@ a { color: inherit; text-decoration: none; }
 h1, h2, h3, p { margin: 0; }
 .page { max-width: 1400px; margin: 0 auto; padding: var(--space-2); }
 .page > * + * { margin-top: 64px; }
-.rule { border: 0; height: 2px; width: min(100%, 1120px); margin: 56px auto 0; background: color-mix(in srgb, var(--accent) 64%, transparent); }   /* a thin cobalt rule between sections */
+.rule { border: 0; height: 2px; width: min(100%, 1120px); margin: 56px auto 0; background: none; }   /* invisible now: only keeps the spacing between sections */
+.rule-line { background: color-mix(in srgb, var(--accent) 64%, transparent); margin-top: 112px; }   /* the one visible rule, above the FAQ */
 .page > .rule + * { margin-top: 56px; }   /* block layout, not flex: a flex-item pin target breaks GSAP's spacer sizing */
+.group-title { margin-bottom: 0; text-align: center; font: 800 var(--fs-display)/1.1 var(--font-display); letter-spacing: -.02em; color: var(--accent); }   /* "For players" / "For developers": names the panels below it, between the rule and the panel */
+.page > .group-title + * { margin-top: 24px; }
 .end-space { height: 1px; }   /* gives the closing rule the same gap below it as the others */
 .panel { background: var(--bg-elevated); border-radius: var(--radius-md); border: 1px solid color-mix(in srgb, var(--accent) 64%, transparent); box-shadow: 0 0 8px 1px color-mix(in srgb, var(--accent) 55%, transparent); }   /* same cobalt line as the rules, with the soft glow of a hovered capsule */
 .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--accent-deep); }
@@ -109,6 +114,7 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 .float-join { position: fixed; right: var(--space-6); bottom: var(--space-6); z-index: 50; box-shadow: 0 10px 28px -10px rgba(34, 28, 23, .5);
   opacity: 0; visibility: hidden; transform: translateY(12px); transition: opacity .25s ease-out, transform .25s ease-out, visibility 0s .25s; }
 .float-join.on { opacity: 1; visibility: visible; transform: none; transition: opacity .25s ease-out, transform .25s ease-out, visibility 0s; }
+.float-join.on:hover { transform: scale(1.04); transition-duration: 33ms; } .float-join.on:hover:active { transform: none; }   /* .on outranks .btn:hover, so the hover and press are restated here */
 @media (max-width: 900px) { .float-join { right: var(--space-4); bottom: var(--space-4); } }
 /* Hero stage: a deck. The live match is the front card; the next two sit behind it, each 10% smaller than the one in front (each card scales about its own centre, so both
    its edges stay hidden) and tucked up so only a --peek strip shows above the one in front, tinted toward the page and blurred so they read as "coming up" without giving the games away. The score lives in the topbar.
@@ -116,7 +122,7 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
    match's height: about 1.4x the old 280px, capped by the deck width (--w) and by the viewport height. */
 .hero { --w: min(100vw - 32px, 1560px); --hd: min(393px, calc((var(--w) - 148px) * .268 + 22px), calc(100svh - 384px)); --peek: 36px; --deck-top: calc(44% - var(--hd) / 2 + var(--peek)); --ease-io: cubic-bezier(.65, 0, .35, 1); position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: var(--space-4); }
 
-.hero-title { position: absolute; left: 0; right: 0; bottom: calc(100% - var(--deck-top) + var(--peek) * 3); margin: 0; text-align: center; font-size: var(--fs-h2); line-height: 1.25; font-weight: 700; letter-spacing: -.015em; color: var(--accent); }   /* one --peek above the back of the stack */
+.hero-title { position: absolute; left: 0; right: 0; bottom: calc(100% - var(--deck-top) + var(--peek) * 3); margin: 0; text-align: center; font: 800 var(--fs-display)/1.1 var(--font-display); letter-spacing: -.02em; color: var(--accent); }   /* one --peek above the back of the stack */
 .deck { position: absolute; left: calc(50% - var(--w) / 2); width: var(--w); top: var(--deck-top); height: var(--hd); z-index: 2; }
 /* One match = two capsules and the clash between them. Its place in the queue is a single attribute, data-d (0 live, 1 next, 2 after, 3 waiting to enter, out leaving);
    JS only rotates that number and CSS eases between the states, so a card always travels from behind to the focus point on the same in-out curve. */
@@ -214,8 +220,10 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
    .join-reveal into a rendered-but-still-invisible state one frame before the opacity flip —
    otherwise a transition starting from display:none never plays. */
 .join-form { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); width: 100%; max-width: 360px; }
-.join-shell { position: relative; overflow: hidden; border-radius: var(--radius-lg); background: var(--bg-elevated); }
+.join-shell { position: relative; overflow: hidden; border-radius: var(--radius-lg); background: var(--bg-elevated); transition: transform 33ms; }
 .join-trigger { width: 100%; opacity: 1; transition: opacity .15s cubic-bezier(.3, 0, 0, 1); }
+.join-trigger:hover { transform: none; }   /* the shell clips its button, so the shell grows instead, like every other waitlist button */
+.join-form:not([data-open="true"]) .join-shell:has(> .join-trigger:hover) { transform: scale(1.04); }
 .join-reveal { display: none; opacity: 0; transition: opacity .15s cubic-bezier(.3, 0, 0, 1); }
 .join-reveal.is-showing { display: block; }
 .join-form[data-open="true"] .join-reveal { opacity: 1; }
@@ -246,8 +254,8 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
    what the live site does. */
 @media (min-width: 901px) {
   .join-form:has(.join-shell) { max-width: 92vw; }
-  .join-shell { height: calc(var(--control-lg) + var(--space-2)); width: var(--join-collapsed-w, 240px); max-width: 92vw; border-radius: var(--radius-md); transition: width .3s cubic-bezier(.3, 0, 0, 1); }
-  .join-form[data-open="true"] .join-shell { width: min(720px, 92vw); }
+  .join-shell { height: var(--control-lg); width: var(--join-collapsed-w, 240px); max-width: 92vw; border-radius: var(--radius-md); transition: width .3s cubic-bezier(.3, 0, 0, 1), height .3s cubic-bezier(.3, 0, 0, 1), transform 33ms; }
+  .join-form[data-open="true"] .join-shell { width: min(720px, 92vw); height: calc(var(--control-lg) + var(--space-2)); }   /* closed it's the same 48px button as the nav; open it grows to fit the form */
   .join-trigger { position: absolute; inset: 0; }
   .join-form[data-open="true"] .join-trigger { opacity: 0; pointer-events: none; }
   .join-reveal, .join-reveal.is-showing { display: flex; position: absolute; inset: 0; pointer-events: none; }
@@ -270,11 +278,13 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 
 /* Sections: 70vh. Copy sits directly on the panel, no card behind it. */
 .band { padding: 48px var(--space-8); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-8) 64px; align-items: center; }
-.copy { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-3); }
+.copy { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-5); }
 .copy h2 { font-size: var(--fs-h2); line-height: 1.2; font-weight: 700; letter-spacing: -.015em; text-wrap: balance; }
 .copy p:not(.eyebrow) { color: var(--text-subdued); max-width: 46ch; }
-.copy .btn-text { padding-left: 0; font-size: 16px; color: var(--text-base); margin-top: var(--space-2); }
-.facts { list-style: none; margin: var(--space-2) 0 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3) var(--space-5); font-size: 18px; font-weight: 700; line-height: 1.25; letter-spacing: -.01em; }   /* the four things we tell a developer, as headlines */
+.copy .btn-text { padding-left: 0; font-size: 16px; color: var(--accent); margin-top: var(--space-2); transform-origin: left center; }
+.copy .btn-text:hover { color: var(--accent); transform: scale(1.04); }   /* grows like the waitlist button; scales from the left so it stays aligned with the copy */
+.facts { list-style: none; margin: var(--space-3) 0 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3) var(--space-5); font-size: 18px; font-weight: 700; line-height: 1.25; letter-spacing: -.01em; }   /* the four things we tell a developer, as headlines */
+.facts + p { margin-top: var(--space-3); }   /* same 32px under the bullets as above them */
 .facts li { position: relative; padding-left: 22px; }
 .facts li::before { content: ""; position: absolute; left: 0; top: .42em; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
 
@@ -302,34 +312,38 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 @media (min-width: 901px) {
   #players { row-gap: var(--space-4); }
   #players .carousel { display: contents; }
-  #players .car-stage { grid-column: 1; grid-row: 1; }
-  #players .car-foot { grid-column: 1; grid-row: 2; justify-self: center; }
-  #players .car-stage, #players .car-foot { translate: 32px 0; }   /* nudge the whole carousel towards the copy */
-  #players .copy { grid-column: 2; grid-row: 1; }
+  #players .car-stage { grid-column: 2; grid-row: 1; }
+  #players .car-foot { grid-column: 2; grid-row: 2; justify-self: center; }
+  #players .car-stage, #players .car-foot { translate: -32px 0; }   /* nudge the whole carousel towards the copy */
+  #players .copy { grid-column: 1; grid-row: 1; }
 }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--bg-tinted); border: 0; padding: 0; cursor: pointer; }
 .dot.on { background: var(--text-base); }
 
 .dev-col { min-width: 0; }
+.band { container-type: inline-size; }
+.band .copy h2 { font-size: min(var(--fs-h2), calc((100cqi - 64px) * .0224)); }   /* one size for both panels' headlines: 5.6% of the developers' copy column (.8fr of 2fr, after the 64px gap), so their two lines, split at the <br>, always fit */
 /* Developers: the four capsules Jamie tested for Silly Suspects. Composed in Figma (Capsule Arts, Frame 25, 555 x 305) and locked
    to that frame: everything is sized in --u, one unit of the 555-wide frame, so the whole stage scales like a single image.
    The winner sits in the middle, the other three in a row below under a linen wash, and the results stand flat either side of the
    winner. Each result is the full-size tile scaled by --s, with its insides in em. No surface behind the results: the text sits
    on the panel. Static, no motion. */
-.dev-stage { position: relative; container-type: inline-size; width: 100%; aspect-ratio: 555 / 305; --u: calc(100cqi / 555); }
-.dv { position: absolute; margin: 0; top: calc(var(--u) * 206); width: calc(var(--u) * 173); }
-.dv img { display: block; width: 100%; aspect-ratio: 173 / 99; object-fit: cover; border-radius: calc(var(--u) * 7.86); }
+.dev-stage { position: relative; container-type: inline-size; width: 100%; aspect-ratio: 555 / 289; --u: calc(100cqi / 555); }
+.dv { position: absolute; margin: 0; top: calc(var(--u) * 190); width: calc(var(--u) * 173); }   /* the three that lost, 32u below the winner; the frame ends at their bottom */
+.dv img { display: block; width: 100%; aspect-ratio: 173 / 99; object-fit: cover; border-radius: var(--radius-sm); }
 .dv-suburb { left: calc(var(--u) * 2); }
 .dv-police { left: calc(var(--u) * 180); }
 .dv-circus { left: calc(var(--u) * 358); }
-.dv.win { left: calc(var(--u) * 130); top: calc(var(--u) * 32); width: calc(var(--u) * 274); z-index: 2; }
-.dv.win img { aspect-ratio: 274 / 158; border-radius: calc(var(--u) * 9.06); box-shadow: 0 calc(var(--u) * 29.97) calc(var(--u) * 31.01) calc(var(--u) * 2.26) color-mix(in srgb, var(--accent) 45%, transparent), 0 calc(var(--u) * 59.99) calc(var(--u) * 71.76) calc(var(--u) * -22.64) rgba(34, 28, 23, .5); }
+.dv.win { left: calc(var(--u) * 130); top: 0; width: calc(var(--u) * 274); z-index: 2; }
+.dv.win img { aspect-ratio: 274 / 158; border-radius: var(--radius-sm); outline: 1px solid color-mix(in srgb, var(--accent) 64%, transparent); box-shadow: 0 0 8px 1px color-mix(in srgb, var(--accent) 55%, transparent), 0 calc(var(--u) * 29.97) calc(var(--u) * 31.01) calc(var(--u) * 2.26) color-mix(in srgb, var(--accent) 22.5%, transparent), 0 calc(var(--u) * 59.99) calc(var(--u) * 71.76) calc(var(--u) * -22.64) rgba(34, 28, 23, .25); }   /* outline and glow like the gift card, plus the Figma drop shadow at half strength */
 .tag { font-size: 12px; font-weight: 700; background: var(--accent); color: var(--on-accent); padding: 3px 9px; border-radius: var(--radius-sm); }
 /* The three that weren't picked sit under the same linen wash as the games grid in the closing section (its 60% step),
    so the winner reads as the choice without a label. The art itself is untouched. */
-.dv:not(.win)::after { content: ""; position: absolute; inset: 0; border-radius: calc(var(--u) * 7.86); background: color-mix(in srgb, var(--bg-base) 60%, transparent); pointer-events: none; }
+.dv .rank { position: absolute; left: calc(var(--u) * 3); bottom: calc(var(--u) * 3); z-index: 1; display: grid; place-items: center; min-width: calc(var(--u) * 18); height: calc(var(--u) * 18); padding: 0 calc(var(--u) * 4); border-radius: calc(var(--u) * 3); background: var(--paper); color: var(--accent-deep); font-size: calc(var(--u) * 11); font-weight: 700; line-height: 1; box-shadow: 0 calc(var(--u) * 2) calc(var(--u) * 6) rgba(34, 28, 23, .25); }   /* finishing place, tucked into the bottom left; sits above the wash so it stays crisp */
+.dv:not(.win) .rank { min-width: calc(var(--u) * 14.4); height: calc(var(--u) * 14.4); padding: 0 calc(var(--u) * 3.2); border-radius: calc(var(--u) * 2.4); font-size: calc(var(--u) * 8.8); }   /* 2, 3, 4: 80% of the winner's square */
+.dv:not(.win)::after { content: ""; position: absolute; inset: 0; border-radius: var(--radius-sm); background: color-mix(in srgb, var(--bg-base) 60%, transparent); pointer-events: none; }
 /* The results stand in two columns either side of the winner. */
-.wall { position: absolute; top: calc(var(--u) * 49); }
+.wall { position: absolute; top: calc(var(--u) * 17); }   /* the Figma frame minus its empty top 32u, so the art is flush top and bottom like the copy */
 .wall-l { left: 0; width: calc(var(--u) * 123.76); height: calc(var(--u) * 138.6); }
 .wall-r { left: calc(var(--u) * 410); width: calc(var(--u) * 145); height: calc(var(--u) * 140.1); }
 /* Alternative, kept for later: the two columns as walls turned in towards the winner, so the stage reads as a shallow room.
@@ -343,17 +357,18 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 .tile-speed { top: calc(var(--u) * 76); --s: .648; }                /* how fast it gets picked */
 .tile-seg { left: 0; top: 0; --s: .567; }                           /* who it wins with */
 .tile-genre { left: calc(var(--u) * 1); top: calc(var(--u) * 76); --s: .648; }   /* where it ranks */
-.stat { display: flex; flex-direction: column; padding: 1em 1.333em; white-space: nowrap; }
+.stat { display: flex; flex-direction: column; padding: 1em 1.333em; white-space: nowrap; background: var(--paper); border-radius: .667em; box-shadow: 0 .833em 2em -1em rgba(34, 28, 23, .45); }   /* a paper card under each result, shadowed like the gift card art */
 .wall-l .stat { align-items: flex-end; text-align: right; }
 .stat .k { font-size: 1em; line-height: 1.5; font-weight: 700; color: var(--text-subdued); }
 .stat .big { font-size: 2.667em; line-height: 1.094; font-weight: 700; letter-spacing: -.01em; color: var(--accent-deep); }
 .stat .sub { font-size: 1em; line-height: 1.5; color: var(--text-subdued); }
-.bars { display: grid; grid-template-columns: 5.333em 7.35em max-content; align-items: center; gap: .5em .667em; margin-top: .5em; }   /* one grid for all rows, so labels, tracks and numbers line up */
+.bars { display: grid; grid-template-columns: max-content 7.35em max-content; align-items: center; gap: .5em .667em; margin-top: .5em; }   /* one grid for all rows, so labels, tracks and numbers line up */
 .bar { display: contents; line-height: 1.333; color: var(--text-subdued); }
 .bar .track { height: .667em; border-radius: .333em; background: var(--bg-press); overflow: hidden; }
 .bar .track i { display: block; height: 100%; width: var(--w); background: var(--accent); }
 .bar b { color: var(--text-base); font-variant-numeric: tabular-nums; }
 @media (min-width: 901px) { #developers { grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); } }   /* give the art side more room */
+@media (min-width: 901px) { .band { padding-left: calc(2 * var(--space-8)); } }   /* copy sits twice as far in from the panel edge as the other padding; headline sizes still fit (they read the panel width after padding) */
 
 /* Finale: 70vh, the one big block of colour on the page. The wall is only a background. A dark overlay sits over it and the copy is the focus. */
 .finale { position: relative; min-height: 70vh; min-height: 70svh; overflow: hidden; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; text-align: center; padding: var(--space-8) var(--space-4); }
@@ -366,6 +381,7 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 
 .studios { padding: 48px var(--space-8); display: flex; flex-direction: column; align-items: center; gap: var(--space-3); text-align: center; }
 .studios h2 { margin: 0; font-size: var(--fs-h2); line-height: 1.2; font-weight: 700; letter-spacing: -.015em; }
+.studios-more { margin: 0; color: var(--text-subdued); }
 /* FAQ: two native dropdowns, one per audience. No script. Narrower than the other panels: it sits inside the rules
    by the same distance the rules sit inside the panels (rule width minus that gap on each side). */
 .faq { width: calc(2 * min(100%, 1120px) - 100%); margin-inline: auto; padding: 48px var(--space-8); display: flex; flex-direction: column; align-items: center; gap: var(--space-5); }
@@ -381,13 +397,13 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 .faq dt { font-weight: 700; }
 .faq dd { margin: var(--space-1) 0 0; color: var(--text-subdued); }
 @media (max-width: 900px) { .faq { padding: var(--space-4); } .faq summary { padding: var(--space-4); } .faq dl { padding: 0 var(--space-4) var(--space-4); } }
-.logos { width: 100%; max-width: 880px; margin-top: var(--space-5); display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-6); align-items: center; }
+.logos { width: 100%; max-width: 880px; margin-top: var(--space-5); padding: 32px 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-6); align-items: center; }
 .logos img { display: block; height: 96px; width: auto; max-width: 100%; object-fit: contain; margin: 0 auto; }   /* same height for every logo, whatever its shape */
 @media (max-width: 900px) { .logos { grid-template-columns: repeat(2, 1fr); } }
 
 @media (max-width: 900px) {
   .band { grid-template-columns: 1fr; padding: var(--space-4); }
-  .copy h2 { font-size: 32px; }
+  .band .copy h2 { font-size: min(32px, 5.6cqi); }   /* one column: the copy is the full panel width */
   .hero { --w: calc(100vw - 16px); --hd: calc((100vw - 108px) * .2866 + 24px); min-height: 440px; }
   .match { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: var(--space-2); }
   .vs { text-align: center; }
@@ -398,7 +414,7 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   * { transition: none !important; animation: none !important; } .track { transition: none; }
-  .btn:hover, .icon-btn:hover { transform: none; }
+  .btn:hover, .icon-btn:hover, .float-join.on:hover, .copy .btn-text:hover, .join-form .join-shell:has(> .join-trigger:hover) { transform: none; }
 }
 </style>
 </head>
@@ -449,7 +465,7 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
     </header>
 
     <div class="hero" id="hero">
-      <h1 class="hero-title">Which one catches your eye?</h1>
+      <h1 class="hero-title">Which image catches your eye?</h1>
       <!-- Deck: three matches in one box. The live one is in focus; the next two wait below the score, clear of it. Only the live one can be clicked. -->
       <div class="deck" id="deck">
         <div class="match first" data-d="0"><div class="slot"><button type="button" class="g-card" aria-label="Pick the left Key Asset"><span class="cap-art"><img class="art" alt="" src="art/main_2771630.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i></span></button></div><span class="vs-clash" aria-hidden="true"><span class="vs-label">OR</span></span><div class="slot"><button type="button" class="g-card" aria-label="Pick the right Key Asset"><span class="cap-art"><img class="art" alt="" src="art/main_3593620.jpg"><i class="cap-bg-glow"></i><i class="cap-glow cap-glow-1"></i><i class="cap-glow cap-glow-2"></i></span></button></div></div>
@@ -501,7 +517,9 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 
   <hr class="rule">
 
-  <!-- PLAYERS: carousel left, copy right. -->
+  <h2 class="group-title">For the players</h2>
+
+  <!-- PLAYERS: copy left, carousel right, so the copy lines up with the developers panel. -->
   <section class="panel band" id="players">
     <div class="carousel" id="car">
       <div class="car-stage">
@@ -512,9 +530,14 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
       <div class="car-foot"><div class="dots" id="dots"></div></div>
     </div>
     <div class="copy">
-      <p class="eyebrow">For players</p>
-      <h2>Vote on new games and earn gift cards</h2>
-      <p>It's free to join. Every vote earns XP, and you choose which gift card to spend it on.</p>
+      <h2>Pick what catches your eye. Earn rewards.</h2>
+      <p>See two images from upcoming games. Pick the one you like best. That's it.</p>
+      <ul class="facts">
+        <li>Earn XP for every pick</li>
+        <li>Swap XP for gift cards</li>
+        <li>See upcoming games first</li>
+        <li>Connect with developers</li>
+      </ul>
       <a class="btn btn-text" href="#wall" data-join="player">Join as a player &rarr;</a>
     </div>
   </section>
@@ -525,7 +548,7 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
   <section class="panel finale" id="wall">
     <div class="wall-bg" id="wallBg" aria-hidden="true"></div>
     <div class="copy-c">
-      <h2>Want in early?</h2>
+      <h2>Hundreds of upcoming games are waiting for your pick.</h2>
       <form class="join-form" id="finaleForm" data-side="player" novalidate>
         <div class="join-shell">
           <button type="button" class="btn btn-lg btn-primary tx tx-accent join-trigger" aria-expanded="false" aria-controls="finaleReveal">Join the waitlist</button>
@@ -556,18 +579,21 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 
   <hr class="rule">
 
+  <h2 class="group-title">For the developers</h2>
+
   <!-- DEVELOPERS: copy left, four versions right. -->
   <section class="panel band" id="developers">
     <div class="copy">
-      <p class="eyebrow">For developers and studios</p>
-      <h2>Know which Key Asset wins before you spend on marketing.</h2>
-      <p>Upload your Key Asset versions. Players in your genre pick, head to head. You get the answer before launch.</p>
+      <h2>Know which Key Asset performs best<br>before spending on marketing.</h2>
+      <p>Your Key Asset versions go head to head in front of players who play your genre. You see which one performs best, and why.</p>
       <ul class="facts">
-        <li>Which version wins</li>
-        <li>Who it wins with</li>
-        <li>Where it ranks in your genre</li>
-        <li>How fast it gets picked</li>
+        <li>Click-through rate (CTR)</li>
+        <li>Head-to-head ranking</li>
+        <li>Audience breakdown</li>
+        <li>Genre benchmark</li>
+        <li>Decision speed</li>
       </ul>
+      <p>No AI predictions. No subscriptions.<br>Every result comes from real players, matched to your genre.</p>
       <a class="btn btn-text" href="#wall" data-join="developer">Join as a developer &rarr;</a>
     </div>
     <div class="dev-col"><div class="dev-stage" id="devStage" aria-hidden="true"></div></div>
@@ -577,17 +603,18 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 
   <!-- STUDIOS: who is already here. A static grid, everything visible at once. -->
   <section class="panel studios" id="studios">
-    <p class="eyebrow">Already on the platform</p>
-    <h2>Studios already testing their Key Assets with us</h2>
+    <h2>Who is actually using ???</h2>
     <div class="logos">   <!-- real studio logos, kept in art/studios -->
       <img src="art/studios/classy_games.png" alt="Classy Games">
       <img src="art/studios/dafluffs_games.png" alt="DaFluffs Games">
       <img src="art/studios/fitnot_games.png" alt="FitNot Games">
       <img src="art/studios/sheba_joy.png" alt="Sheba Joy Games">
     </div>
+    <p class="studios-more">And hundreds more of publishers, PR agencies, studios and indies!</p>
+    <a class="btn btn-lg btn-primary tx tx-accent" href="#wall" data-join>Join the waitlist</a>
   </section>
 
-  <hr class="rule">
+  <hr class="rule rule-line">
 
   <!-- FAQ: one dropdown for players, one for developers. -->
   <section class="panel faq" id="faq">
@@ -626,7 +653,7 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 /* Real capsules (developer art pulled from Steam by collect_capsules.py): static/uploads/main_<appid>.jpg, copied to ./art. All src values go through artUrl(). */
 function artUrl(n) { return 'art/' + n; }
 var HERO = ["main_2771630.jpg", "main_3593620.jpg", "main_1001520.jpg", "main_4062790.jpg", "main_3338240.jpg", "main_581150.jpg", "main_2398100.jpg", "main_4600800.jpg", "main_3298140.jpg", "main_4692380.jpg"];   // 2 per match, 5 matches
-var DEV  = ["silly_suspects_park.jpg", "silly_suspects_circus.jpg", "silly_suspects_suburb.jpg", "silly_suspects_police.jpg"];   // four versions of one game's capsule (Silly Suspects); [0] = the winner
+var DEV  = ["silly_suspects_v1.jpg", "silly_suspects_v4.jpg", "silly_suspects_v2.jpg", "silly_suspects_v3.jpg"];   // four versions of one game's capsule (Silly Suspects, 800px JPGs of the 1232 x 706 originals in art/silly_suspects_src); [0] = the winner, then the right, left and middle slots, so the row reads v2, v3, v4
 var WALL = ["main_1001520.jpg", "main_1730600.jpg", "main_2195450.jpg", "main_2217040.jpg", "main_2326200.jpg", "main_2398100.jpg", "main_2771630.jpg", "main_3120770.jpg", "main_3174440.jpg", "main_3298140.jpg", "main_3338240.jpg", "main_3474620.jpg", "main_3593620.jpg", "main_4062790.jpg", "main_4240600.jpg", "main_4598970.jpg", "main_4600800.jpg", "main_4647110.jpg", "main_4690740.jpg", "main_4692380.jpg", "main_4697010.jpg", "main_4698730.jpg", "main_4825820.jpg", "main_4958620.jpg", "main_5070330.jpg", "main_5079330.jpg", "main_5086800.jpg", "main_5222780.jpg", "main_581150.jpg", "main_746530.jpg", "main_876240.jpg", "main_3664750.jpg", "main_1111150.jpg", "main_2826260.jpg"];
 
 /* Hero mini-game. Pick a capsule, score bumps, the next matches step up from behind, match 5 asks for the waitlist.
@@ -738,7 +765,7 @@ var WALL = ["main_1001520.jpg", "main_1730600.jpg", "main_2195450.jpg", "main_22
   ];
   var track = document.getElementById('cardTrack'), dots = document.getElementById('dots'), car = document.getElementById('car');
   track.innerHTML = GIFTS.map(function (g) {
-    return '<div class="slide"><div class="gift"><div class="gift-copy"><span class="eyebrow">Exchange XP for</span><div><div class="val' + (g[0].length > 4 ? ' long' : '') + '">' + g[0] + '</div><div class="name">' + g[1] + '</div></div></div><img class="gift-img" alt="" src="art/gift/' + g[2] + '"></div></div>';
+    return '<div class="slide"><div class="gift"><div class="gift-copy"><span class="eyebrow">Exchange<br>earned XP for</span><div><div class="val' + (g[0].length > 4 ? ' long' : '') + '">' + g[0] + '</div><div class="name">' + g[1] + '</div></div></div><img class="gift-img" alt="" src="art/gift/' + g[2] + '"></div></div>';
   }).join('');
   var i = 0, timer, hold = false, calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
   GIFTS.forEach(function (_, n) {
@@ -764,22 +791,23 @@ var WALL = ["main_1001520.jpg", "main_1730600.jpg", "main_2195450.jpg", "main_22
   go(0);
 })();
 
-/* Developers: the four Silly Suspects capsules from Figma Frame 25. DEV[0] (park) is the winner, centred; the other
+/* Developers: the four Silly Suspects capsules from Figma Frame 25. DEV[0] (v1, police station) is the winner, centred; the other
    three sit in a row below, washed out. The results stand flat either side (angled walls: ?dev=walls). Static, no motion. The numbers are sample data.
    The segment bars (win rate by player genre) are on the roadmap, not in the build yet. In this app a click on a capsule is the
    vote, so CTR = picked when shown = win rate. */
 (function () {
-  var SEG = [['Roguelike', 71], ['Strategy', 58], ['RPG', 44]];
+  var SEG = [['Comedy', 88], ['Detective', 84], ['Social deduction', 79]];
   var bars = SEG.map(function (g) { return '<div class="bar"><span>' + g[0] + '</span><span class="track"><i style="--w:' + g[1] + '%"></i></span><b>' + g[1] + '%</b></div>'; }).join('');
   var SLOT = ['park', 'circus', 'suburb', 'police'];   // matches the order of DEV
+  var RANK = ['1st', '4th', '2nd', '3rd'];   // finishing place per DEV entry: the winner, then 2, 3, 4 left to right along the row
   function tile(cls, k, big, sub) { return '<div class="tile ' + cls + '"><div class="stat"><div class="k">' + k + '</div><div class="big">' + big + '</div><div class="sub">' + sub + '</div></div></div>'; }
   var stage = document.getElementById('devStage');
   if (/[?&]dev=walls\b/.test(location.search)) stage.classList.add('dev-walls');   // the angled-walls alternative, see the CSS
   stage.innerHTML =
-    DEV.map(function (a, i) { return '<figure class="dv dv-' + SLOT[i] + (i ? '' : ' win') + '"><img class="art" alt="" src="' + artUrl(a) + '"></figure>'; }).join('') +
-    '<div class="wall wall-l">' + tile('tile-ctr', 'Key Asset A', '65% CTR', '92% sure after 240 matchups') + tile('tile-speed', 'Decision speed', '1.4s', 'fastest of your four') + '</div>' +
-    '<div class="wall wall-r"><div class="tile tile-seg"><div class="stat"><div class="k">Who it wins with</div><div class="bars">' + bars + '</div></div></div>' +
-    tile('tile-genre', 'In your genre', 'Top 32%', 'beats 68% of Key Assets tested') + '</div>';
+    DEV.map(function (a, i) { return '<figure class="dv dv-' + SLOT[i] + (i ? '' : ' win') + '"><img class="art" alt="" src="' + artUrl(a) + '"><span class="rank">' + RANK[i] + '</span></figure>'; }).join('') +
+    '<div class="wall wall-l">' + tile('tile-ctr', 'Click-through rate', '82%', 'picked in 164 of 200 matchups') + tile('tile-speed', 'Decision speed', '2.3s', 'average time to pick') + '</div>' +
+    '<div class="wall wall-r"><div class="tile tile-seg"><div class="stat"><div class="k">Click-through rate by genre</div><div class="bars">' + bars + '</div></div></div>' +
+    tile('tile-genre', 'In your genre', 'Top 12%', 'beats 88% of Key Assets tested') + '</div>';
 })();
 
 /* Closing section: a wall of capsules behind the copy, under the dark overlay. The wall is a grid of cells; a block is one cell or a 2x2.
@@ -857,17 +885,16 @@ var WALL = ["main_1001520.jpg", "main_1730600.jpg", "main_2195450.jpg", "main_22
   function level(name) { return parseFloat(getComputedStyle(root).getPropertyValue(name)) || 0; }
   function targetFor(it) {
     var active = it.hover || it.focus || it.el.getAttribute('aria-pressed') === 'true';
-    return active ? level('--c-active') : it.view ? level('--c-view') : level('--c-rest');
+    return active ? level('--c-active') : level('--c-rest');
   }
   function apply(it, instant) { gsap.to(it.el, { '--c': targetFor(it), duration: instant ? 0 : duration, ease: 'power3.out', overwrite: true }); }
   document.querySelectorAll('.tx').forEach(function (el) {
-    var it = { el: el, hover: false, focus: false, view: false };
+    var it = { el: el, hover: false, focus: false };
     el.addEventListener('pointerenter', function () { it.hover = true; apply(it); });
     el.addEventListener('pointerleave', function () { it.hover = false; apply(it); });
     el.addEventListener('focusin', function () { it.focus = true; apply(it); });
     el.addEventListener('focusout', function () { it.focus = false; apply(it); });
     if (window.MutationObserver) new MutationObserver(function () { apply(it); }).observe(el, { attributes: true, attributeFilter: ['aria-pressed'] });
-    ScrollTrigger.create({ trigger: el, start: 'top 80%', end: 'bottom 20%', onToggle: function (self) { it.view = self.isActive; apply(it); } });
     apply(it, true);
   });
 })();
