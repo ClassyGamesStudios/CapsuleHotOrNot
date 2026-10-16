@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KeyArtClarity Logos</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@800&family=Figtree:wght@400..800&display=swap" rel="stylesheet">
+<style>
+:root { --bg: #ebe4d8; --card: #f1ebe1; --paper: #faf7f1; --ink: #221c17; --sub: #5a4f44; --accent: #2b52a8; --line: #c9bfae; }
+* { box-sizing: border-box; margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.5 "Figtree", system-ui, sans-serif; padding: 40px 16px 80px; }
+h1 { font: 800 32px/1.1 "Archivo", sans-serif; text-align: center; color: var(--accent); }
+.intro { text-align: center; color: var(--sub); margin: 8px auto 32px; max-width: 60ch; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr)); gap: 24px; max-width: 1120px; margin: 0 auto; }
+.dir { background: var(--card); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.dir header { padding: 14px 20px; border-bottom: 1px solid var(--line); display: flex; gap: 10px; align-items: baseline; }
+.dir header b { white-space: nowrap; font: 800 18px "Archivo", sans-serif; color: var(--accent); }
+.dir header span { color: var(--sub); font-size: 14px; }
+.hero { background: var(--paper); padding: 48px 24px; display: flex; justify-content: center; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 20px; border-top: 1px solid var(--line); flex-wrap: wrap; }
+.row.dark { background: #221c17; --ink: #faf7f1; --accent: #8fa9e6; --paper: #221c17; border-top: 0; }
+.favs { display: flex; gap: 12px; align-items: end; }
+.fav { display: grid; place-items: center; background: var(--paper); border-radius: 6px; border: 1px solid var(--line); }
+.fav svg { display: block; }
+
+/* lockup: symbol, then "Key Art" over "Clarity" */
+.lock { display: inline-flex; align-items: flex-start; gap: .4em; white-space: nowrap; color: var(--ink); }
+.lock svg { height: 1.61em; margin-top: .105em; width: auto; flex: none; }   /* cap top of line 1 to baseline of line 2 */
+.words { display: inline-flex; flex-direction: column; font: 800 1em/.92 "Archivo", sans-serif; letter-spacing: -.02em; }
+.words .acc { color: var(--accent); }
+.big { font-size: 44px; } .small { font-size: 18px; }
+</style></head><body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <!-- F: two landscape cards stacked, the winner in front. Viewbox is tight to the ink so the mark can match the text height.
+         Both cards show the same outer corner radius (3): the grey one is stroked, so its path radius is 3 minus half the stroke. -->
+    <symbol id="f2" viewBox="0 0 48.5 35.2">
+      <rect x="1.3" y="1.3" width="30" height="18" rx="2" fill="none" stroke="var(--ink)" stroke-width="2.6" opacity=".45"/>
+      <rect x="10" y="11" width="38.5" height="24.2" rx="3.3" fill="var(--accent)" stroke="var(--paper)" stroke-width="2" paint-order="stroke"/>
+      <path d="M23.2 23.1l4.4 4.4 7.7-8.25" fill="none" stroke="var(--paper)" stroke-width="3.3" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+  </defs>
+</svg>
+
+<h1>KeyArtClarity: direction F</h1>
+<p class="intro">Stacked landscape cards. The mark runs from the top of "Key Art" to the baseline of "Clarity".</p>
+
+<div class="grid" id="grid"></div>
+
+<script>
+const dirs = [
+  ['F', 'Stacked', 'Same height as the two lines of text, and both cards share one corner radius.', 'f2', '0 0 48.5 35.2'],
+];
+const svg = (id, vb, attrs) => '<svg viewBox="' + vb + '" ' + (attrs || '') + ' aria-hidden="true"><use href="#' + id + '"/></svg>';
+const lock = (id, vb, size) => '<span class="lock ' + size + '">' + svg(id, vb) + '<span class="words"><span>Key Art</span><span class="acc">Clarity</span></span></span>';
+const fav = (id, vb, px) => '<span class="fav" style="width:' + (px + 12) + 'px;height:' + (px + 12) + 'px">' + svg(id, vb, 'width="' + px + '" height="' + px + '"') + '</span>';
+document.getElementById('grid').innerHTML = dirs.map(([k, name, why, id, vb]) =>
+  '<section class="dir"><header><b>' + k + '. ' + name + '</b><span>' + why + '</span></header>' +
+  '<div class="hero">' + lock(id, vb, 'big') + '</div>' +
+  '<div class="row">' + lock(id, vb, 'small') + '<div class="favs">' + fav(id, vb, 32) + fav(id, vb, 16) + '</div></div>' +
+  '<div class="row dark">' + lock(id, vb, 'small') + '</div></section>').join('');
+</script>
+</body></html>
