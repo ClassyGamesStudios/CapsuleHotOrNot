@@ -44,14 +44,13 @@
 <h2 class="sec">Waitlist <span class="count">({{ waitlist_total }})</span></h2>
 {% if waitlist %}
 <table class="adm">
-    <thead><tr><th>Email</th><th>Role</th><th>Referral code</th><th>Joined</th></tr></thead>
+    <thead><tr><th>Email</th><th>Type</th><th>Joined (UTC)</th></tr></thead>
     <tbody>
         {% for w in waitlist %}
         <tr>
-            <td>{{ w.email }}</td>
-            <td>{{ w.role }}</td>
-            <td>{{ w.referral_code or '—' }}</td>
-            <td>{{ w.created_at.strftime('%Y-%m-%d %H:%M') if w.created_at else '' }}</td>
+            <td>{{ w.emailID }}</td>
+            <td>{{ w.type }}</td>
+            <td>{{ w.timestamp.strftime('%Y-%m-%d %H:%M') if w.timestamp else '' }}</td>
         </tr>
         {% endfor %}
     </tbody>

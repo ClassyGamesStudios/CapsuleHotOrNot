@@ -32,7 +32,7 @@ Data source note:
 """
 
 from flask import (Flask, render_template, request, redirect, url_for, flash, abort, session,
-                   send_from_directory)
+                   send_from_directory, jsonify)
 import requests
 import re
 import json
@@ -1197,8 +1197,13 @@ def player_join():
 WAITLIST_ROLES = [
     ('player', 'Player — I want to vote and earn points'),
     ('developer', 'Developer / Publisher — I have a game'),
-    ('press', 'Press, creator or influencer'),
 ]
+WAITLIST_EMAIL_RE = re.compile(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
+WAITLIST_JOINED_MSG = {
+    'player': "You're on the waitlist. We'll email you the moment voting opens.",
+    'developer': "You're on the waitlist. We'll email you when onboarding opens for your studio.",
+}
+WAITLIST_EXISTS_MSG = "You've already joined the waitlist as a {} with this email."
 
 
 def _pending_referrer():
@@ -1225,19 +1230,18 @@ def referral_link(code):
 @app.route('/waitlist', methods=['POST'])
 def waitlist_join():
     """Collect an email (+ role) for the waitlist and credit the referrer."""
-    email = request.form.get('email', '').strip().lower()
+    email = db.normalize_email(request.form.get('email'))
     role = request.form.get('role', '').strip() or 'player'
     back = request.form.get('next') or url_for('player_join')
-    if '@' not in email or '.' not in email.split('@')[-1]:
+    if not WAITLIST_EMAIL_RE.match(email) or len(email) > 255:
         flash('Please enter a valid email address.')
         return redirect(back)
-    if role not in dict(WAITLIST_ROLES):
+    if role not in db.WAITLIST_TYPES:
         role = 'player'
 
     code = session.get('ref')
-    ok, err = db.add_to_waitlist(email, role, code)
-    if not ok:
-        flash(err)
+    if db.add_to_waitlist(email, role) == 'exists':
+        flash(WAITLIST_EXISTS_MSG.format(role))
         return redirect(back)
 
     owner, points = db.credit_referral(code, 'waitlist', email) if code else (None, 0)
@@ -1247,6 +1251,32 @@ def waitlist_join():
     else:
         flash("You're on the waitlist! We'll email you as soon as your spot opens.")
     return redirect(back)
+
+
+@app.route('/api/waitlist', methods=['POST'])
+def waitlist_api():
+    """JSON waitlist sign-up used by the landing page popup.
+
+    201 joined, 409 already on the waitlist, 400 bad input, 503 database trouble.
+    """
+    data = request.get_json(silent=True) or {}
+    if data.get('website'):   # honeypot: a hidden field only bots fill in
+        return jsonify(status='joined', message=WAITLIST_JOINED_MSG['player']), 201
+    email = db.normalize_email(data.get('email'))
+    waitlist_type = data.get('type')
+    if waitlist_type not in db.WAITLIST_TYPES:
+        return jsonify(status='invalid', message='Choose player or developer.'), 400
+    if not WAITLIST_EMAIL_RE.match(email) or len(email) > 255:
+        return jsonify(status='invalid', message='Check your email address and try again.'), 400
+    try:
+        result = db.add_to_waitlist(email, waitlist_type)
+    except Exception:
+        app.logger.exception('Waitlist sign-up failed')
+        return jsonify(status='error',
+                       message='Something went wrong on our side. Please try again in a minute.'), 503
+    if result == 'exists':
+        return jsonify(status='exists', message=WAITLIST_EXISTS_MSG.format(waitlist_type)), 409
+    return jsonify(status='joined', message=WAITLIST_JOINED_MSG[waitlist_type]), 201
 
 
 @app.route('/developer/join')

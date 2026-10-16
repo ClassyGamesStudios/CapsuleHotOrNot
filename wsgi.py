@@ -23,6 +23,9 @@ except pymysql.err.OperationalError as exc:
     logging.getLogger('capsulehotornot').error(
         'Database unreachable at boot (%s). Only pages that need no database '
         '(the landing page) will work.', exc)
+    # The waitlist can live in Postgres (PG_HOST) while the rest is still MySQL,
+    # so make sure its table exists even when the MySQL setup above failed.
+    db.ensure_waitlist_table()
 
 if _app.IS_PRODUCTION:
     _app.check_production_config()

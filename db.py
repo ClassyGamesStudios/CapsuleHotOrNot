@@ -240,17 +240,6 @@ def init_db():
         _ensure_index(cur, 'developer_profile', 'uniq_dev_referral',
                       'UNIQUE KEY uniq_dev_referral (referral_code)')
 
-        # Waitlist — sign-up is closed, both portals collect emails instead.
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS waitlist (
-                waitlistID    INT AUTO_INCREMENT PRIMARY KEY,
-                email         VARCHAR(255) NOT NULL UNIQUE,
-                role          VARCHAR(20),
-                referral_code VARCHAR(16),
-                created_at    DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-
         # One row per successful referral. referred_ref is the waitlist email or
         # the new player's steam id, and it's UNIQUE so a referrer can never be
         # paid twice for the same friend.
@@ -291,6 +280,7 @@ def init_db():
         _ensure_index(cur, 'game_profile', 'idx_game_upcoming',
                       'KEY idx_game_upcoming (comingSoonFlag, releaseDateFlag)')
     conn.close()
+    ensure_waitlist_table()
 
 
 # Category dimension rules. match_mode 'exact' -> width AND height must match;
@@ -591,14 +581,6 @@ def get_all_players():
     return rows
 
 
-def get_waitlist(limit=200):
-    conn = get_connection()
-    with conn.cursor() as cur:
-        cur.execute("""SELECT email, role, referral_code, created_at FROM waitlist
-                       ORDER BY waitlistID DESC LIMIT %s""", (limit,))
-        rows = cur.fetchall()
-    conn.close()
-    return rows
 
 
 def get_scored_winrates(min_shown=1):
@@ -1349,24 +1331,144 @@ def get_referral_stats(kind, row_id):
 
 
 # --- Waitlist ----------------------------------------------------------------
-def add_to_waitlist(email, role, referral_code=None):
-    """Returns (True, None) or (False, message) if the email is already on it."""
-    conn = get_connection()
+# --- Waitlist ----------------------------------------------------------------
+# waitlist(waitlistID, emailID UNIQUE, type 'player'|'developer', timestamp UTC)
+#
+# Lives in Postgres when PG_HOST is set (the production server keeps its data
+# there) and in this MySQL database otherwise. Only the waitlist goes through
+# this switch so far; everything else in db.py is still MySQL-only.
+WAITLIST_TYPES = ('player', 'developer')
+
+
+def _waitlist_connection():
+    """(connection, identifier quote char) for whichever database holds the waitlist."""
+    if os.environ.get('PG_HOST'):
+        import psycopg
+        from psycopg.rows import dict_row
+        conn = psycopg.connect(
+            host=os.environ['PG_HOST'], port=int(os.environ.get('PG_PORT', 5432)),
+            dbname=os.environ.get('PG_DB', DB_NAME), user=os.environ.get('PG_USER'),
+            password=os.environ.get('PG_PASSWORD'), connect_timeout=5,
+            autocommit=True, row_factory=dict_row)
+        return conn, '"'
+    return get_connection(), '`'
+
+
+def _is_unique_violation(exc):
+    if isinstance(exc, pymysql.err.IntegrityError):
+        return exc.args and exc.args[0] == 1062        # ER_DUP_ENTRY
+    return getattr(exc, 'sqlstate', None) == '23505'  # Postgres unique_violation
+
+
+def _waitlist_unique_keys(cur, pg):
+    """{name: set of columns} for the waitlist's UNIQUE keys (primary key excluded)."""
+    if pg:
+        cur.execute("""SELECT c.conname AS name, a.attname AS col
+                       FROM pg_constraint c
+                       JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = ANY(c.conkey)
+                       WHERE c.conrelid = '"waitlist"'::regclass AND c.contype = 'u'""")
+    else:
+        cur.execute("""SELECT INDEX_NAME AS name, COLUMN_NAME AS col FROM information_schema.STATISTICS
+                       WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'waitlist'
+                         AND NON_UNIQUE = 0 AND INDEX_NAME <> 'PRIMARY'""", (DB_NAME,))
+    keys = {}
+    for r in cur.fetchall():
+        keys.setdefault(r['name'], set()).add(r['col'])
+    return keys
+
+
+def ensure_waitlist_table():
+    """Create the waitlist table, or bring an older one up to date in place.
+
+    - The first version was waitlist(email, role, referral_code, created_at).
+      Its columns are renamed rather than the table rebuilt, so no row is lost;
+      referral_code goes (referrals are recorded in the referrals table anyway).
+    - One email may join once per type (player AND developer), so the unique
+      key is (emailID, type); an older UNIQUE on emailID alone is dropped.
+    """
+    conn, q = _waitlist_connection()
+    pg = q == '"'
+    with conn.cursor() as cur:
+        cur.execute("SELECT column_name AS c FROM information_schema.columns "
+                    "WHERE table_name = 'waitlist' AND table_schema = %s",
+                    ('public' if pg else DB_NAME,))
+        cols = {r['c'] for r in cur.fetchall()}
+        if 'email' in cols:
+            for old, new in (('email', 'emailID'), ('role', 'type'), ('created_at', 'timestamp')):
+                cur.execute(f"ALTER TABLE {q}waitlist{q} RENAME COLUMN {q}{old}{q} TO {q}{new}{q}")
+            cur.execute(f"ALTER TABLE {q}waitlist{q} DROP COLUMN {q}referral_code{q}")
+        id_col = ('"waitlistID" integer GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY' if pg
+                  else '`waitlistID` INT AUTO_INCREMENT PRIMARY KEY')
+        cur.execute(f"""
+            CREATE TABLE IF NOT EXISTS {q}waitlist{q} (
+                {id_col},
+                {q}emailID{q}   VARCHAR(255) NOT NULL,
+                {q}type{q}      VARCHAR(10)  NOT NULL,
+                {q}timestamp{q} {'timestamp' if pg else 'DATETIME'} NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT {q}uniq_waitlist_email_type{q} UNIQUE ({q}emailID{q}, {q}type{q})
+            )
+        """)
+        keys = _waitlist_unique_keys(cur, pg)
+        for name, key_cols in keys.items():
+            if key_cols == {'emailID'}:
+                drop = 'CONSTRAINT' if pg else 'INDEX'
+                cur.execute(f"ALTER TABLE {q}waitlist{q} DROP {drop} {q}{name}{q}")
+        if {'emailID', 'type'} not in keys.values():
+            cur.execute(f"ALTER TABLE {q}waitlist{q} ADD CONSTRAINT {q}uniq_waitlist_email_type{q} "
+                        f"UNIQUE ({q}emailID{q}, {q}type{q})")
+    conn.close()
+
+
+def normalize_email(email):
+    return (email or '').strip().lower()
+
+
+def add_to_waitlist(email, waitlist_type):
+    """Add an email to the waitlist as a player or developer.
+
+    Returns 'joined', or 'exists' if that email is already on it as that type
+    (the same email may join once as a player and once as a developer). Emails
+    are stored lowercased, so Bob@x.com and bob@x.com are the same entry. The
+    UNIQUE (emailID, type) key backs up the check if two requests race.
+    """
+    email = normalize_email(email)
+    if waitlist_type not in WAITLIST_TYPES:
+        raise ValueError(f'waitlist type must be one of {WAITLIST_TYPES}')
+    conn, q = _waitlist_connection()
     try:
         with conn.cursor() as cur:
-            cur.execute("""INSERT INTO waitlist (email, role, referral_code)
-                           VALUES (%s, %s, %s)""", (email, role, referral_code))
-    except pymysql.err.IntegrityError:
-        return False, "You're already on the waitlist — we'll be in touch."
+            cur.execute(f"SELECT 1 FROM {q}waitlist{q} WHERE {q}emailID{q} = %s AND {q}type{q} = %s",
+                        (email, waitlist_type))
+            if cur.fetchone():
+                return 'exists'
+            cur.execute(
+                f"INSERT INTO {q}waitlist{q} ({q}emailID{q}, {q}type{q}, {q}timestamp{q}) "
+                "VALUES (%s, %s, %s)",
+                (email, waitlist_type,
+                 datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)))
+    except Exception as exc:
+        if _is_unique_violation(exc):
+            return 'exists'
+        raise
     finally:
         conn.close()
-    return True, None
+    return 'joined'
+
+
+def get_waitlist(limit=200):
+    conn, q = _waitlist_connection()
+    with conn.cursor() as cur:
+        cur.execute(f"SELECT {q}emailID{q}, {q}type{q}, {q}timestamp{q} FROM {q}waitlist{q} "
+                    f"ORDER BY {q}waitlistID{q} DESC LIMIT %s", (limit,))
+        rows = cur.fetchall()
+    conn.close()
+    return rows
 
 
 def waitlist_count():
-    conn = get_connection()
+    conn, q = _waitlist_connection()
     with conn.cursor() as cur:
-        cur.execute("SELECT COUNT(*) n FROM waitlist")
+        cur.execute(f"SELECT COUNT(*) AS n FROM {q}waitlist{q}")
         n = cur.fetchone()['n']
     conn.close()
     return n

@@ -222,38 +222,31 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 .hero.done .deck, .hero.done .hero-title, .hero.done .score { display: none; }
 .hero.done .g-end { display: flex; }
 
-/* Shared join form: end-of-demo (always Player) and the finale (Player/Developer switch).
-   Collapse/expand ported exactly from lynkpay.co.uk/visa-preregister — re-verified by clicking the
-   real trigger and reading computed styles mid-transition, after an earlier pass wrongly concluded
-   (from a test corrupted by a JS scrollIntoView call) that desktop had no collapsed state at all. It
-   does: desktop collapses to a 380px pill too, same as mobile, and widens to 720px on click.
-   Both breakpoints share the same crossfade: trigger and card opacity both tween 150ms,
-   cubic-bezier(.3, 0, 0, 1) (their "ease-emphasized"), starting simultaneously on click. What
-   differs is the layout under that fade: mobile swaps display (none<->block) instantly with no
-   layout tween at all; desktop keeps both trigger and card permanently in an absolute inset:0 stack
-   and instead tweens the shell's WIDTH, 300ms, same easing. .is-showing exists only so JS can put
-   .join-reveal into a rendered-but-still-invisible state one frame before the opacity flip —
-   otherwise a transition starting from display:none never plays. */
-.join-form { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); width: 100%; max-width: 360px; }
-.join-shell { position: relative; overflow: hidden; border-radius: var(--radius-lg); background: var(--bg-elevated); transition: transform 33ms; }
-.join-trigger { width: 100%; opacity: 1; transition: opacity .15s cubic-bezier(.3, 0, 0, 1); }
-.join-trigger:hover { transform: none; }   /* the shell clips its button, so the shell grows instead, like every other waitlist button */
-.join-form:not([data-open="true"]) .join-shell:has(> .join-trigger:hover) { transform: scale(1.04); }
-.join-reveal { display: none; opacity: 0; transition: opacity .15s cubic-bezier(.3, 0, 0, 1); }
-.join-reveal.is-showing { display: block; }
-.join-form[data-open="true"] .join-reveal { opacity: 1; }
-.join-reveal-inner { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); padding: var(--space-3); }
-.join-submit-icon { width: 20px; height: 20px; }
-.join-card { display: flex; flex-direction: column; gap: var(--space-3); width: 100%; }
-.switch { margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: var(--space-2); width: 100%; }
-/* Visible copy: sr-only. The pills say Player/Developer and the field says you@example.com — a label above each would only repeat it. */
-.switch-label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-.switch-options { display: flex; height: var(--control-lg); padding: var(--space-1); border-radius: var(--radius-md); background: var(--bg-highlight); }
-.switch-opt { flex: 1; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-md); font-size: 14px; font-weight: 700; color: var(--text-subdued); cursor: pointer; transition: background-color .15s ease-out, color .15s ease-out; }
-.switch-opt:hover { color: var(--text-base); }
-.switch-opt:has(input:checked) { background: var(--accent); color: var(--on-accent); }
-.switch-opt:has(input:focus-visible) { outline: 3px solid var(--text-base); outline-offset: 2px; }
-.switch-opt input { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+/* Waitlist popup: every "Join the waitlist" button opens this one dialog. Step 1 asks player or
+   developer (skipped by the "Join as a ..." links, which already say), step 2 takes the email.
+   Same surfaces as the rest of the page: the cobalt-edged panel, tx-paper choices, tx-accent button. */
+.wl { position: fixed; width: min(460px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); margin: auto; padding: var(--space-8) var(--space-6) var(--space-6); color: var(--text-base); text-align: center; overflow: auto; }
+.wl::backdrop { background: color-mix(in srgb, var(--inverted) 55%, transparent); backdrop-filter: blur(3px); }
+.wl[open] { animation: wlIn .3s cubic-bezier(.16, 1, .3, 1); }
+@keyframes wlIn { from { opacity: 0; transform: translateY(16px) scale(.97); } }
+html:has(.wl[open]) { overflow: hidden; }
+.wl-step { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); }
+.wl-step[hidden] { display: none; }
+.wl h2 { font-size: var(--fs-h2); line-height: 1.2; font-weight: 700; letter-spacing: -.01em; }
+.wl-q { color: var(--text-subdued); }
+.wl-choices { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); width: 100%; margin-top: var(--space-2); }
+.wl-choice { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-1); padding: var(--space-5) var(--space-4); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); border-radius: var(--radius-md); font: inherit; text-align: left; cursor: pointer; transition: border-color .15s ease-out, transform 33ms; }
+.wl-choice b { font-size: 18px; font-weight: 800; color: var(--accent-deep); }
+.wl-choice span { font-size: 14px; line-height: 1.35; color: var(--text-subdued); }
+.wl-choice:hover { border-color: var(--accent); transform: scale(1.03); }
+.wl-choice:focus-visible { outline: 3px solid var(--text-base); outline-offset: 2px; border-color: var(--accent); }
+.wl form { width: 100%; }
+.wl .wl-submit { width: 100%; }
+.wl .form-msg:empty { min-height: 0; }
+.wl-close { position: absolute; top: var(--space-3); right: var(--space-3); width: 36px; height: 36px; }
+.wl-close svg { width: 18px; height: 18px; }
+.wl-hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }   /* honeypot: people never see it, bots fill it in */
+@media (max-width: 480px) { .wl-choices { grid-template-columns: 1fr; } }
 .field { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-1); width: 100%; text-align: left; }
 .field-label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 /* Field: the same pill-and-grain surface as .search, just without the icon. */
@@ -261,35 +254,12 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 .field-input:has(input:focus-visible) { outline: 3px solid var(--text-base); outline-offset: 2px; }
 .field input { width: 100%; height: 100%; padding: 0 var(--space-5); border: 0; border-radius: inherit; background: transparent; color: var(--text-base); font: 400 16px/1 var(--font-sans); outline: none; }
 .field input::placeholder { color: var(--text-subdued); }
-
-/* Desktop only: the shell is a fixed-height pill that widens on click instead of the mobile
-   accordion — 380px collapsed (measured off the trigger's real rendered width, same trick as
-   before) to 720px open, 300ms. Trigger and card both go position:absolute; inset:0 and stay
-   permanently rendered (never display:none) so only opacity and pointer-events toggle — exactly
-   what the live site does. */
-@media (min-width: 901px) {
-  .join-form:has(.join-shell) { max-width: 92vw; }
-  .join-shell { height: var(--control-lg); width: var(--join-collapsed-w, 240px); max-width: 92vw; border-radius: var(--radius-md); transition: width .3s cubic-bezier(.3, 0, 0, 1), height .3s cubic-bezier(.3, 0, 0, 1), transform 33ms; }
-  .join-form[data-open="true"] .join-shell { width: min(720px, 92vw); height: calc(var(--control-lg) + var(--space-2)); }   /* closed it's the same 48px button as the nav; open it grows to fit the form */
-  .join-trigger { position: absolute; inset: 0; }
-  .join-form[data-open="true"] .join-trigger { opacity: 0; pointer-events: none; }
-  .join-reveal, .join-reveal.is-showing { display: flex; position: absolute; inset: 0; pointer-events: none; }
-  .join-form[data-open="true"] .join-reveal { pointer-events: auto; }
-  .join-reveal-inner { display: flex; flex-direction: row; align-items: center; height: 100%; width: 100%; padding: var(--space-1); }
-  .join-card { flex-direction: row; align-items: center; gap: var(--space-2); border-radius: var(--radius-md); }
-  .join-card .switch { width: auto; flex: none; }
-  .join-card .switch-options { width: 180px; }
-  .join-card .field { flex: 1; min-width: 0; width: auto; }
-  .join-card .join-submit { flex: none; width: var(--control-lg); padding: 0; border-radius: 50%; }
-  .join-card .join-submit .btn-label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-}
 .form-msg { min-height: 1.4em; margin: 0; font-size: 14px; }
 .form-msg[data-state="error"] { color: var(--negative); }
-.form-msg[data-state="success"] { color: var(--win); }
-/* Copy sourced verbatim from the live app's own waitlist fine print (templates/player_join.html,
-   developer_join.html) — not invented, and swapped per role by the same toggle that already
-   updates the email placeholder. States what happens next; no points, no Steam, no rewards. */
-.join-note { margin: 0; font-size: 12px; color: var(--text-muted); }
+.form-msg[data-state="info"] { color: var(--accent-deep); }
+/* Fine print under the popup's heading, swapped per type. Copy from the app's own waitlist pages
+   (templates/player_join.html, developer_join.html). */
+.join-note { margin: 0; font-size: 14px; color: var(--text-muted); }
 
 /* Sections: 70vh. Copy sits directly on the panel, no card behind it. */
 .band { padding: 48px var(--space-8); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-8) 64px; align-items: center; }
@@ -430,7 +400,7 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   * { transition: none !important; animation: none !important; } .track { transition: none; }
-  .btn:hover, .icon-btn:hover, .float-join.on:hover, .copy .btn-text:hover, .join-form .join-shell:has(> .join-trigger:hover) { transform: none; }
+  .btn:hover, .icon-btn:hover, .float-join.on:hover, .copy .btn-text:hover, .wl-choice:hover { transform: none; }
 }
 </style>
 </head>
@@ -485,31 +455,7 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
       <div class="g-end" id="gend">
         <h2>Want in early?</h2>
         <p class="g-end-sub">It's free, no spam.</p>
-        <form class="join-form" id="demoForm" data-side="player" novalidate>
-          <div class="join-shell">
-            <button type="button" class="btn btn-lg btn-primary tx tx-accent join-trigger" aria-expanded="false" aria-controls="demoReveal">Join the waitlist</button>
-            <div class="join-reveal" id="demoReveal"><div class="join-reveal-inner">
-              <div class="join-card">
-                <fieldset class="switch">
-                  <legend class="switch-label">I'm joining as a</legend>
-                  <div class="switch-options">
-                    <label class="switch-opt"><input type="radio" name="side" value="player" checked><span>Player</span></label>
-                    <label class="switch-opt"><input type="radio" name="side" value="developer"><span>Developer</span></label>
-                  </div>
-                </fieldset>
-                <label class="field">
-                  <span class="field-label">Email</span>
-                  <span class="field-input tx tx-paper"><input type="email" name="email" placeholder="you@example.com" autocomplete="email" required></span>
-                </label>
-                <button type="submit" class="btn btn-lg btn-primary tx tx-accent join-submit">
-                  <span class="btn-label">Join the waitlist</span>
-                  <svg class="join-submit-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                </button>
-              </div>
-            </div></div>
-          </div>
-          <p class="form-msg" aria-live="polite"></p>
-        </form>
+        <a class="btn btn-lg btn-primary tx tx-accent" href="#wall" data-join>Join the waitlist</a>
       </div>
     </div>
   </section>
@@ -548,31 +494,7 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
     <div class="wall-bg" id="wallBg" aria-hidden="true"></div>
     <div class="copy-c">
       <h2>Hundreds of upcoming games are waiting for your pick.</h2>
-      <form class="join-form" id="finaleForm" data-side="player" novalidate>
-        <div class="join-shell">
-          <button type="button" class="btn btn-lg btn-primary tx tx-accent join-trigger" aria-expanded="false" aria-controls="finaleReveal">Join the waitlist</button>
-          <div class="join-reveal" id="finaleReveal"><div class="join-reveal-inner">
-            <div class="join-card">
-              <fieldset class="switch">
-                <legend class="switch-label">I'm joining as a</legend>
-                <div class="switch-options">
-                  <label class="switch-opt"><input type="radio" name="side" value="player" checked><span>Player</span></label>
-                  <label class="switch-opt"><input type="radio" name="side" value="developer"><span>Developer</span></label>
-                </div>
-              </fieldset>
-              <label class="field">
-                <span class="field-label">Email</span>
-                <span class="field-input tx tx-paper"><input type="email" name="email" placeholder="you@example.com" autocomplete="email" required></span>
-              </label>
-              <button type="submit" class="btn btn-lg btn-primary tx tx-accent join-submit">
-                <span class="btn-label">Join the waitlist</span>
-                <svg class="join-submit-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </button>
-            </div>
-          </div></div>
-        </div>
-        <p class="form-msg" aria-live="polite"></p>
-      </form>
+      <a class="btn btn-lg btn-primary tx tx-accent" href="#wall" data-join>Join the waitlist</a>
     </div>
   </section>
 
@@ -645,6 +567,39 @@ html.no-gsap .tx:hover, html.no-gsap .tx:focus-visible, html.no-gsap .tx:focus-w
 
 <!-- Floating copy of the topbar's waitlist button: shown only while that one is scrolled out of view. -->
 <a class="btn btn-lg btn-primary tx tx-accent float-join" id="floatJoin" href="#wall" data-join>Join the waitlist</a>
+
+<!-- Waitlist popup. Opened by every [data-join] button; posts to /api/waitlist. -->
+<dialog class="wl panel" id="waitlist" aria-labelledby="wlTitle">
+  <button type="button" class="icon-btn wl-close" data-wl-close aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+
+  <div class="wl-step" data-step="type">
+    <h2 id="wlTitle">Join the waitlist</h2>
+    <p class="wl-q">Are you a player or a developer?</p>
+    <div class="wl-choices">
+      <button type="button" class="wl-choice tx tx-paper" data-type="player"><b>Player</b><span>Pick what catches your eye. Earn rewards.</span></button>
+      <button type="button" class="wl-choice tx tx-paper" data-type="developer"><b>Developer</b><span>Know which Key Asset performs best.</span></button>
+    </div>
+  </div>
+
+  <form class="wl-step" data-step="email" novalidate hidden>
+    <h2>Join as a <span data-wl-type>player</span></h2>
+    <p class="join-note" data-wl-note></p>
+    <input class="wl-hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+    <label class="field">
+      <span class="field-label">Email</span>
+      <span class="field-input tx tx-paper"><input type="email" name="email" placeholder="you@example.com" autocomplete="email" maxlength="255" required></span>
+    </label>
+    <button type="submit" class="btn btn-lg btn-primary tx tx-accent wl-submit">Join the waitlist</button>
+    <p class="form-msg" aria-live="polite"></p>
+    <button type="button" class="btn btn-text" data-wl-back>&larr; Back</button>
+  </form>
+
+  <div class="wl-step" data-step="done" hidden>
+    <h2>You're in!</h2>
+    <p class="wl-q" data-wl-done></p>
+    <button type="button" class="btn btn-lg btn-primary tx tx-accent" data-wl-close>Done</button>
+  </div>
+</dialog>
 
 <script src="vendor/gsap.min.js"></script>
 <script src="vendor/ScrollTrigger.min.js"></script>
@@ -906,114 +861,92 @@ var WALL = ["main_1001520.jpg", "main_1730600.jpg", "main_2195450.jpg", "main_22
   new IntersectionObserver(function (e) { fl.classList.toggle('on', !e[0].isIntersecting); }).observe(top);
 })();
 
-/* Join flow: every .join-form (the finale form and the end-of-demo panel) is the same component —
-   collapsible trigger, Player/Developer switch, email field, icon submit — wired up identically so
-   there's exactly one CTA design on the page, not a full one here and a stripped-down one there. */
+/* Waitlist popup: every [data-join] opens it. A bare data-join starts at "player or developer?";
+   data-join="player" / "developer" goes straight to the email step. Submits to /api/waitlist:
+   201 joined, 409 already on the list, 400 bad input, 503 server trouble. */
 (function () {
+  var dlg = document.getElementById('waitlist');
+  if (!dlg || typeof dlg.showModal !== 'function') return;
   var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  var finale = document.getElementById('finaleForm');
+  var NOTE = {
+    player: "We'll let you know the moment your spot opens. It's free, no spam.",
+    developer: "We'll email you when onboarding opens for your studio."
+  };
+  var form = dlg.querySelector('form'), email = form.querySelector('input[name="email"]');
+  var honeypot = form.querySelector('input[name="website"]'), submit = form.querySelector('.wl-submit');
+  var msg = form.querySelector('.form-msg'), type = 'player';
 
-  // Desktop's pill-to-bar width tween needs a real starting number, not "auto" (which CSS can't
-  // animate) — measured off the trigger's own rendered width via a detached clone, same trick as
-  // before. Harmless no-op below 901px, where the shell's width isn't driven by this variable.
-  function measureCollapsedWidth(trigger, shell, form) {
-    function measure() {
-      if (form.dataset.open === 'true') return;
-      var clone = trigger.cloneNode(true);
-      clone.style.cssText = 'position:absolute; visibility:hidden; pointer-events:none; left:-9999px; top:-9999px; right:auto; bottom:auto; inset:auto; width:auto; opacity:1;';
-      document.body.appendChild(clone);
-      var w = clone.offsetWidth;
-      document.body.removeChild(clone);
-      if (w) shell.style.setProperty('--join-collapsed-w', w + 'px');
-    }
-    measure();
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(measure);
-    var resizeTimer;
-    window.addEventListener('resize', function () { clearTimeout(resizeTimer); resizeTimer = setTimeout(measure, 150); });
+  function show(name, focusSel) {
+    dlg.querySelectorAll('.wl-step').forEach(function (el) { el.hidden = el.getAttribute('data-step') !== name; });
+    var f = dlg.querySelector('.wl-step[data-step="' + name + '"] ' + focusSel);
+    if (f) f.focus();
   }
-
-  // Reveal sequencing, matching lynkpay's actual mechanic exactly: the trigger's fade-out and the
-  // card's fade-in are a single simultaneous 150ms opacity crossfade — not one-after-the-other,
-  // and not gated behind a layout tween finishing first. That only plays as a crossfade if the
-  // reveal is already rendered (opacity still 0) with a reflow forced in *before* data-open flips;
-  // otherwise a transition starting from display:none never registers. .is-showing (not an inline
-  // display value) is what makes that rendered-but-invisible step work at both breakpoints: mobile
-  // wants display:block, desktop wants display:flex, and only the CSS cascade knows which.
-  function setupCollapsible(form) {
-    var trigger = form.querySelector('.join-trigger');
-    var shell = form.querySelector('.join-shell');
-    var reveal = form.querySelector('.join-reveal');
-    if (!trigger || !shell || !reveal) return function () {};
-    measureCollapsedWidth(trigger, shell, form);
-
-    function open(focusEmail) {
-      if (form.dataset.open === 'true') return;
-      reveal.classList.add('is-showing');
-      reveal.getBoundingClientRect();   // force layout so the next line's opacity/width change transitions
-      form.dataset.open = 'true';       // CSS: reveal opacity 0->1, shell width grows (desktop), trigger fades
-      trigger.style.opacity = '0';
-      trigger.setAttribute('aria-expanded', 'true');
-      setTimeout(function () {
-        trigger.style.display = 'none';   // matches lynkpay: removed from layout only once the fade finishes
-        if (focusEmail) form.querySelector('input[name="email"]').focus();
-      }, 150);
-    }
-    trigger.addEventListener('click', function () { open(true); });
-    return open;
+  function setMsg(text, state) {
+    msg.textContent = text;
+    if (state) msg.setAttribute('data-state', state); else msg.removeAttribute('data-state');
   }
-
-  var openFinale = finale ? setupCollapsible(finale) : function () {};
-  var demo = document.getElementById('demoForm');
-  if (demo) setupCollapsible(demo);
+  function choose(t) {
+    type = t;
+    dlg.querySelector('[data-wl-type]').textContent = t;
+    dlg.querySelector('[data-wl-note]').textContent = NOTE[t];
+    email.placeholder = t === 'developer' ? 'you@yourstudio.com' : 'you@example.com';
+    setMsg('');
+    show('email', 'input[name="email"]');
+  }
+  function open(t) {
+    form.reset(); setMsg(''); submit.disabled = false;
+    dlg.showModal();
+    if (NOTE[t]) choose(t); else show('type', '.wl-choice');
+  }
 
   document.querySelectorAll('[data-join]').forEach(function (el) {
-    el.addEventListener('click', function (e) {
-      var side = el.getAttribute('data-join');
-      if (side && finale) {
-        var radio = finale.querySelector('input[name="side"][value="' + side + '"]');
-        if (radio) { radio.checked = true; radio.dispatchEvent(new Event('change', { bubbles: true })); }
-      }
-      openFinale(false);
-      var target = document.getElementById('wall');
-      if (target) { e.preventDefault(); target.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
-    });
+    el.addEventListener('click', function (e) { e.preventDefault(); open(el.getAttribute('data-join')); });
+  });
+  dlg.querySelectorAll('.wl-choice').forEach(function (b) {
+    b.addEventListener('click', function () { choose(b.getAttribute('data-type')); });
+  });
+  dlg.querySelector('[data-wl-back]').addEventListener('click', function () {
+    show('type', '.wl-choice[data-type="' + type + '"]');
+  });
+  dlg.querySelectorAll('[data-wl-close]').forEach(function (b) {
+    b.addEventListener('click', function () { dlg.close(); });
+  });
+  // A click on the dimmed backdrop lands on the dialog element itself, outside its box.
+  dlg.addEventListener('click', function (e) {
+    if (e.target !== dlg) return;
+    var r = dlg.getBoundingClientRect();
+    if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) dlg.close();
   });
 
-  // Player/Developer swaps the email placeholder and the fine-print note on every form that has
-  // the switch, not just finale. Note text matches templates/player_join.html and
-  // templates/developer_join.html exactly — the app's own established copy, not new marketing copy.
-  document.querySelectorAll('.join-form').forEach(function (form) {
-    var sideInputs = form.querySelectorAll('input[name="side"]');
-    if (!sideInputs.length) return;
-    var emailField = form.querySelector('input[name="email"]');
-    var noteField = form.querySelector('.join-note');
-    function syncSide() {
-      var dev = form.querySelector('input[name="side"]:checked').value === 'developer';
-      form.dataset.side = dev ? 'developer' : 'player';
-      emailField.placeholder = dev ? 'you@yourstudio.com' : 'you@example.com';
-      if (noteField) noteField.textContent = dev ? "We'll email you when onboarding opens for your studio." : "We'll let you know the moment your spot opens. It's free, no spam.";
-    }
-    sideInputs.forEach(function (r) { r.addEventListener('change', syncSide); });
-  });
-
-  document.querySelectorAll('.join-form').forEach(function (form) {
-    var emailField = form.querySelector('input[name="email"]');
-    var msgField = form.querySelector('.form-msg');
-    function setMsg(text, state) { msgField.textContent = text; if (state) msgField.setAttribute('data-state', state); else msgField.removeAttribute('data-state'); }
-    form.addEventListener('submit', function (e) {
-      e.preventDefault();
-      var email = emailField.value.trim();
-      if (!email) { setMsg('Enter your email.', 'error'); emailField.focus(); return; }
-      if (!EMAIL_RE.test(email)) { setMsg('Check your email address and try again.', 'error'); emailField.focus(); return; }
-      var dev = (form.dataset.side || (form.querySelector('input[name="side"]:checked') || {}).value) === 'developer';
-      setMsg('Joining…');
-      setTimeout(function () {
-        setMsg("You're on the waitlist. We'll email " + email + (dev ? ' when studio onboarding opens.' : ' when voting opens.'), 'success');
-        form.reset();
-        var d = form.querySelector('input[name="side"]:checked');
-        if (d) d.dispatchEvent(new Event('change', { bubbles: true }));
-      }, 500);
-    });
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var value = email.value.trim();
+    if (!value) { setMsg('Enter your email.', 'error'); email.focus(); return; }
+    if (!EMAIL_RE.test(value)) { setMsg('Check your email address and try again.', 'error'); email.focus(); return; }
+    submit.disabled = true;
+    setMsg('Joining…');
+    fetch('/api/waitlist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: value, type: type, website: honeypot.value })
+    })
+      .then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (body) { return { code: r.status, body: body }; });
+      })
+      .then(function (res) {
+        if (res.code === 201) {
+          dlg.querySelector('[data-wl-done]').textContent = res.body.message;
+          show('done', '[data-wl-close].btn');
+          return;
+        }
+        setMsg(res.body.message || 'Something went wrong. Please try again.', res.code === 409 ? 'info' : 'error');
+        submit.disabled = false;
+        if (res.code !== 409) email.focus();
+      })
+      .catch(function () {
+        setMsg("Couldn't reach the server. Check your connection and try again.", 'error');
+        submit.disabled = false;
+      });
   });
 })();
 </script>

@@ -7,6 +7,8 @@ Flask>=3.0,<4
 Werkzeug>=3.0,<4
 requests>=2.31
 PyMySQL>=1.1
+# Postgres driver: the waitlist lives in Postgres when PG_HOST is set (production).
+psycopg[binary]>=3.1
 Pillow>=10
 
 # Clustering stack (KMeans-free sklearn metrics + TSNE).

@@ -10,6 +10,7 @@ import sys
 import tempfile
 
 os.environ['DB_NAME'] = 'chon_selftest'
+os.environ['PG_HOST'] = ''    # keep the waitlist in the scratch MySQL db, even if .env names a Postgres
 
 import db                                     # noqa: E402  (must follow env var)
 import app as A                               # noqa: E402
@@ -210,6 +211,63 @@ db.remove_mediaid_from_developer(did, win_id)
 check('delete_media removes the row and its score', gone and no_score)
 check('developer mediaIDs no longer lists it',
       win_id not in db.get_developer_by_id(did)['mediaIDs'])
+
+# --- waitlist ----------------------------------------------------------------
+# Old shape (email, role, referral_code, created_at) is renamed in place, rows kept.
+conn = db.get_connection()
+with conn.cursor() as cur:
+    cur.execute('DROP TABLE waitlist')
+    cur.execute("""CREATE TABLE waitlist (waitlistID INT AUTO_INCREMENT PRIMARY KEY,
+                   email VARCHAR(255) NOT NULL UNIQUE, role VARCHAR(20),
+                   referral_code VARCHAR(16), created_at DATETIME DEFAULT CURRENT_TIMESTAMP)""")
+    cur.execute("INSERT INTO waitlist (email, role) VALUES ('old@x.com', 'developer')")
+conn.close()
+db.ensure_waitlist_table()
+db.ensure_waitlist_table()   # idempotent
+rows = db.get_waitlist()
+check('old waitlist migrated to emailID/type/timestamp, row kept',
+      [(r['emailID'], r['type']) for r in rows] == [('old@x.com', 'developer')], str(rows))
+
+check('new email joins', db.add_to_waitlist('New@Example.com ', 'player') == 'joined')
+check('same email + same type is reported as already on it',
+      db.add_to_waitlist('new@example.com', 'player') == 'exists')
+check('same email can also join as the other type',
+      db.add_to_waitlist('new@example.com', 'developer') == 'joined')
+check('email match ignores case and spaces', db.add_to_waitlist(' NEW@EXAMPLE.COM', 'developer') == 'exists')
+check('email stored lowercased, once per type',
+      sorted(r['type'] for r in db.get_waitlist() if r['emailID'] == 'new@example.com')
+      == ['developer', 'player'])
+conn = db.get_connection()
+try:
+    with conn.cursor() as cur:   # bypass the pre-check: the (emailID, type) key must still refuse it
+        cur.execute("INSERT INTO waitlist (emailID, type) VALUES ('new@example.com', 'player')")
+    check('UNIQUE (emailID, type) rejects a duplicate insert', False)
+except Exception as e:
+    check('UNIQUE (emailID, type) rejects a duplicate insert', db._is_unique_violation(e))
+conn.close()
+try:
+    db.add_to_waitlist('z@x.com', 'press')
+    check('unknown waitlist type rejected', False)
+except ValueError:
+    check('unknown waitlist type rejected', True)
+
+client = A.app.test_client()
+r = client.post('/api/waitlist', json={'email': 'api@x.com', 'type': 'developer'})
+check('API: new email -> 201 joined', r.status_code == 201 and r.json['status'] == 'joined', r.data)
+r = client.post('/api/waitlist', json={'email': 'API@x.com', 'type': 'developer'})
+check('API: repeat email + type -> 409 with already-joined message',
+      r.status_code == 409 and r.json['message'] == A.WAITLIST_EXISTS_MSG.format('developer'), r.data)
+r = client.post('/api/waitlist', json={'email': 'api@x.com', 'type': 'player'})
+check('API: same email as the other type -> 201', r.status_code == 201, r.data)
+check('API: bad email -> 400',
+      client.post('/api/waitlist', json={'email': 'nope', 'type': 'player'}).status_code == 400)
+check('API: bad type -> 400',
+      client.post('/api/waitlist', json={'email': 'ok@x.com', 'type': 'press'}).status_code == 400)
+before = db.waitlist_count()
+r = client.post('/api/waitlist', json={'email': 'bot@x.com', 'type': 'player', 'website': 'spam'})
+check('API: honeypot looks successful but stores nothing',
+      r.status_code == 201 and db.waitlist_count() == before)
+check('waitlist_count matches rows', db.waitlist_count() == 5, str(db.waitlist_count()))
 
 print(f'\n{len(ok)} passed, {len(fail)} failed')
 for f in fail:
