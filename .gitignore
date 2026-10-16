@@ -14,6 +14,9 @@ vectors_cache.json
 # User-uploaded media
 static/uploads/
 
+# Database dump + media archive from deploy/export-from-windows.ps1
+chon-export/
+
 # Local tooling / editor
 .claude/
 .vscode/

@@ -32,6 +32,31 @@ import secrets
 import importlib.util
 import pymysql
 
+def _load_env_file(path=None):
+    """Load KEY=value lines from .env into the environment, if it exists.
+
+    Real environment variables always win, so systemd's EnvironmentFile, a
+    shell `export`, or a test overriding DB_NAME are never clobbered. Done here
+    (before DB_CONFIG is built) because db is imported by every entry point —
+    app.py, wsgi.py, selftest.py and the one-off scripts — so all of them get
+    the same configuration without each having to load it.
+    """
+    path = path or os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+    if not os.path.exists(path):
+        return
+    with open(path, encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith('#') or '=' not in line:
+                continue
+            key, _, value = line.partition('=')
+            key, value = key.strip(), value.strip().strip('"').strip("'")
+            if key and key not in os.environ:
+                os.environ[key] = value
+
+
+_load_env_file()
+
 DB_CONFIG = {
     'host': os.environ.get('DB_HOST', '127.0.0.1'),
     'user': os.environ.get('DB_USER', 'root'),

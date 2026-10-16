@@ -31,7 +31,8 @@ Data source note:
   capsule from the capsule_616x353.jpg asset. Tag ids match SteamDB's /tag/<id>/.
 """
 
-from flask import Flask, render_template, request, redirect, url_for, flash, abort, session
+from flask import (Flask, render_template, request, redirect, url_for, flash, abort, session,
+                   send_from_directory)
 import requests
 import re
 import json
@@ -60,6 +61,25 @@ try:
 except ImportError:
     _SECRET_KEY = os.environ.get('SECRET_KEY', '')
 app.secret_key = _SECRET_KEY or 'dev-only-insecure-key'
+
+# CHON_ENV=production on a real server: disables the test-login backdoor and
+# refuses to start with the insecure dev defaults. Left as development locally
+# so `python app.py` keeps working with no environment set up.
+CHON_ENV = os.environ.get('CHON_ENV', 'development').lower()
+IS_PRODUCTION = CHON_ENV == 'production'
+
+
+def check_production_config():
+    """Fail fast rather than serve a publicly reachable app with dev secrets."""
+    problems = []
+    if app.secret_key == 'dev-only-insecure-key':
+        problems.append('SECRET_KEY is unset (sessions would be forgeable)')
+    if ADMIN_PASSWORD == 'admin':
+        problems.append('ADMIN_PASSWORD is still the default')
+    if not STEAM_API_KEY:
+        problems.append('STEAM_API_KEY is unset (Steam login and sync will fail)')
+    if problems:
+        raise RuntimeError('Refusing to start in production: ' + '; '.join(problems))
 
 # Uploaded media lives under static/uploads so Flask can serve it directly.
 UPLOAD_FOLDER = os.path.join(app.static_folder, 'uploads')
@@ -660,8 +680,36 @@ def _no_repeat_run(matches):
     return out
 
 
+# The public landing page (keyartclarity.com) is the static site in drafts/landing-v1.
+# It is served as-is, with its relative art/ and vendor/ paths, so the same folder
+# can still be copied straight to the Caddy web root.
+LANDING_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'drafts', 'landing-v1')
+
+
 @app.route('/')
 def index():
+    return send_from_directory(LANDING_DIR, 'index.html')
+
+
+@app.route('/art/<path:filename>')
+def landing_art(filename):
+    return send_from_directory(os.path.join(LANDING_DIR, 'art'), filename)
+
+
+@app.route('/vendor/<path:filename>')
+def landing_vendor(filename):
+    return send_from_directory(os.path.join(LANDING_DIR, 'vendor'), filename)
+
+
+@app.route('/sitemap.xml')
+def landing_sitemap():
+    return send_from_directory(LANDING_DIR, 'sitemap.xml')
+
+
+# Previous landing page (stats, recent matches, capsule wall), kept reachable
+# while the new one is built out.
+@app.route('/home')
+def home():
     real = db.get_platform_stats()
     stats = {k: real[k] * STAT_BOOST[k]['mult'] + STAT_BOOST[k]['base'] for k in real}
     recent = _no_repeat_run(db.get_recent_matches(24))
@@ -1294,9 +1342,12 @@ def player_logout():
 
 @app.route('/player/test-login/<steam_id>')
 def player_test_login(steam_id):
-    """TEMPORARY: log in as a specific steam id without Steam OpenID, for testing.
-    Remove this route once real Steam login testing is done."""
-    if not steam_id.isdigit():
+    """Log in as a specific steam id without Steam OpenID, for local testing.
+
+    This is an auth bypass — anyone who can reach it can become any player — so
+    it only exists when CHON_ENV is not 'production'.
+    """
+    if IS_PRODUCTION or not steam_id.isdigit():
         abort(404)
     _log_player_in(steam_id)
     return redirect(url_for('player_home'))

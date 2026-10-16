@@ -1,0 +1,52 @@
+# Caddy in front of gunicorn.
+#
+# LOCAL (WSL) — no domain, plain HTTP on :8080 so you can browse from Windows.
+# No sudo needed for a port above 1024. Run it FROM THE PROJECT ROOT, because
+# the local block's static root is relative to the working directory:
+#   caddy run --config deploy/Caddyfile
+#
+# PRODUCTION — comment out the :8080 block, uncomment the domain block, point an
+# A record at the server, open 80/443, and Caddy fetches a Let's Encrypt cert on
+# its own. That is the ONLY difference between this rehearsal and the real host.
+
+:8080 {
+	encode zstd gzip
+
+	# Serve uploads and static art straight from disk; Flask never sees them.
+	# Relative to Caddy's working directory (the project root) — an absolute
+	# path belongs in the production block below, where caddy.service runs
+	# from / rather than from the app directory.
+	handle_path /static/* {
+		root * static
+		file_server
+	}
+
+	reverse_proxy 127.0.0.1:8000 {
+		header_up X-Forwarded-Proto {scheme}
+	}
+}
+
+# capsulehotornot.com, www.capsulehotornot.com {
+# 	encode zstd gzip
+#
+# 	handle_path /static/* {
+# 		root * /srv/capsulehotornot/static
+# 		file_server
+# 		header Cache-Control "public, max-age=604800"
+# 	}
+#
+# 	reverse_proxy 127.0.0.1:8000 {
+# 		header_up X-Forwarded-Proto {scheme}
+# 	}
+#
+# 	# Keep the internal admin surface off the public internet if you like:
+# 	# @admin path /admin*
+# 	# handle @admin {
+# 	# 	@notmine not remote_ip 203.0.113.4
+# 	# 	respond @notmine 404
+# 	# }
+#
+# 	log {
+# 		output file /var/log/caddy/capsulehotornot.log
+# 	}
+# }

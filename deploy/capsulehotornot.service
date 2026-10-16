@@ -1,0 +1,33 @@
+# systemd unit for the Flask app behind Caddy.
+#   sudo cp deploy/capsulehotornot.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now capsulehotornot
+# Edit User/WorkingDirectory if you deploy somewhere other than /srv/capsulehotornot.
+[Unit]
+Description=CapsuleHotOrNot (Flask + gunicorn)
+After=network.target mysql.service
+Wants=mysql.service
+
+[Service]
+Type=simple
+User=chon
+Group=chon
+WorkingDirectory=/srv/capsulehotornot
+EnvironmentFile=/srv/capsulehotornot/.env
+ExecStart=/srv/capsulehotornot/.venv/bin/gunicorn -c deploy/gunicorn.conf.py wsgi:application
+Restart=always
+RestartSec=3
+KillSignal=SIGTERM
+
+# Hardening — the app only ever writes to static/uploads and vectors_cache.json.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/srv/capsulehotornot
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=capsulehotornot
+
+[Install]
+WantedBy=multi-user.target

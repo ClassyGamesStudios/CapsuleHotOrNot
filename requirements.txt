@@ -1,10 +1,20 @@
-# Pinned to the versions this app is developed and tested against.
-Flask==3.0.3
-Werkzeug==3.0.3
-requests==2.33.1
-PyMySQL==1.1.1
-Pillow==12.3.0
-numpy==2.2.6
-scikit-learn==1.5.1
-# scikit-learn 1.5.1 pulls scipy; scipy 1.14.1 requires numpy < 2.3, hence the numpy pin above.
-scipy==1.14.1
+# Compatible ranges rather than exact pins: numpy/scipy/scikit-learn have tight
+# inter-version bounds (scipy 1.14 needs numpy < 2.3, for example), so pinning
+# the three independently produces an unsatisfiable set. Let pip resolve a
+# consistent trio, then lock it per-machine with:
+#     pip freeze > deploy/requirements-lock.txt
+Flask>=3.0,<4
+Werkzeug>=3.0,<4
+requests>=2.31
+PyMySQL>=1.1
+Pillow>=10
+
+# Clustering stack (KMeans-free sklearn metrics + TSNE).
+numpy>=1.26
+scipy>=1.11
+scikit-learn>=1.4
+
+# Production WSGI servers. gunicorn is Linux-only; waitress covers Windows
+# hosting. Dev uses `python app.py`, so neither is needed locally.
+gunicorn>=22.0; sys_platform != "win32"
+waitress>=3.0; sys_platform == "win32"
